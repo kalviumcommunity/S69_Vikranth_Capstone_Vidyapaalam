@@ -58,7 +58,7 @@ async function googleLogin(req, res) {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res
+    return res
       .cookie('accessToken',  accessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .status(200)
@@ -68,7 +68,7 @@ async function googleLogin(req, res) {
       });
   } catch (error) {
     console.error("Error verifying Google token:", error);
-    res.status(401).json({ message: "Invalid Google token", error: error.message });
+    return res.status(401).json({ message: "Invalid Google token", error: error.message });
   }
 }
 
@@ -80,12 +80,21 @@ async function refreshToken(req, res) {
 
   try {
     // 1) Blacklist check
-    if (await BlacklistedToken.findOne({ token })) {
+    const isBlacklisted = await BlacklistedToken.findOne({ token });
+    if (isBlacklisted) {
       return res.status(403).json({ error: 'Refresh token revoked' });
     }
 
     // 2) Verify signature & expiry
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return res.status(403).json({ error: 'Refresh token expired' });
+      }
+      return res.status(403).json({ error: 'Invalid or expired refresh token' });
+    }
 
     // 3) Load user & guard non-existent
     const user = await User.findById(decoded.id).select('refreshToken activeToken');
@@ -96,30 +105,26 @@ async function refreshToken(req, res) {
       return res.status(403).json({ error: 'Invalid refresh token' });
     }
 
-    // 4) Blacklist old
+    // 4) Blacklist old refresh token
     await BlacklistedToken.create({ token });
 
     // 5) Issue new pair
     const newAccessToken  = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
-    // 6) Persist
+    // 6) Persist new tokens
     user.activeToken  = newAccessToken;
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    // 7) Send cookies
-    res
+    return res
       .cookie('accessToken',  newAccessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .json({ message: 'Tokens refreshed' });
 
   } catch (error) {
-    console.error('Refresh token error:', error);
-    if (error.name === 'TokenExpiredError') {
-      return res.status(403).json({ error: 'Refresh token expired' });
-    }
-    return res.status(403).json({ error: 'Invalid or expired refresh token' });
+    console.error('Unexpected refreshToken error:', error);
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
@@ -128,7 +133,8 @@ async function signup(req, res) {
     const { name, email, password, role = 'student' } = req.body;
     const normalizedEmail = email.trim().toLowerCase();
 
-    if (await User.findOne({ email: normalizedEmail })) {
+    const existing = await User.findOne({ email: normalizedEmail });
+    if (existing) {
       return res.status(409).json({ error: 'User with this email already exists' });
     }
 
@@ -155,7 +161,7 @@ async function signup(req, res) {
     newUser.refreshToken = refreshToken;
     await newUser.save();
 
-    res
+    return res
       .cookie('accessToken',  accessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .status(201)
@@ -163,10 +169,9 @@ async function signup(req, res) {
         message: 'User registered—please check your email for verification.',
         user: { id: newUser._id, name: newUser.name, email: newUser.email }
       });
-
   } catch (error) {
     console.error('Error during signup:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
@@ -179,7 +184,8 @@ async function login(req, res) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    if (!await bcrypt.compare(password, user.password)) {
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
       return res.status(401).json({ message: 'Invalid password' });
     }
 
@@ -190,7 +196,7 @@ async function login(req, res) {
     user.refreshToken = refreshToken;
     await user.save();
 
-    res
+    return res
       .cookie('accessToken',  accessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .status(200)
@@ -198,10 +204,9 @@ async function login(req, res) {
         message: 'Login successful',
         user: { id: user._id, name: user.name, email: user.email }
       });
-
   } catch (error) {
     console.error('Error during login:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
@@ -212,14 +217,13 @@ async function logout(req, res) {
       await BlacklistedToken.create({ token });
     }
 
-    res
+    return res
       .clearCookie('accessToken',  cookieOptions)
       .clearCookie('refreshToken', cookieOptions)
       .json({ message: 'Logout successful' });
-
   } catch (error) {
     console.error('Error logging out:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
@@ -233,7 +237,7 @@ async function profile(req, res) {
     return res.status(404).json({ error: "User not found" });
   }
 
-  res.status(200).json(user);
+  return res.status(200).json(user);
 }
 
 async function forgotPassword(req, res) {
@@ -261,10 +265,10 @@ async function forgotPassword(req, res) {
       text: `Reset your password here: ${resetUrl}`
     });
 
-    res.json({ message: 'Password reset email sent' });
+    return res.json({ message: 'Password reset email sent' });
   } catch (error) {
     console.error('Error during forgot password:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
@@ -284,10 +288,10 @@ async function resetPassword(req, res) {
     user.resetPasswordExpire = undefined;
     await user.save();
 
-    res.json({ message: 'Password reset successful' });
+    return res.json({ message: 'Password reset successful' });
   } catch (error) {
     console.error('Error during reset password:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
@@ -303,10 +307,10 @@ async function verifyEmail(req, res) {
     user.verificationToken = null;
     await user.save();
 
-    res.json({ message: "Email verified successfully" });
+    return res.json({ message: "Email verified successfully" });
   } catch (error) {
     console.error("Error verifying email:", error);
-    res.status(500).json({ error: "Internal Server Error" });
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 }
 
@@ -320,10 +324,11 @@ async function saveRole(req, res) {
 
     user.role = role;
     await user.save();
-    res.status(200).json({ message: 'Role updated', role: user.role });
+
+    return res.status(200).json({ message: 'Role updated', role: user.role });
   } catch (error) {
     console.error('Error saving role:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
