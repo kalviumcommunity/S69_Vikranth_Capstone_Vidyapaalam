@@ -10,12 +10,12 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure:   process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-  path: '/',
+  path:     '/',
 };
 
-const ACCESS_TOKEN_AGE  = 60 * 60 * 1000;         // 1 hour
+const ACCESS_TOKEN_AGE  = 60 * 60 * 1000;          // 1 hour
 const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function generateAccessToken(user) {
@@ -84,10 +84,10 @@ async function refreshToken(req, res) {
       return res.status(403).json({ error: 'Refresh token revoked' });
     }
 
-    // 2) Verify JWT
+    // 2) Verify signature & expiry
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    // 3) Load user
+    // 3) Load user & guard non-existent
     const user = await User.findById(decoded.id).select('refreshToken activeToken');
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -96,14 +96,14 @@ async function refreshToken(req, res) {
       return res.status(403).json({ error: 'Invalid refresh token' });
     }
 
-    // 4) Blacklist old refresh token
+    // 4) Blacklist old
     await BlacklistedToken.create({ token });
 
-    // 5) Issue new tokens
+    // 5) Issue new pair
     const newAccessToken  = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
-    // 6) Persist new tokens
+    // 6) Persist
     user.activeToken  = newAccessToken;
     user.refreshToken = newRefreshToken;
     await user.save();
@@ -113,6 +113,7 @@ async function refreshToken(req, res) {
       .cookie('accessToken',  newAccessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .json({ message: 'Tokens refreshed' });
+
   } catch (error) {
     console.error('Refresh token error:', error);
     if (error.name === 'TokenExpiredError') {
@@ -162,6 +163,7 @@ async function signup(req, res) {
         message: 'User registered—please check your email for verification.',
         user: { id: newUser._id, name: newUser.name, email: newUser.email }
       });
+
   } catch (error) {
     console.error('Error during signup:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -196,6 +198,7 @@ async function login(req, res) {
         message: 'Login successful',
         user: { id: user._id, name: user.name, email: user.email }
       });
+
   } catch (error) {
     console.error('Error during login:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -213,6 +216,7 @@ async function logout(req, res) {
       .clearCookie('accessToken',  cookieOptions)
       .clearCookie('refreshToken', cookieOptions)
       .json({ message: 'Logout successful' });
+
   } catch (error) {
     console.error('Error logging out:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -220,7 +224,7 @@ async function logout(req, res) {
 }
 
 async function profile(req, res) {
-  if (!req.user || !req.user.id) {
+  if (!req.user?.id) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -335,4 +339,3 @@ module.exports = {
   verifyEmail,
   saveRole
 };
-

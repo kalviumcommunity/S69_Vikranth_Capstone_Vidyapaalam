@@ -1,7 +1,6 @@
-// src/middleware/authMiddleware.js
-const jwt               = require("jsonwebtoken");
-const User              = require("../models/User");
-const BlacklistedToken  = require("../models/BlackListedToken");
+const jwt              = require("jsonwebtoken");
+const User             = require("../models/User");
+const BlacklistedToken = require("../models/BlackListedToken");
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -11,18 +10,18 @@ const authMiddleware = async (req, res, next) => {
     }
 
     if (await BlacklistedToken.findOne({ token })) {
-      return res.status(401).json({ message: "Auth failed, token invalidated" });
+      return res.status(403).json({ message: "Auth failed, token invalidated" });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id;
+    const userId  = decoded.id;
 
     const user = await User.findById(userId).select("activeToken");
     if (!user) {
-      return res.status(401).json({ message: "Auth failed, user not found" });
+      return res.status(404).json({ message: "Auth failed, user not found" });
     }
     if (user.activeToken !== token) {
-      return res.status(401).json({ message: "Auth failed, token mismatch" });
+      return res.status(403).json({ message: "Auth failed, token mismatch" });
     }
 
     req.user = { id: userId };
@@ -30,12 +29,12 @@ const authMiddleware = async (req, res, next) => {
 
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: "Auth failed, token expired" });
+      return res.status(403).json({ message: "Auth failed, token expired" });
     } else if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Auth failed, invalid token" });
+      return res.status(403).json({ message: "Auth failed, invalid token" });
     }
     console.error("Auth middleware error:", error);
-    return res.status(401).json({ message: "Auth failed, general authentication error" });
+    return res.status(500).json({ message: "Auth failed, general authentication error" });
   }
 };
 
