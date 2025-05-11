@@ -12,11 +12,10 @@ const port = process.env.PORT;
 app.use(express.json());
 
 app.use(cors({
-    origin: 'http://localhost:5173',       // your React origin
-    credentials: true,                     // ← Allow Set-Cookie + Cookie headers
+    origin: 'http://localhost:5173',       
+    credentials: true,                     
     methods: ['GET','POST','PATCH','DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
-
   }));
   
   

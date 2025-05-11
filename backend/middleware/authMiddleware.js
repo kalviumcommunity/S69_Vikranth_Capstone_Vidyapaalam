@@ -1,6 +1,7 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");                  
-const BlacklistedToken = require("../models/BlackListedToken");
+// src/middleware/authMiddleware.js
+const jwt               = require("jsonwebtoken");
+const User              = require("../models/User");
+const BlacklistedToken  = require("../models/BlackListedToken");
 
 const authMiddleware = async (req, res, next) => {
   try {
@@ -9,8 +10,7 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Auth failed, no token provided" });
     }
 
-    const blacklisted = await BlacklistedToken.findOne({ token });
-    if (blacklisted) {
+    if (await BlacklistedToken.findOne({ token })) {
       return res.status(401).json({ message: "Auth failed, token invalidated" });
     }
 
@@ -25,8 +25,9 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Auth failed, token mismatch" });
     }
 
-    req.user = { userId };
+    req.user = { id: userId };
     next();
+
   } catch (error) {
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({ message: "Auth failed, token expired" });
