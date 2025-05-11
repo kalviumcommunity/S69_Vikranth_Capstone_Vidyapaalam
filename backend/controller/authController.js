@@ -1,23 +1,22 @@
-
-const bcrypt = require('bcrypt');
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
+const bcrypt           = require('bcrypt');
+const crypto           = require('crypto');
+const jwt              = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
-const nodemailer = require('nodemailer');
-const User = require('../models/User');
-const BlacklistedToken  = require('../models/BlackListedToken');
+const nodemailer       = require('nodemailer');
+const User             = require('../models/User');
+const BlacklistedToken = require('../models/BlackListedToken');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production', 
+  secure: process.env.NODE_ENV === 'production',
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   path: '/',
 };
 
-const ACCESS_TOKEN_AGE  = 60 * 60 * 1000;        
-const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; 
+const ACCESS_TOKEN_AGE  = 60 * 60 * 1000;         // 1 hour
+const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function generateAccessToken(user) {
   const payload = { id: user._id, email: user.email, role: user.role };
@@ -32,7 +31,9 @@ function generateRefreshToken(user) {
 async function googleLogin(req, res) {
   try {
     const { credential } = req.body;
-    if (!credential) return res.status(400).json({ message: "ID token is required" });
+    if (!credential) {
+      return res.status(400).json({ message: "ID token is required" });
+    }
 
     const ticket = await client.verifyIdToken({
       idToken: credential,
@@ -65,7 +66,6 @@ async function googleLogin(req, res) {
         message: "Login successful",
         user: { id: user._id, name: user.name, email: user.email }
       });
-
   } catch (error) {
     console.error("Error verifying Google token:", error);
     res.status(401).json({ message: "Invalid Google token", error: error.message });
@@ -79,39 +79,40 @@ async function refreshToken(req, res) {
   }
 
   try {
-    // 1) Reject if this token has been blacklisted
-    const blacklisted = await BlacklistedToken.findOne({ token });
-    if (blacklisted) {
+    // 1) Blacklist check
+    if (await BlacklistedToken.findOne({ token })) {
       return res.status(403).json({ error: 'Refresh token revoked' });
     }
 
-    // 2) Verify JWT signature & expiry
+    // 2) Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
 
-    // 3) Load user & check stored refreshToken
+    // 3) Load user
     const user = await User.findById(decoded.id).select('refreshToken activeToken');
-    if (!user || user.refreshToken !== token) {
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    if (user.refreshToken !== token) {
       return res.status(403).json({ error: 'Invalid refresh token' });
     }
 
-    // 4) Blacklist the old refresh token
+    // 4) Blacklist old refresh token
     await BlacklistedToken.create({ token });
 
     // 5) Issue new tokens
     const newAccessToken  = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
-    // 6) Persist them
+    // 6) Persist new tokens
     user.activeToken  = newAccessToken;
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    // 7) Send cookies back
+    // 7) Send cookies
     res
       .cookie('accessToken',  newAccessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .json({ message: 'Tokens refreshed' });
-
   } catch (error) {
     console.error('Refresh token error:', error);
     if (error.name === 'TokenExpiredError') {
@@ -161,7 +162,6 @@ async function signup(req, res) {
         message: 'User registered—please check your email for verification.',
         user: { id: newUser._id, name: newUser.name, email: newUser.email }
       });
-
   } catch (error) {
     console.error('Error during signup:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -173,7 +173,9 @@ async function login(req, res) {
     const { email, password } = req.body;
     const normalizedEmail = email.trim().toLowerCase();
     const user = await User.findOne({ email: normalizedEmail });
-    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
     if (!await bcrypt.compare(password, user.password)) {
       return res.status(401).json({ message: 'Invalid password' });
@@ -181,6 +183,7 @@ async function login(req, res) {
 
     const accessToken  = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
+
     user.activeToken  = accessToken;
     user.refreshToken = refreshToken;
     await user.save();
@@ -202,7 +205,9 @@ async function login(req, res) {
 async function logout(req, res) {
   try {
     const token = req.cookies.accessToken;
-    if (token) await BlacklistedToken.create({ token });
+    if (token) {
+      await BlacklistedToken.create({ token });
+    }
 
     res
       .clearCookie('accessToken',  cookieOptions)
@@ -231,11 +236,13 @@ async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken  = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000;
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save();
 
     const resetUrl = `${req.protocol}://${req.get('host')}/auth/resetpassword/${resetToken}`;
@@ -264,7 +271,9 @@ async function resetPassword(req, res) {
       resetPasswordToken: tokenHash,
       resetPasswordExpire: { $gt: Date.now() },
     });
-    if (!user) return res.status(400).json({ error: 'Invalid or expired token' });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid or expired token' });
+    }
 
     user.password = req.body.password;
     user.resetPasswordToken  = undefined;
@@ -282,7 +291,9 @@ async function verifyEmail(req, res) {
   try {
     const { token } = req.params;
     const user = await User.findOne({ verificationToken: token });
-    if (!user) return res.status(400).json({ error: "Invalid verification token" });
+    if (!user) {
+      return res.status(400).json({ error: "Invalid verification token" });
+    }
 
     user.isVerified        = true;
     user.verificationToken = null;
@@ -298,7 +309,7 @@ async function verifyEmail(req, res) {
 async function saveRole(req, res) {
   try {
     const { role } = req.body;
-    const user = await User.findById(req.user.userId);
+    const user = await User.findById(req.user.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -312,7 +323,6 @@ async function saveRole(req, res) {
   }
 }
 
-
 module.exports = {
   googleLogin,
   refreshToken,
@@ -325,3 +335,4 @@ module.exports = {
   verifyEmail,
   saveRole
 };
+
