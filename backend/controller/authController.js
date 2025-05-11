@@ -7,7 +7,6 @@ const User             = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 const cookieOptions = {
   httpOnly: true,
   secure:   process.env.NODE_ENV === 'production',
@@ -31,8 +30,10 @@ function generateRefreshToken(user) {
 async function googleLogin(req, res) {
   try {
     const { credential } = req.body;
+
     if (!credential) {
-      return res.status(400).json({ message: "ID token is required" });
+      res.status(400).json({ message: "ID token is required" });
+      return; // Keep return here as it's an early exit
     }
 
     const ticket = await client.verifyIdToken({
@@ -42,6 +43,7 @@ async function googleLogin(req, res) {
     const { sub: googleId, email, name } = ticket.getPayload();
 
     let user = await User.findOne({ googleId }) || await User.findOne({ email });
+
     if (!user) {
       const randomPassword = crypto.randomBytes(16).toString("hex");
       user = new User({ name, email, password: randomPassword, googleId });
@@ -66,6 +68,7 @@ async function googleLogin(req, res) {
         message: "Login successful",
         user: { id: user._id, name: user.name, email: user.email }
       });
+
   } catch (error) {
     console.error("Error verifying Google token:", error);
     res.status(401).json({ message: "Invalid Google token", error: error.message });
@@ -74,62 +77,78 @@ async function googleLogin(req, res) {
 
 async function refreshToken(req, res) {
   const token = req.cookies.refreshToken;
+
   if (!token) {
-    return res.status(401).json({ error: 'Refresh token missing' });
+    res.status(401).json({ error: 'Refresh token missing' });
+    return; // Keep return here as it's an early exit
   }
 
   try {
     // 1) Blacklist check
-    if (await BlacklistedToken.findOne({ token })) {
-      return res.status(403).json({ error: 'Refresh token revoked' });
+    const isBlacklisted = await BlacklistedToken.findOne({ token });
+
+    if (isBlacklisted) {
+      res.status(403).json({ error: 'Refresh token revoked' });
+      return; // Keep return here as it's an early exit
     }
 
     // 2) Verify signature & expiry
-    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        res.status(403).json({ error: 'Refresh token expired' });
+        return; // Keep return here as it's an early exit
+      }
+      res.status(403).json({ error: 'Invalid or expired refresh token' });
+      return; // Keep return here as it's an early exit
+    }
 
     // 3) Load user & guard non-existent
     const user = await User.findById(decoded.id).select('refreshToken activeToken');
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return; // Keep return here as it's an early exit
     }
     if (user.refreshToken !== token) {
-      return res.status(403).json({ error: 'Invalid refresh token' });
+      res.status(403).json({ error: 'Invalid refresh token' });
+      return; // Keep return here as it's an early exit
     }
 
-    // 4) Blacklist old
+    // 4) Blacklist old refresh token
     await BlacklistedToken.create({ token });
 
     // 5) Issue new pair
     const newAccessToken  = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
-    // 6) Persist
+    // 6) Persist new tokens
     user.activeToken  = newAccessToken;
     user.refreshToken = newRefreshToken;
     await user.save();
 
-    // 7) Send cookies
     res
       .cookie('accessToken',  newAccessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .json({ message: 'Tokens refreshed' });
 
   } catch (error) {
-    console.error('Refresh token error:', error);
-    if (error.name === 'TokenExpiredError') {
-      return res.status(403).json({ error: 'Refresh token expired' });
-    }
-    return res.status(403).json({ error: 'Invalid or expired refresh token' });
+    console.error('Unexpected refreshToken error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 }
 
 async function signup(req, res) {
   try {
     const { name, email, password, role = 'student' } = req.body;
-    const normalizedEmail = email.trim().toLowerCase();
 
-    if (await User.findOne({ email: normalizedEmail })) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await User.findOne({ email: normalizedEmail });
+
+    if (existing) {
+      res.status(409).json({ error: 'User with this email already exists' });
+      return; // Keep return here as it's an early exit
     }
 
     const newUser = new User({ name, email: normalizedEmail, password, role });
@@ -173,14 +192,20 @@ async function signup(req, res) {
 async function login(req, res) {
   try {
     const { email, password } = req.body;
+
     const normalizedEmail = email.trim().toLowerCase();
+
     const user = await User.findOne({ email: normalizedEmail });
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return; // Keep return here as it's an early exit
     }
 
-    if (!await bcrypt.compare(password, user.password)) {
-      return res.status(401).json({ message: 'Invalid password' });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      res.status(401).json({ message: 'Invalid password' });
+      return; // Keep return here as it's an early exit
     }
 
     const accessToken  = generateAccessToken(user);
@@ -208,6 +233,7 @@ async function login(req, res) {
 async function logout(req, res) {
   try {
     const token = req.cookies.accessToken;
+
     if (token) {
       await BlacklistedToken.create({ token });
     }
@@ -225,12 +251,15 @@ async function logout(req, res) {
 
 async function profile(req, res) {
   if (!req.user?.id) {
-    return res.status(401).json({ error: "Unauthorized" });
+    res.status(401).json({ error: "Unauthorized" });
+    return; // Keep return here as it's an early exit
   }
 
   const user = await User.findById(req.user.id).select("-password");
+
   if (!user) {
-    return res.status(404).json({ error: "User not found" });
+    res.status(404).json({ error: "User not found" });
+    return; // Keep return here as it's an early exit
   }
 
   res.status(200).json(user);
@@ -239,9 +268,12 @@ async function profile(req, res) {
 async function forgotPassword(req, res) {
   try {
     const { email } = req.body;
+
     const user = await User.findOne({ email });
+
     if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+      res.status(404).json({ error: 'User not found' });
+      return; // Keep return here as it's an early exit
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
@@ -262,6 +294,7 @@ async function forgotPassword(req, res) {
     });
 
     res.json({ message: 'Password reset email sent' });
+
   } catch (error) {
     console.error('Error during forgot password:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -271,12 +304,15 @@ async function forgotPassword(req, res) {
 async function resetPassword(req, res) {
   try {
     const tokenHash = crypto.createHash('sha256').update(req.body.token).digest('hex');
+
     const user = await User.findOne({
       resetPasswordToken: tokenHash,
       resetPasswordExpire: { $gt: Date.now() },
     });
+
     if (!user) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
+      res.status(400).json({ error: 'Invalid or expired token' });
+      return; // Keep return here as it's an early exit
     }
 
     user.password = req.body.password;
@@ -285,6 +321,7 @@ async function resetPassword(req, res) {
     await user.save();
 
     res.json({ message: 'Password reset successful' });
+
   } catch (error) {
     console.error('Error during reset password:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -294,9 +331,12 @@ async function resetPassword(req, res) {
 async function verifyEmail(req, res) {
   try {
     const { token } = req.params;
+
     const user = await User.findOne({ verificationToken: token });
+
     if (!user) {
-      return res.status(400).json({ error: "Invalid verification token" });
+      res.status(400).json({ error: "Invalid verification token" });
+      return; // Keep return here as it's an early exit
     }
 
     user.isVerified        = true;
@@ -304,6 +344,7 @@ async function verifyEmail(req, res) {
     await user.save();
 
     res.json({ message: "Email verified successfully" });
+
   } catch (error) {
     console.error("Error verifying email:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -313,14 +354,19 @@ async function verifyEmail(req, res) {
 async function saveRole(req, res) {
   try {
     const { role } = req.body;
+
     const user = await User.findById(req.user.id);
+
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      res.status(404).json({ message: 'User not found' });
+      return; // Keep return here as it's an early exit
     }
 
     user.role = role;
     await user.save();
+
     res.status(200).json({ message: 'Role updated', role: user.role });
+
   } catch (error) {
     console.error('Error saving role:', error);
     res.status(500).json({ error: 'Internal Server Error' });
