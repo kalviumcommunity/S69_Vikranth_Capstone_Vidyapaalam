@@ -40,7 +40,7 @@ const authMiddleware = async (req, res, next) => {
 
     // All checks passed
     req.user = { id: userId };
-    return next();
+    next();
 
   } catch (error) {
     console.error("Auth middleware error:", error);
