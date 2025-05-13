@@ -14,8 +14,8 @@ const cookieOptions = {
   path:     '/',
 };
 
-const ACCESS_TOKEN_AGE  = 60 * 60 * 1000;          // 1 hour
-const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+const ACCESS_TOKEN_AGE  = 60 * 60 * 1000;          
+const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; 
 
 function generateAccessToken(user) {
   const payload = { id: user._id, email: user.email, role: user.role };
@@ -80,50 +80,44 @@ async function refreshToken(req, res) {
 
   if (!token) {
     res.status(401).json({ error: 'Refresh token missing' });
-    return; // Keep return here as it's an early exit
+    return;
   }
 
   try {
-    // 1) Blacklist check
     const isBlacklisted = await BlacklistedToken.findOne({ token });
 
     if (isBlacklisted) {
       res.status(403).json({ error: 'Refresh token revoked' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
-    // 2) Verify signature & expiry
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     } catch (err) {
       if (err.name === 'TokenExpiredError') {
         res.status(403).json({ error: 'Refresh token expired' });
-        return; // Keep return here as it's an early exit
+        return; 
       }
       res.status(403).json({ error: 'Invalid or expired refresh token' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
-    // 3) Load user & guard non-existent
     const user = await User.findById(decoded.id).select('refreshToken activeToken');
     if (!user) {
       res.status(404).json({ error: 'User not found' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
     if (user.refreshToken !== token) {
       res.status(403).json({ error: 'Invalid refresh token' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
-    // 4) Blacklist old refresh token
     await BlacklistedToken.create({ token });
 
-    // 5) Issue new pair
     const newAccessToken  = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
 
-    // 6) Persist new tokens
     user.activeToken  = newAccessToken;
     user.refreshToken = newRefreshToken;
     await user.save();
@@ -148,7 +142,7 @@ async function signup(req, res) {
 
     if (existing) {
       res.status(409).json({ error: 'User with this email already exists' });
-      return; // Keep return here as it's an early exit
+      return;
     }
 
     const newUser = new User({ name, email: normalizedEmail, password, role });
@@ -199,13 +193,13 @@ async function login(req, res) {
 
     if (!user) {
       res.status(404).json({ message: 'User not found' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       res.status(401).json({ message: 'Invalid password' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     const accessToken  = generateAccessToken(user);
@@ -250,20 +244,20 @@ async function logout(req, res) {
 }
 
 async function profile(req, res) {
-  if (!req.user?.id) {
-    res.status(401).json({ error: "Unauthorized" });
-    return; // Keep return here as it's an early exit
-  }
-
-  const user = await User.findById(req.user.id).select("-password");
-
-  if (!user) {
-    res.status(404).json({ error: "User not found" });
-    return; // Keep return here as it's an early exit
-  }
-
-  res.status(200).json(user);
-}
+    if (!req.user?.id) {
+      res.status(401).json({ error: "Unauthorized" });
+      return; 
+    }
+  
+    const user = await User.findById(req.user.id).select("-password");
+  
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return; 
+    }
+    
+    res.status(200).json(user);
+  } 
 
 async function forgotPassword(req, res) {
   try {
@@ -273,12 +267,12 @@ async function forgotPassword(req, res) {
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
     user.resetPasswordToken  = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; 
     await user.save();
 
     const resetUrl = `${req.protocol}://${req.get('host')}/auth/resetpassword/${resetToken}`;
@@ -312,7 +306,7 @@ async function resetPassword(req, res) {
 
     if (!user) {
       res.status(400).json({ error: 'Invalid or expired token' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     user.password = req.body.password;
@@ -336,7 +330,7 @@ async function verifyEmail(req, res) {
 
     if (!user) {
       res.status(400).json({ error: "Invalid verification token" });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     user.isVerified        = true;
@@ -359,7 +353,7 @@ async function saveRole(req, res) {
 
     if (!user) {
       res.status(404).json({ message: 'User not found' });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     user.role = role;
