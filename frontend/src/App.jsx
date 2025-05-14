@@ -110,7 +110,7 @@ import TeacherLayout from "./layouts/TeacherLayout";
 import PrivateRoute from "./components/ui/PrivateRoute";
 
 // Public pages
-import Index from "./pages/Index";
+import Index from "./pages/index";
 import SkillsPage from "./pages/SkillsPage";
 import SkillDetailPage from "./pages/SkillDetailPage";
 import MentorsPage from "./pages/MentorsPage";
