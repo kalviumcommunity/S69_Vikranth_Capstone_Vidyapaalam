@@ -33,7 +33,7 @@ async function googleLogin(req, res) {
 
     if (!credential) {
       res.status(400).json({ message: "ID token is required" });
-      return; // Keep return here as it's an early exit
+      return; 
     }
 
     const ticket = await client.verifyIdToken({
