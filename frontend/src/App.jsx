@@ -188,10 +188,8 @@ const App = () => (
           </Route>
         </Route>
 
-        {/* Not Authorized */}
         <Route path="/not-authorized" element={<NotAuthorized />} />
 
-        {/* No Match Route */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

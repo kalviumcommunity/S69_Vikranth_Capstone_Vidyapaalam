@@ -9,25 +9,30 @@ const UserSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,    
+    unique: true,
+    sparse: true, // Allows multiple documents to have null or missing email, only unique if present
   },
   password: {
     type: String,
-    // required: true,
-  },
+    },
   googleId: {
     type: String,
     unique: true,
-    sparse: true,     
+    sparse: true,
   },
   bio: {
     type: String,
     default: "",
   },
+  phoneNumber: { // ADD THIS NEW FIELD
+    type: String,
+    trim: true,
+    default: "", // Can be empty if not provided or for Google users initially
+  },
   role: {
     type: String,
     enum: ["student", "teacher", "admin"],
-    default: "teacher",
+    default: "teacher", // Ensure this default aligns with your initial onboarding flow
   },
   activeToken: {
     type: String,
@@ -56,9 +61,10 @@ const UserSchema = new mongoose.Schema({
 });
 
 UserSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(12);
-  this.password = await bcrypt.hash(this.password, salt);
+  if (this.isModified("password") && this.password) { // Added check for password existence
+    const salt = await bcrypt.genSalt(12);
+    this.password = await bcrypt.hash(this.password, salt);
+  }
   next();
 });
 
