@@ -1,11 +1,5 @@
-
-
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { CheckIcon } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
 import { motion } from "framer-motion";
 
 const skills = [
@@ -39,13 +33,11 @@ const StudentOnboarding = ({ step, onNext, onBack, onComplete }) => {
   };
 
   const handleSkillToggle = (skillId) => {
-    setSelectedSkills((prev) => {
-      if (prev.includes(skillId)) {
-        return prev.filter((id) => id !== skillId);
-      } else {
-        return [...prev, skillId];
-      }
-    });
+    setSelectedSkills((prev) =>
+      prev.includes(skillId)
+        ? prev.filter((id) => id !== skillId)
+        : [...prev, skillId]
+    );
   };
 
   const validateForm = () => {
@@ -82,18 +74,20 @@ const StudentOnboarding = ({ step, onNext, onBack, onComplete }) => {
   if (step === "info") {
     return (
       <div className="space-y-8">
-        <h2 className="text-3xl font-semibold text-gray-900">Basic Information</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Basic Information</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-lg font-medium text-gray-800">Full Name</label>
-            <Input
+            <label className="block text-lg font-medium text-gray-800">
+              Full Name
+            </label>
+            <input
               type="text"
               name="fullName"
               value={formData.fullName}
               onChange={handleInputChange}
               placeholder="John Doe"
-              className={`mt-2 border rounded-md py-2 px-3 w-full ${
-                errors.fullName ? "border-red-500" : ""
+              className={`mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.fullName ? "border-red-500" : "border-gray-300"
               }`}
             />
             {errors.fullName && (
@@ -101,36 +95,49 @@ const StudentOnboarding = ({ step, onNext, onBack, onComplete }) => {
             )}
           </div>
           <div>
-            <label className="block text-lg font-medium text-gray-800">Phone Number</label>
-            <Input
+            <label className="block text-lg font-medium text-gray-800">
+              Phone Number
+            </label>
+            <input
               type="text"
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
               placeholder="+1 (555) 123-4567"
-              className={`mt-2 border rounded-md py-2 px-3 w-full ${
-                errors.phone ? "border-red-500" : ""
+              className={`mt-2 w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.phone ? "border-red-500" : "border-gray-300"
               }`}
             />
-            {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+            {errors.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+            )}
           </div>
           <div>
             <label className="block text-lg font-medium text-gray-800">
               About You (Optional)
             </label>
-            <Textarea
+            <textarea
               name="bio"
               value={formData.bio}
               onChange={handleInputChange}
               placeholder="Tell us a bit about yourself and what you hope to learn"
-              className="min-h-[120px] border rounded-md py-2 px-3 w-full"
+              className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
             />
           </div>
           <div className="flex justify-between pt-6">
-            <Button type="button" variant="outline" onClick={onBack}>
+            <button
+              type="button"
+              onClick={onBack}
+              className="px-6 py-2 border border-gray-400 rounded-lg text-gray-700 hover:bg-gray-100"
+            >
               Back
-            </Button>
-            <Button type="submit">Continue</Button>
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Continue
+            </button>
           </div>
         </form>
       </div>
@@ -140,17 +147,19 @@ const StudentOnboarding = ({ step, onNext, onBack, onComplete }) => {
   if (step === "interests") {
     return (
       <div className="space-y-8">
-        <h2 className="text-3xl font-semibold text-gray-900">Skills I Want to Learn</h2>
+        <h2 className="text-3xl font-bold text-gray-900">Skills I Want to Learn</h2>
         <p className="text-lg text-gray-600">
           Select the skills you're interested in learning.
         </p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {skills.map((skill) => (
             <div key={skill.id} className="flex items-center space-x-3">
-              <Checkbox
+              <input
+                type="checkbox"
                 id={skill.id}
                 checked={selectedSkills.includes(skill.id)}
-                onCheckedChange={() => handleSkillToggle(skill.id)}
+                onChange={() => handleSkillToggle(skill.id)}
+                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
               />
               <label
                 htmlFor={skill.id}
@@ -162,12 +171,24 @@ const StudentOnboarding = ({ step, onNext, onBack, onComplete }) => {
           ))}
         </div>
         <div className="flex justify-between pt-6">
-          <Button type="button" variant="outline" onClick={onBack}>
+          <button
+            type="button"
+            onClick={onBack}
+            className="px-6 py-2 border border-gray-400 rounded-lg text-gray-700 hover:bg-gray-100"
+          >
             Back
-          </Button>
-          <Button onClick={onNext} disabled={selectedSkills.length === 0}>
+          </button>
+          <button
+            onClick={onNext}
+            disabled={selectedSkills.length === 0}
+            className={`px-6 py-2 rounded-lg text-white ${
+              selectedSkills.length === 0
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
+          >
             Continue
-          </Button>
+          </button>
         </div>
       </div>
     );
@@ -186,14 +207,18 @@ const StudentOnboarding = ({ step, onNext, onBack, onComplete }) => {
           </motion.div>
         </div>
         <div>
-          <h2 className="text-3xl font-semibold text-gray-900">You're All Set!</h2>
+          <h2 className="text-3xl font-bold text-gray-900">You're All Set!</h2>
           <p className="text-lg text-gray-600 mt-3">
-            Your student profile has been created. Let's start exploring skills and finding teachers.
+            Your student profile has been created. Let's start exploring skills and finding
+            teachers.
           </p>
         </div>
-        <Button onClick={onComplete} size="lg">
+        <button
+          onClick={onComplete}
+          className="mt-4 px-8 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 text-lg"
+        >
           Go to Dashboard
-        </Button>
+        </button>
       </div>
     );
   }

@@ -150,11 +150,14 @@ async function signup(req, res) {
     newUser.verificationToken = verificationToken;
     await newUser.save();
 
-    const verifyUrl = `${req.protocol}://${req.get("host")}/auth/verifyemail/${verificationToken}`;
+    // ✅ Use BASE_URL instead of req.get('host')
+    const verifyUrl = `${process.env.BASE_URL}/auth/verifyemail/${verificationToken}`;
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
     });
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: normalizedEmail,
@@ -162,14 +165,14 @@ async function signup(req, res) {
       text: `Click here to verify your account: ${verifyUrl}`
     });
 
-    const accessToken  = generateAccessToken(newUser);
+    const accessToken = generateAccessToken(newUser);
     const refreshToken = generateRefreshToken(newUser);
-    newUser.activeToken  = accessToken;
+    newUser.activeToken = accessToken;
     newUser.refreshToken = refreshToken;
     await newUser.save();
 
     res
-      .cookie('accessToken',  accessToken,  { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
+      .cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .status(201)
       .json({
@@ -182,6 +185,7 @@ async function signup(req, res) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
+
 
 async function login(req, res) {
   try {
@@ -267,19 +271,22 @@ async function forgotPassword(req, res) {
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
-      return; 
+      return;
     }
 
     const resetToken = crypto.randomBytes(20).toString('hex');
-    user.resetPasswordToken  = crypto.createHash('sha256').update(resetToken).digest('hex');
-    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; 
+    user.resetPasswordToken = crypto.createHash('sha256').update(resetToken).digest('hex');
+    user.resetPasswordExpire = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save();
 
-    const resetUrl = `${req.protocol}://${req.get('host')}/auth/resetpassword/${resetToken}`;
+    // ✅ Use BASE_URL to generate mobile-accessible reset URL
+    const resetUrl = `${process.env.BASE_URL}/auth/resetpassword/${resetToken}`;
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
     });
+
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: email,
@@ -294,6 +301,7 @@ async function forgotPassword(req, res) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 }
+
 
 async function resetPassword(req, res) {
   try {
