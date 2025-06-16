@@ -75,7 +75,7 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 export const api = axios.create({
-  baseURL: "http://localhost:3400",
+  baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
   withCredentials: true,
 });
 
