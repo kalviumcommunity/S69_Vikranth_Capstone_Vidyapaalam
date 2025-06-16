@@ -6,6 +6,7 @@ const {
   getSkillById,
   updateSkill,
   deleteSkill,
+  updateInterestedSkills
 } = require('../controller/skillController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware'); 
 
@@ -19,5 +20,7 @@ router.route('/:id')
   .get(getSkillById)
   .put(protect, authorizeRoles('teacher', 'admin'), updateSkill) 
   .delete(protect, authorizeRoles('teacher', 'admin'), deleteSkill); 
+
+router.put('/interests', protect, authorizeRoles('student'), updateInterestedSkills);
 
 module.exports = router;

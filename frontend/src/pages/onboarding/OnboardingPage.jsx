@@ -38,7 +38,7 @@ const OnboardingPage = () => {
     if (role === "student") {
       if (step === "info") setStep("interests");
       else if (step === "interests") setStep("complete");
-    } else {
+    } else if( role === "teacher") {
       if (step === "info") setStep("expertise");
       else if (step === "expertise") setStep("availability");
       else if (step === "availability") setStep("complete");

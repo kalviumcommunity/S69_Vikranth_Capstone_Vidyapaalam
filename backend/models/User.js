@@ -10,7 +10,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    sparse: true, // Allows multiple documents to have null or missing email, only unique if present
+    sparse: true, 
   },
   password: {
     type: String,
@@ -20,19 +20,21 @@ const UserSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  isGoogleUser: { type: Boolean, default: false },
+
   bio: {
     type: String,
     default: "",
   },
-  phoneNumber: { // ADD THIS NEW FIELD
+  phoneNumber: { 
     type: String,
     trim: true,
-    default: "", // Can be empty if not provided or for Google users initially
+    default: "", 
   },
   role: {
     type: String,
     enum: ["student", "teacher", "admin"],
-    default: "teacher", // Ensure this default aligns with your initial onboarding flow
+    default: "teacher", 
   },
   activeToken: {
     type: String,
@@ -58,6 +60,23 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+interestedSkills: [{
+  type: String,
+  trim: true,
+}],
+ teachingSkills: [{
+    type: String,
+    trim: true,
+  }],
+
+  availability: {
+    date: {
+      type: Date,
+    },
+    slots: [{
+      type: String,
+      trim: true,
+    }],}
 });
 
 UserSchema.pre("save", async function (next) {

@@ -94,7 +94,7 @@ const protect = async (req, res, next) => {
     }
 
     // All checks passed. Attach user information to the request object.
-    req.user = { id: user._id, role: user.role };
+    req.user = { id: user._id, role: user.role || null };
     next();
 
   } catch (error) {
