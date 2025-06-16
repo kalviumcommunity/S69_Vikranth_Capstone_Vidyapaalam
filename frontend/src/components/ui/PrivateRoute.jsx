@@ -21,9 +21,13 @@ export default function PrivateRoute({ roles }) {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
-    return <p>Loading...</p>;
-  }
+ if (loading) {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <span className="text-lg font-medium">Loading...</span>
+    </div>
+  );
+}
 
   if (!user) {
     // Not authenticated → redirect to login/home

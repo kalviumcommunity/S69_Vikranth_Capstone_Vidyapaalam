@@ -129,10 +129,40 @@ const deleteSkill = async (req, res) => {
   }
 };
 
+const updateInterestedSkills = async (req, res) => {
+  const { skills } = req.body;
+  const userId = req.user.id;
+
+  if (!Array.isArray(skills)) {
+    return res.status(400).json({ message: 'Skills must be an array of skill IDs.' });
+  }
+
+  try {
+    const user = await User.findById(userId);
+
+    if (!user || user.role !== 'student') {
+      return res.status(403).json({ message: 'Only students can update interested skills.' });
+    }
+
+    user.interestedSkills = skills;
+    await user.save();
+
+    const populatedUser = await user.populate('interestedSkills', 'name category');
+    res.status(200).json({
+      message: 'Interested skills updated successfully.',
+      interestedSkills: populatedUser.interestedSkills,
+    });
+  } catch (error) {
+    console.error('Error updating interested skills:', error);
+    res.status(500).json({ message: 'Server error while updating interested skills', error: error.message });
+  }
+};
+
 module.exports = {
   createSkill,
   getSkills,
   getSkillById,
   updateSkill,
   deleteSkill,
+  updateInterestedSkills
 };
