@@ -29,6 +29,81 @@ function generateRefreshToken(user) {
   return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 }
 
+// async function googleLogin(req, res) {
+//   try {
+//     const { credential } = req.body;
+//     if (!credential) {
+//       return res.status(400).json({ message: "Google credential is required." });
+//     }
+
+//     const ticket = await client.verifyIdToken({
+//       idToken: credential,
+//       audience: process.env.GOOGLE_CLIENT_ID,
+//     });
+
+//     const payload = ticket.getPayload();
+//     const googleId = payload.sub;
+//     const email = payload.email.toLowerCase();
+//     const name = payload.name;
+
+//     let user = await User.findOne({ googleId });
+
+//     let isNewUser = false;
+
+//     // If user with googleId not found, try finding by email
+//     if (!user) {
+//       user = await User.findOne({ email });
+
+//       if (user) {
+//         // Link existing account to Google
+//         if (!user.googleId) {
+//           user.googleId = googleId;
+//           user.isGoogleUser = true;
+//           await user.save();
+//         }
+//       } else {
+//         // Create a new user
+//         user = new User({
+//           name,
+//           email,
+//           googleId,
+//           isGoogleUser: true,
+//           isVerified: true,
+//         });
+//         await user.save();
+//         isNewUser = true;
+//       }
+//     }
+
+//     // Generate tokens
+//     const accessToken = generateAccessToken(user);
+//     const refreshToken = generateRefreshToken(user);
+
+//     // Save tokens to DB
+//     user.activeToken = accessToken;
+//     user.refreshToken = refreshToken;
+//     await user.save();
+
+//     res
+//       .cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
+//       .cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
+//       .status(200)
+//       .json({
+//         message: "Google login successful",
+//         isNewUser,
+//         user: {
+//           id: user._id,
+//           name: user.name,
+//           email: user.email,
+//         }
+//       });
+
+//   } catch (error) {
+//     console.error("Google Login Error:", error);
+//     res.status(401).json({ message: "Invalid Google token", error: error.message });
+//   }
+// }
+
 async function googleLogin(req, res) {
   try {
     const { credential } = req.body;
@@ -36,6 +111,7 @@ async function googleLogin(req, res) {
       return res.status(400).json({ message: "Google credential is required." });
     }
 
+    // ✅ Verify Google token
     const ticket = await client.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
@@ -47,46 +123,44 @@ async function googleLogin(req, res) {
     const name = payload.name;
 
     let user = await User.findOne({ googleId });
-
     let isNewUser = false;
 
-    // If user with googleId not found, try finding by email
     if (!user) {
       user = await User.findOne({ email });
 
       if (user) {
-        // Link existing account to Google
+        // ✅ Link Google ID to existing user
         if (!user.googleId) {
           user.googleId = googleId;
           user.isGoogleUser = true;
           await user.save();
         }
       } else {
-        // Create a new user
+        // ✅ Create new Google user
         user = new User({
           name,
           email,
           googleId,
           isGoogleUser: true,
           isVerified: true,
+          password: null, // 🔐 explicitly set
         });
         await user.save();
         isNewUser = true;
       }
     }
 
-    // Generate tokens
+    // ✅ Generate and save tokens
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // Save tokens to DB
     user.activeToken = accessToken;
     user.refreshToken = refreshToken;
     await user.save();
 
     res
-      .cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
-      .cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
+      .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
+      .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
       .status(200)
       .json({
         message: "Google login successful",
@@ -95,7 +169,7 @@ async function googleLogin(req, res) {
           id: user._id,
           name: user.name,
           email: user.email,
-        }
+        },
       });
 
   } catch (error) {
