@@ -10,7 +10,7 @@ const port = process.env.PORT;
 app.use(express.json());
 
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'https://gregarious-sprinkles-9e14c9.netlify.app/',
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization']
