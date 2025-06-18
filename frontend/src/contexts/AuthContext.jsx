@@ -133,7 +133,7 @@ export function AuthProvider({ children }) {
   return (
     <AuthContext.Provider
       value={{
-        user, // Renamed from 'user' to 'currentUser' for clarity, but keeping 'user' for now to match your code.
+        user, 
         loading,
         login,
         signup,
