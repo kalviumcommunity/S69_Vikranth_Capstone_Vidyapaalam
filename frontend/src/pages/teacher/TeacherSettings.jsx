@@ -273,16 +273,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "@/hooks/use-toast";
-import {
-  BellIcon,
-  ShieldCheckIcon,
-} from "@heroicons/react/24/outline";
+} from "../../components/ui/card";
 
 const TeacherSettings = () => {
   const [activePage, setActivePage] = useState("security");
@@ -308,18 +299,10 @@ const TeacherSettings = () => {
   const handlePasswordChange = (e) => {
     e.preventDefault();
     if (formData.newPassword !== formData.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match.",
-        variant: "destructive",
-      });
+      alert("New passwords do not match.");
       return;
     }
-    // TODO: call API to update password
-    toast({
-      title: "Success",
-      description: "Your password has been updated.",
-    });
+    alert("Your password has been updated.");
     setFormData((prev) => ({
       ...prev,
       currentPassword: "",
@@ -330,12 +313,11 @@ const TeacherSettings = () => {
 
   const handleToggleNotification = (key) => {
     setNotifications((prev) => ({ ...prev, [key]: !prev[key] }));
-    toast({
-      title: "Updated",
-      description: `${key.charAt(0).toUpperCase() + key.slice(1)} notifications ${
+    alert(
+      `${key.charAt(0).toUpperCase() + key.slice(1)} notifications ${
         notifications[key] ? "disabled" : "enabled"
-      }.`,
-    });
+      }.`
+    );
   };
 
   return (
@@ -345,7 +327,6 @@ const TeacherSettings = () => {
       transition={{ duration: 0.3 }}
       className="py-10 px-4 md:px-6 lg:px-8 max-w-3xl mx-auto space-y-8 bg-white"
     >
-      {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-3xl font-semibold text-gray-900 mb-2">
           Account Settings
@@ -355,33 +336,29 @@ const TeacherSettings = () => {
 
       {/* Tabs */}
       <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-        <Button
-          variant={activePage === "security" ? "default" : "outline"}
-          className={
+        <button
+          className={`px-4 py-2 rounded-md font-medium transition ${
             activePage === "security"
               ? "bg-orange-500 text-white"
-              : "bg-white text-orange-500 border border-orange-500"
-          }
+              : "border border-orange-500 text-orange-500"
+          }`}
           onClick={() => setActivePage("security")}
         >
-          <ShieldCheckIcon className="h-5 w-5 mr-2" />
           Security
-        </Button>
-        <Button
-          variant={activePage === "notifications" ? "default" : "outline"}
-          className={
+        </button>
+        <button
+          className={`px-4 py-2 rounded-md font-medium transition ${
             activePage === "notifications"
               ? "bg-orange-500 text-white"
-              : "bg-white text-orange-500 border border-orange-500"
-          }
+              : "border border-orange-500 text-orange-500"
+          }`}
           onClick={() => setActivePage("notifications")}
         >
-          <BellIcon className="h-5 w-5 mr-2" />
           Notifications
-        </Button>
+        </button>
       </div>
 
-      <AnimatePresence exitBeforeEnter>
+      <AnimatePresence mode="wait">
         {activePage === "security" ? (
           <motion.div
             key="security"
@@ -392,86 +369,91 @@ const TeacherSettings = () => {
             className="space-y-6"
           >
             {/* Password Card */}
-            <Card className="shadow-md border-gray-100 rounded-lg transition-transform hover:shadow-lg hover:scale-102 duration-200">
+            <Card className="shadow-md border-gray-100 rounded-lg">
               <CardHeader>
                 <CardTitle>Password</CardTitle>
                 <CardDescription>
                   Update your password to keep your account secure.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent>
                 <form onSubmit={handlePasswordChange} className="space-y-4">
-                  {/* Email (read-only) */}
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input
+                    <label htmlFor="email" className="font-medium text-gray-700">
+                      Email Address
+                    </label>
+                    <input
                       id="email"
                       name="email"
                       type="email"
                       value={formData.email}
                       disabled
-                      className="bg-gray-100 border-gray-200 cursor-not-allowed rounded-md"
+                      className="w-full bg-gray-100 border border-gray-300 rounded-md px-3 py-2 text-sm cursor-not-allowed"
                     />
                     <p className="text-xs text-gray-500">
                       To change email, contact support.
                     </p>
                   </div>
-                  {/* Current Password */}
+
                   <div className="grid gap-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <Input
+                    <label htmlFor="current-password" className="font-medium text-gray-700">
+                      Current Password
+                    </label>
+                    <input
                       id="current-password"
                       name="currentPassword"
                       type="password"
                       value={formData.currentPassword}
                       onChange={handleInputChange}
-                      className="border-gray-200 rounded-md focus:ring-2 focus:ring-orange-400"
                       required
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                     />
                   </div>
-                  {/* New Password */}
+
                   <div className="grid gap-2">
-                    <Label htmlFor="new-password">New Password</Label>
-                    <Input
+                    <label htmlFor="new-password" className="font-medium text-gray-700">
+                      New Password
+                    </label>
+                    <input
                       id="new-password"
                       name="newPassword"
                       type="password"
                       value={formData.newPassword}
                       onChange={handleInputChange}
-                      className="border-gray-200 rounded-md focus:ring-2 focus:ring-orange-400"
                       required
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                     />
                   </div>
-                  {/* Confirm Password */}
+
                   <div className="grid gap-2">
-                    <Label htmlFor="confirm-password">
+                    <label htmlFor="confirm-password" className="font-medium text-gray-700">
                       Confirm New Password
-                    </Label>
-                    <Input
+                    </label>
+                    <input
                       id="confirm-password"
                       name="confirmPassword"
                       type="password"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
-                      className="border-gray-200 rounded-md focus:ring-2 focus:ring-orange-400"
                       required
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                     />
                   </div>
-                  {/* Submit */}
+
                   <div className="flex justify-end">
-                    <Button
+                    <button
                       type="submit"
-                      className="bg-orange-500 hover:bg-orange-600 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md font-semibold"
                     >
                       Update Password
-                    </Button>
+                    </button>
                   </div>
                 </form>
               </CardContent>
             </Card>
 
-            {/* Two-Factor Auth Card */}
-            <Card className="shadow-md border-gray-100 rounded-lg transition-transform hover:shadow-lg hover:scale-102 duration-200">
+            {/* 2FA */}
+            <Card className="shadow-md border-gray-100 rounded-lg">
               <CardHeader>
                 <CardTitle>Two-Factor Authentication</CardTitle>
                 <CardDescription>
@@ -487,13 +469,9 @@ const TeacherSettings = () => {
                     Require a verification code on login.
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  className="border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white focus:ring-2 focus:ring-orange-400 rounded-md"
-                  // TODO: toggle 2FA state
-                >
+                <button className="px-4 py-2 border border-orange-500 text-orange-500 rounded-md hover:bg-orange-500 hover:text-white transition">
                   Enable
-                </Button>
+                </button>
               </CardContent>
             </Card>
           </motion.div>
@@ -505,8 +483,7 @@ const TeacherSettings = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {/* Notifications Card */}
-            <Card className="shadow-md border-gray-100 rounded-lg transition-transform hover:shadow-lg hover:scale-102 duration-200">
+            <Card className="shadow-md border-gray-100 rounded-lg">
               <CardHeader>
                 <CardTitle>Notification Preferences</CardTitle>
                 <CardDescription>
@@ -525,16 +502,19 @@ const TeacherSettings = () => {
                     className="flex items-center justify-between"
                     key={key}
                   >
-                    <div className="space-y-0.5">
-                      <Label className="text-gray-700">{label}</Label>
+                    <div>
+                      <label className="text-gray-700 font-medium">
+                        {label}
+                      </label>
                       <p className="text-sm text-gray-500">
-                        {/* Customize descriptions if needed */}
                         {label}.
                       </p>
                     </div>
-                    <Switch
+                    <input
+                      type="checkbox"
                       checked={notifications[key]}
-                      onCheckedChange={() => handleToggleNotification(key)}
+                      onChange={() => handleToggleNotification(key)}
+                      className="w-5 h-5 text-orange-500 border-gray-300 focus:ring-orange-500 rounded"
                     />
                   </div>
                 ))}
