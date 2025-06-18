@@ -81,10 +81,10 @@ const AboutPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
-                <button size="lg">Join as a Learner</button>
+                <button>Join as a Learner</button>
               </Link>
               <Link to="/become-mentor">
-                <button variant="outline" size="lg">Become a Mentor</button>
+                <button >Become a Mentor</button>
               </Link>
             </div>
           </div>
