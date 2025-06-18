@@ -1,4 +1,4 @@
-const Card = ({ children, className = "" }) => {
+export const Card = ({ children, className = "" }) => {
   return (
     <div className={`bg-white rounded-lg shadow-md ${className}`}>
       {children}
@@ -33,4 +33,3 @@ export const CardFooter = ({ children, className = "" }) => {
   return <div className={`px-6 pb-6 pt-4 ${className}`}>{children}</div>;
 };
 
-export default Card;
