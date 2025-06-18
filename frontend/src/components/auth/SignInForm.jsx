@@ -3,6 +3,10 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 
+// CORRECTED: Import the GoogleSignInButton component
+import GoogleSignInButton from './GoogleSignInButton'; 
+
+
 export default function SignInForm({ onSwitchToSignUp, onClose }) {
   const { login, fetchUser } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -29,18 +33,21 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
   };
 
   const handleLoginSuccess = async () => {
-
+    // This fetchUser is crucial as it updates the user state in AuthContext
+    // after successful login (either traditional or Google via cookies)
     const user = await fetchUser();
-    onClose(); 
+    onClose(); // Close the modal/form
 
+    // Navigate based on the fetched user's role
     if (user && user.role) {
       if (user.role === "student") navigate("/student/overview");
       else if (user.role === "teacher") navigate("/teacher/overview");
       else {
         console.warn("User logged in with an unrecognized role:", user.role);
-        navigate("/onboarding"); 
+        navigate("/onboarding"); // Default for other roles or unassigned roles
       }
     } else {
+      // If no user or role is found (e.g., brand new Google user), go to onboarding
       navigate("/onboarding");
     }
   };
@@ -109,7 +116,6 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
         </button>
       </form>
 
-      {/* NEW: Integrate the Google Sign-In Button */}
       <div className="flex items-center justify-between my-4">
         <hr className="flex-grow border-t border-gray-300" />
         <span className="px-3 text-gray-500 text-sm">OR</span>
