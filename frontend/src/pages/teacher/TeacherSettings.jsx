@@ -273,7 +273,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "../../components/ui/card";
 
 const TeacherSettings = () => {
   const [activePage, setActivePage] = useState("security");

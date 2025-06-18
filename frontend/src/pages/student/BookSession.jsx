@@ -280,7 +280,7 @@ import { Calendar as CalendarIcon, Clock, ArrowRight, CreditCard } from "lucide-
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 
 // Mock teacher data
 const mockTeacher = {

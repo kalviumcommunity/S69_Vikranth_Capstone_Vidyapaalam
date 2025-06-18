@@ -25,7 +25,6 @@ export const CardDescription = ({ children, className = "" }) => {
     </p>
   );
 };
-
 export const CardContent = ({ children, className = "" }) => {
   return <div className={`px-6 ${className}`}>{children}</div>;
 };

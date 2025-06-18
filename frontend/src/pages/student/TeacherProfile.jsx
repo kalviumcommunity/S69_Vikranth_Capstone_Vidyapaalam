@@ -2,7 +2,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { useParams, Link } from "react-router-dom";
 import { Star, MessageCircle, Heart, Calendar } from "lucide-react";
-import Card, { CardContent, CardHeader, CardTitle } from "@/components/Card";
+import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 
 // Mock dataset of teachers
 const teachers = [
