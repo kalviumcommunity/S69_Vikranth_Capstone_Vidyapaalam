@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 
 const AboutPage = () => {
@@ -82,10 +81,10 @@ const AboutPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/signup">
-                <Button size="lg">Join as a Learner</Button>
+                <button size="lg">Join as a Learner</button>
               </Link>
               <Link to="/become-mentor">
-                <Button variant="outline" size="lg">Become a Mentor</Button>
+                <button variant="outline" size="lg">Become a Mentor</button>
               </Link>
             </div>
           </div>
