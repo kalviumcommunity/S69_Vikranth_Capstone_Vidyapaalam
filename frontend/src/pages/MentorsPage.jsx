@@ -1,10 +1,39 @@
 import { useState } from "react";
-import { mockMentors } from "@/data/mockData";
 import { Search, MapPin } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const MentorsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
+
+  const mockMentors = [
+    {
+      id: 1,
+      name: "Ayesha Khan",
+      location: "Delhi",
+      rating: 4.8,
+      skills: ["Yoga", "Mindfulness", "Wellness"],
+      bio: "Certified yoga instructor with 5+ years of experience.",
+      image: "https://randomuser.me/api/portraits/women/44.jpg",
+    },
+    {
+      id: 2,
+      name: "Ravi Verma",
+      location: "Mumbai",
+      rating: 4.5,
+      skills: ["Fitness", "Cardio", "Strength"],
+      bio: "Passionate about helping others reach their fitness goals.",
+      image: "https://randomuser.me/api/portraits/men/32.jpg",
+    },
+    {
+      id: 3,
+      name: "Neha Sharma",
+      location: "Bangalore",
+      rating: 4.9,
+      skills: ["Meditation", "Mental Health", "Breathing Techniques"],
+      bio: "Guiding people toward inner peace and balance.",
+      image: "https://randomuser.me/api/portraits/women/68.jpg",
+    },
+  ];
 
   const filteredMentors = mockMentors.filter((mentor) => {
     const matchesName = mentor.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -12,7 +41,6 @@ const MentorsPage = () => {
       skill.toLowerCase().includes(searchQuery.toLowerCase())
     );
     const matchesLocation = mentor.location.toLowerCase().includes(searchQuery.toLowerCase());
-
     return matchesName || matchesSkill || matchesLocation;
   });
 
