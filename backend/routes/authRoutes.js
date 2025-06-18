@@ -8,7 +8,8 @@ const {
   login,
   profile,
   logout,
-  googleLogin,
+  googleAuth,
+  googleAuthCallback,
   refreshToken,
   forgotPassword,
   resetPassword,
@@ -18,16 +19,14 @@ const {
   updateTeachingSkills,
   updateAvailability, 
   updateProfile
-} = require('../controller/authController'); // Corrected path to 'controllers' from 'controller'
+} = require('../controller/authController'); 
 
-// FIX: Destructure 'protect' from the authMiddleware module
 const { protect } = require('../middleware/authMiddleware');
 
 const { loginLimiter } = require('../config/rateLimiter');
 const {
   signupValidationRules,
   loginValidationRules,
-  googleLoginValidationRules,
   validate
 } = require('../middleware/validation');
 
@@ -49,18 +48,14 @@ router.post(
 );
 
 // Protected profile
-router.get('/profile', protect, profile); // Use 'protect' here
+router.get('/profile', protect, profile); 
 
 // Logout (protected)
-router.post('/logout', protect, logout); // Use 'protect' here
+router.post('/logout', protect, logout); 
 
 // OAuth & token routes
-router.post(
-  '/google-login',
-  googleLoginValidationRules,
-  validate,
-  googleLogin
-);
+router.get('/google', googleAuth);         
+router.get('/google/callback', googleAuthCallback);
 
 router.post('/refreshtoken', refreshToken);
 
@@ -72,7 +67,7 @@ router.post('/resetpassword',protect, resetPassword);
 router.get('/verifyemail/:token', verifyEmail);
 
 // Save user role (protected)
-router.patch('/profile/role', protect, saveRole); // Use 'protect' here
+router.patch('/profile/role', protect, saveRole); 
 
 router.patch('/profile/interested-skills', protect, updateInterestedSkills);
 

@@ -1,39 +1,14 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { renderGoogleSignInButton } from "../../utils/googleAuth.js";
 
 export default function SignInForm({ onSwitchToSignUp, onClose }) {
-  const { login, fetchUser, api } = useAuth();
+  const { login, fetchUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
-  const googleButtonRef = useRef();
-
-  useEffect(() => {
-    renderGoogleSignInButton(
-      async (credential) => {
-        try {
-          const { data } = await api.post("/auth/google-login", { credential });
-          await fetchUser();
-          onClose();
-
-          const role = data?.user?.role;
-          if (role === "student") navigate("/student/overview");
-          else if (role === "teacher") navigate("/teacher/overview");
-          else navigate("/onboarding");
-        } catch (err) {
-          alert(err?.response?.data?.message || "Google login failed");
-        }
-      },
-      (error) => {
-        console.error("Google Sign-In error:", error);
-        alert("Google Sign-In failed");
-      }
-    );
-  }, []);
 
   const validate = () => {
     const e = {};
@@ -53,31 +28,39 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
     return ok;
   };
 
+  const handleLoginSuccess = async () => {
+
+    const user = await fetchUser();
+    onClose(); 
+
+    if (user && user.role) {
+      if (user.role === "student") navigate("/student/overview");
+      else if (user.role === "teacher") navigate("/teacher/overview");
+      else {
+        console.warn("User logged in with an unrecognized role:", user.role);
+        navigate("/onboarding"); 
+      }
+    } else {
+      navigate("/onboarding");
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
     try {
-      const loggedInUser = await login(formData.email, formData.password);
-      onClose();
-
-      if (loggedInUser && loggedInUser.role) {
-        if (loggedInUser.role === "student") {
-          navigate("/student/overview");
-        } else if (loggedInUser.role === "teacher") {
-          navigate("/teacher/overview");
-        } else {
-          console.warn("User logged in with an unrecognized role:", loggedInUser.role);
-          navigate("/");
-        }
-      } else {
-        navigate("/onboarding");
-      }
+      await login(formData.email, formData.password); // This sets the authentication cookies
+      await handleLoginSuccess(); // Use the shared success handler
     } catch (err) {
       alert(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoogleLoginError = (errorMessage) => {
+    alert(errorMessage || "Google login failed.");
   };
 
   return (
@@ -126,8 +109,14 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
         </button>
       </form>
 
-      {/* Google Sign-In Button (Rendered via ref) */}
-      <div ref={googleButtonRef} id="google-signin-button" className="w-full flex justify-center mt-4" />
+      {/* NEW: Integrate the Google Sign-In Button */}
+      <div className="flex items-center justify-between my-4">
+        <hr className="flex-grow border-t border-gray-300" />
+        <span className="px-3 text-gray-500 text-sm">OR</span>
+        <hr className="flex-grow border-t border-gray-300" />
+      </div>
+
+      <GoogleSignInButton onSuccess={handleLoginSuccess} onError={handleGoogleLoginError} />
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Don't have an account?{" "}

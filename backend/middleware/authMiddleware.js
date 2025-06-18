@@ -1,61 +1,9 @@
-// const jwt              = require("jsonwebtoken");
-// const User             = require("../models/User");
-// const BlacklistedToken = require("../models/BlackListedToken");
 
-// const authMiddleware = async (req, res, next) => {
-//   try {
-//     const token = req.cookies.accessToken;
-//     if (!token) {
-//       return res.status(401).json({ message: "Auth failed, no token provided" });
-//     }
 
-//     // Blacklist check → forbid and STOP if revoked
-//     const isBlacklisted = await BlacklistedToken.findOne({ token });
-//     if (isBlacklisted) {
-//       return res.status(403).json({ message: "Auth failed, token invalidated" });
-//     }
-
-//     // Verify signature & expiry
-//     let decoded;
-//     try {
-//       decoded = jwt.verify(token, process.env.JWT_SECRET);
-//     } catch (err) {
-//       if (err.name === "TokenExpiredError") {
-//         return res.status(403).json({ message: "Auth failed, token expired" });
-//       }
-//       return res.status(403).json({ message: "Auth failed, invalid token" });
-//     }
-
-//     // Now that decode succeeded, we know decoded.id exists
-//     const userId = decoded.id;
-
-//     // Load user and confirm it matches the stored activeToken
-//     const user = await User.findById(userId).select("activeToken");
-//     if (!user) {
-//       return res.status(404).json({ message: "Auth failed, user not found" });
-//     }
-//     if (user.activeToken !== token) {
-//       return res.status(403).json({ message: "Auth failed, token mismatch" });
-//     }
-
-//     // All checks passed
-//     req.user = { id: userId };
-//     next();
-
-//   } catch (error) {
-//     console.error("Auth middleware error:", error);
-//     return res.status(500).json({ message: "Auth failed, general authentication error" });
-//   }
-// };
-
-// module.exports = authMiddleware;
-
-// src/middleware/authMiddleware.js (This is the one we finalized in the previous turn)
 const jwt = require("jsonwebtoken");
-const User = require("../models/User"); // Correct path to your User model
-const BlacklistedToken = require("../models/BlackListedToken"); // Correct path to your BlacklistedToken model (ensure this filename is correct)
+const User = require("../models/User"); 
+const BlacklistedToken = require("../models/BlackListedToken"); 
 
-// Middleware to protect routes (authentication)
 const protect = async (req, res, next) => {
   try {
     const token = req.cookies.accessToken;
@@ -99,8 +47,6 @@ const protect = async (req, res, next) => {
       return res.status(403).json({ message: "Not authorized, invalid token" });
     }
 
-    // 3. Load user and confirm it matches the stored activeToken
-    // Crucially, select 'activeToken' AND 'role'
     const user = await User.findById(decoded.id).select("activeToken role");
 
     if (!user) {
@@ -117,7 +63,6 @@ const protect = async (req, res, next) => {
       return res.status(403).json({ message: "Not authorized, token mismatch or invalidated" });
     }
 
-    // All checks passed. Attach user information to the request object.
     req.user = { id: user._id, role: user.role || null };
     if (process.env.NODE_ENV !== 'production') {
       console.log('User authenticated. Role:', req.user.role); // Conditional Debug log
@@ -130,18 +75,17 @@ const protect = async (req, res, next) => {
   }
 };
 
-// Middleware to authorize roles
 const authorizeRoles = (...roles) => {
   return (req, res, next) => {
     if (process.env.NODE_ENV !== 'production') {
-      console.log('AuthorizeRoles middleware triggered.'); // Conditional Debug log
-      console.log('Required roles:', roles); // Conditional Debug log
-      console.log('User role:', req.user ? req.user.role : 'N/A'); // Conditional Debug log
+      console.log('AuthorizeRoles middleware triggered.'); 
+      console.log('Required roles:', roles); 
+      console.log('User role:', req.user ? req.user.role : 'N/A'); 
     }
 
     if (!req.user || !req.user.role) {
       if (process.env.NODE_ENV !== 'production') {
-        console.log('No user or role found on request for authorization. Sending 401.'); // Conditional Debug log
+        console.log('No user or role found on request for authorization. Sending 401.'); 
       }
       return res.status(401).json({ message: "Authentication required for role check." });
     }
@@ -155,7 +99,7 @@ const authorizeRoles = (...roles) => {
       });
     }
     if (process.env.NODE_ENV !== 'production') {
-      console.log(`User role '${req.user.role}' authorized.`); // Conditional Debug log
+      console.log(`User role '${req.user.role}' authorized.`); 
     }
     next();
   };

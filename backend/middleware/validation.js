@@ -33,13 +33,6 @@ const loginValidationRules = [
         .withMessage('Password is required'),
 ];
 
-// ✅ Google login validation rule
-const googleLoginValidationRules = [
-    check('credential')
-        .notEmpty()
-        .withMessage('Google credential is required'),
-];
-
 // Common validator middleware
 const validate = (req, res, next) => {
     const errors = validationResult(req);
@@ -52,6 +45,5 @@ const validate = (req, res, next) => {
 module.exports = {
     signupValidationRules,
     loginValidationRules,
-    googleLoginValidationRules,
     validate
 };

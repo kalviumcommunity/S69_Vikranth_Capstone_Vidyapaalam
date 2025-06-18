@@ -10,11 +10,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    sparse: true, 
+    sparse: true,
   },
   password: {
     type: String,
-    },
+  },
   googleId: {
     type: String,
     unique: true,
@@ -22,19 +22,25 @@ const UserSchema = new mongoose.Schema({
   },
   isGoogleUser: { type: Boolean, default: false },
 
+  googleCalendar: {
+    refreshToken: {
+      type: String,
+      default: null,
+    },
+  },
   bio: {
     type: String,
     default: "",
   },
-  phoneNumber: { 
+  phoneNumber: {
     type: String,
     trim: true,
-    default: "", 
+    default: "",
   },
   role: {
     type: String,
     enum: ["student", "teacher", "admin"],
-    default: "teacher", 
+    default: "teacher",
   },
   activeToken: {
     type: String,
@@ -60,11 +66,11 @@ const UserSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
-interestedSkills: [{
-  type: String,
-  trim: true,
-}],
- teachingSkills: [{
+  interestedSkills: [{
+    type: String,
+    trim: true,
+  }],
+  teachingSkills: [{
     type: String,
     trim: true,
   }],
@@ -76,7 +82,8 @@ interestedSkills: [{
     slots: [{
       type: String,
       trim: true,
-    }],}
+    }],
+  }
 });
 
 UserSchema.pre("save", async function (next) {
