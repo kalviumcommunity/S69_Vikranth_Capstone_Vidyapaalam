@@ -11,7 +11,7 @@ const GoogleSignInButton = ({ onSuccess, onError }) => {
 const backendUrl = import.meta.env.VITE_REACT_APP_BACKEND_URL;
   // Function to initiate Google OAuth login via backend
   const handleGoogleLogin = () => {
-    window.location.href = `${backendUrl}/api/auth/google`;
+    window.location.href = `${backendUrl}/auth/google`;
   };
 
   // Effect to handle the redirect from the backend after Google OAuth
