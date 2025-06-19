@@ -623,7 +623,8 @@ async function googleAuthCallback(req, res) {
     user.refreshToken = refreshToken;
     await user.save();
 
-    const redirectUrl = `${process.env.FRONTEND_URL}/login?googleAuthSuccess=true&isNewUser=${isNewUser}`;
+    // --- UPDATED LINE FOR SUCCESS REDIRECT ---
+    const redirectUrl = `${process.env.FRONTEND_URL}/?googleAuthSuccess=true&isNewUser=${isNewUser}`;
 
     res
       .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
@@ -632,7 +633,8 @@ async function googleAuthCallback(req, res) {
 
   } catch (error) {
     console.error("Google Auth Callback Error:", error);
-    const errorRedirectUrl = `${process.env.FRONTEND_URL}/login?googleAuthSuccess=false&error=${encodeURIComponent(error.message)}`;
+    // --- UPDATED LINE FOR ERROR REDIRECT ---
+    const errorRedirectUrl = `${process.env.FRONTEND_URL}/?googleAuthSuccess=false&error=${encodeURIComponent(error.message)}`;
     res.redirect(errorRedirectUrl);
   }
 }
