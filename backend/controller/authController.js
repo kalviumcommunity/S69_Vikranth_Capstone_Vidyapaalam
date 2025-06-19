@@ -524,7 +524,7 @@ const BlacklistedToken = require('../models/BlackListedToken');
 const oAuth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.BASE_URL + '/api/auth/google/callback'
+  process.env.BASE_URL + '/auth/google/callback'
 );
 
 
