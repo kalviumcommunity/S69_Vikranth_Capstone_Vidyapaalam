@@ -32,25 +32,30 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
     return ok;
   };
 
-  const handleLoginSuccess = async () => {
-    // This fetchUser is crucial as it updates the user state in AuthContext
-    // after successful login (either traditional or Google via cookies)
-    const user = await fetchUser();
-    onClose(); // Close the modal/form
+  const handleLoginSuccess = async ({ isNewUser }) => {
+  const user = await fetchUser();
+  onClose();
 
-    // Navigate based on the fetched user's role
-    if (user && user.role) {
-      if (user.role === "student") navigate("/student/overview");
-      else if (user.role === "teacher") navigate("/teacher/overview");
-      else {
-        console.warn("User logged in with an unrecognized role:", user.role);
-        navigate("/onboarding"); // Default for other roles or unassigned roles
-      }
+  if (isNewUser) {
+    console.log("New Google user detected. Navigating to /onboarding.");
+    navigate("/onboarding");
+    return;
+  }
+
+  if (user && user.role) {
+    if (user.role === "student") {
+      navigate("/student/overview");
+    } else if (user.role === "teacher") {
+      navigate("/teacher/overview");
     } else {
-      // If no user or role is found (e.g., brand new Google user), go to onboarding
+      console.warn("User logged in with an unrecognized role:", user.role);
       navigate("/onboarding");
     }
-  };
+  } else {
+    console.warn("User data or role missing after login (not a new user). Navigating to /onboarding.");
+    navigate("/onboarding");
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
