@@ -1,7 +1,7 @@
 // routes/calendarApiRoutes.js
 const express = require('express');
-const calendarController = require('../controllers/calendarController'); // Ensure correct path
-const { protect } = require('../middleware/authMiddleware'); // Your authentication middleware
+const calendarController = require('../controller/calendarController'); 
+const { protect } = require('../middleware/authMiddleware'); 
 
 const router = express.Router();
 

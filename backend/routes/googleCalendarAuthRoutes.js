@@ -1,6 +1,6 @@
 // routes/googleCalendarAuthRoutes.js
 const express = require('express');
-const calendarController = require('../controllers/calendarController'); // Ensure correct path
+const calendarController = require('../controller/calendarController'); // Ensure correct path
 const { protect } = require('../middleware/authMiddleware'); // Your authentication middleware
 
 const router = express.Router();
