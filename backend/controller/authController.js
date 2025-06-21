@@ -619,7 +619,7 @@ function generateAccessToken(user) {
 }
 
 function generateRefreshToken(user) {
-  const payload = { id: user._2id, email: user.email };
+  const payload = { id: user._id, email: user.email };
   return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 }
 
