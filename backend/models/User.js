@@ -26,6 +26,24 @@ const UserSchema = new mongoose.Schema({
     refreshToken: {
       type: String,
       default: null,
+      select: false,
+    },
+    accessToken: { // <-- NEW FIELD: To store the short-lived access token
+      type: String,
+      default: null,
+      select: false,
+    },
+    accessTokenExpiryDate: { // <-- NEW FIELD: To store when the access token expires
+      type: Date,
+      default: null,
+      select: false,
+    },
+    connected: {
+      type: Boolean,
+      default: false,
+    },
+    lastConnected: {
+      type: Date,
     },
   },
   bio: {
@@ -87,7 +105,7 @@ const UserSchema = new mongoose.Schema({
 });
 
 UserSchema.pre("save", async function (next) {
-  if (this.isModified("password") && this.password) { // Added check for password existence
+  if (this.isModified("password") && this.password) {
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
   }
