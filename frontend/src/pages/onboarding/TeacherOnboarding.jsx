@@ -793,6 +793,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
   const [date, setDate] = useState(new Date());
   // State for selected time slots (array of strings)
   const [selectedSlots, setSelectedSlots] = useState([]);
+  // State for Google Calendar busy times fetched from backend
+  const [busyTimes, setBusyTimes] = useState([]); // <-- State to store busy times
 
   // State for form validation errors
   const [errors, setErrors] = useState({});
@@ -815,7 +817,107 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       }));
       setTeachingSkills(authUser.teachingSkills || []);
     }
-  }, [authUser, authLoading, step]);
+
+    // --- NEW/UPDATED LOGIC FOR GOOGLE CALENDAR REDIRECT HANDLING ---
+    const params = new URLSearchParams(window.location.search);
+    const calendarAuthStatus = params.get('calendarAuthStatus');
+    const calendarAuthError = params.get('error');
+    const isGoogleAuthCallback = params.has('code') && params.has('state'); // Check for the initial Google Auth redirect
+
+    if (calendarAuthStatus) {
+      if (calendarAuthStatus === 'success') {
+        toast.success("Google Calendar connected successfully!");
+        // Important: Re-fetch user data to update AuthContext with new googleCalendarConnected status
+        // and trigger re-render if needed.
+        if (typeof api.get === 'function') {
+          api.get('/auth/profile', { withCredentials: true })
+            .then(response => {
+              // Assuming AuthContext updates its user state with this response
+              console.log("Profile refetched after calendar success:", response.data);
+            })
+            .catch(err => console.error("Failed to refetch user profile after calendar auth:", err));
+        } else {
+          console.warn("API instance not available for refetching profile after calendar success.");
+        }
+      } else {
+        toast.error(`Failed to connect Google Calendar: ${decodeURIComponent(calendarAuthError || 'Unknown error.')}`);
+      }
+      // Clean up URL parameters to avoid re-displaying toast on refresh
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (isGoogleAuthCallback) {
+      // This is the initial redirect *from* Google, but *before* your backend redirects.
+      // The backend `googleAuthCallback` will handle this. We don't need to do anything here,
+      // but it's good to be aware of this case.
+      // We *do not* clean the URL here because the backend still needs the 'code' parameter.
+    }
+  }, [authUser, authLoading, step, api]); // Added 'api' to dependencies
+
+  // --- NEW: Effect to fetch busy times when date or connection status changes ---
+  useEffect(() => {
+    const fetchBusyTimes = async () => {
+      // Ensure we have a date, the calendar is connected, and the API instance is available
+      if (!date || !authUser?.googleCalendarConnected || !api) {
+        setBusyTimes([]); // Clear busy times if conditions aren't met
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // Format the date to 'YYYY-MM-DD' for the backend API
+        const formattedDate = date.toISOString().split('T')[0];
+        const response = await api.get(`/api/calendar/busy-times?date=${formattedDate}`);
+        setBusyTimes(response.data.busyTimes || []);
+        console.log(`Fetched busy times for ${formattedDate}:`, response.data.busyTimes);
+      } catch (error) {
+        console.error("Failed to fetch busy times:", error.response?.data || error.message);
+        toast.error(error.response?.data?.message || "Failed to fetch busy times from Google Calendar.");
+        setBusyTimes([]); // Clear busy times on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    // Only fetch busy times if we are on the availability step
+    if (step === "availability") {
+      fetchBusyTimes();
+    }
+  }, [date, authUser?.googleCalendarConnected, api, step]); // Dependencies
+
+  // Helper function to check if a given time slot overlaps with any busy times
+  const isSlotBusy = useCallback((slot) => {
+    if (!busyTimes || busyTimes.length === 0) return false;
+
+    // Parse the slot string (e.g., "09:00 AM - 10:00 AM") into start and end Date objects
+    // relative to the currently selected `date`.
+    const [startTimeStr, endTimeStr] = slot.split(' - ');
+    const selectedDateISO = date.toISOString().split('T')[0]; // Get YYYY-MM-DD for consistency
+
+    const parseTime = (timeStr) => {
+      const [time, period] = timeStr.split(' ');
+      let [hours, minutes] = time.split(':').map(Number);
+      if (period === 'PM' && hours !== 12) hours += 12;
+      if (period === 'AM' && hours === 12) hours = 0; // Midnight (12 AM) is 0 hours
+
+      const d = new Date(selectedDateISO); // Start with the selected date
+      d.setHours(hours, minutes, 0, 0); // Set hours, minutes, seconds, milliseconds
+      return d;
+    };
+
+    const slotStart = parseTime(startTimeStr);
+    const slotEnd = parseTime(endTimeStr);
+
+    // Check for overlap with each busy event
+    for (const busyEvent of busyTimes) {
+      const busyStart = new Date(busyEvent.start);
+      const busyEnd = new Date(busyEvent.end);
+
+      // Overlap condition: (slotStart < busyEnd) AND (slotEnd > busyStart)
+      if (slotStart < busyEnd && slotEnd > busyStart) {
+        return true; // This slot overlaps with a busy period
+      }
+    }
+    return false;
+  }, [busyTimes, date]); // Dependencies for useCallback
 
   // Handler for standard input changes (fullName, phone, bio)
   const handleInputChange = (e) => {
@@ -894,6 +996,21 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     }
   }, []);
 
+  // --- NEW: Google Calendar Connection Handler ---
+  const handleConnectGoogleCalendar = async () => {
+    setIsLoading(true);
+    try {
+      // Your backend should redirect to Google's OAuth consent screen
+      const response = await api.get("/auth/google/auth-url");
+      const { authUrl } = response.data;
+      window.location.href = authUrl; // Redirect the user to Google for authentication
+    } catch (error) {
+      console.error("Error connecting Google Calendar:", error.response?.data || error.message);
+      toast.error(error.response?.data?.message || "Failed to initiate Google Calendar connection.");
+      setIsLoading(false); // Only set loading to false if we don't redirect
+    }
+  };
+
   // Form validation logic based on the current step
   const validateForm = (currentStep) => {
     let isValid = true;
@@ -934,14 +1051,19 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
         console.log("Validation: teachingSkills length is NOT 0. Proceeding.");
       }
     } else if (currentStep === "availability") {
+      if (!authUser?.googleCalendarConnected) {
+        newErrors.googleCalendar = "Please connect your Google Calendar to proceed.";
+        isValid = false;
+      } else {
         if (!date) { // A date must be selected
-            newErrors.date = "Please select a date for your availability.";
-            isValid = false;
+          newErrors.date = "Please select a date for your availability.";
+          isValid = false;
         }
         if (selectedSlots.length === 0) { // At least one time slot must be selected
-            newErrors.selectedSlots = "Please select at least one time slot.";
-            isValid = false;
+          newErrors.selectedSlots = "Please select at least one time slot.";
+          isValid = false;
         }
+      }
     }
 
     setErrors(newErrors);
@@ -960,9 +1082,9 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
 
     // First, run client-side validation
     if (!validateForm(currentStep)) {
-        console.log("handleSubmit: validateForm returned FALSE. Stopping submission.");
-        toast.error("Please correct the errors in the form before continuing.");
-        return; // Halt execution if validation fails
+      console.log("handleSubmit: validateForm returned FALSE. Stopping submission.");
+      toast.error("Please correct the errors in the form before continuing.");
+      return; // Halt execution if validation fails
     }
 
     console.log("handleSubmit: validateForm returned TRUE. Proceeding to API call.");
@@ -970,7 +1092,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
 
     try {
       let dataToSend = {}; // Data payload for the API request
-      let endpoint = "";   // API endpoint for the current step
+      let endpoint = "";  // API endpoint for the current step
 
       // Determine the data and endpoint based on the current step
       if (currentStep === "info") {
@@ -989,7 +1111,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       } else if (currentStep === "availability") {
         dataToSend = {
           date: date.toISOString(), // Convert Date object to ISO string
-          slots: selectedSlots,    // Array of selected time slots
+          slots: selectedSlots, // Array of selected time slots
         };
         endpoint = "/auth/profile/availability"; // Endpoint for availability update
       }
@@ -1014,26 +1136,26 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
 
   // Handler for when the entire onboarding flow is completed
   const handleCompleteOnboarding = async () => {
-      setIsLoading(true); // Show loading indicator
-      try {
-          // Send a PATCH request to mark the teacher onboarding as complete
-          // Assumes you have a `teacherOnboardingComplete` boolean field in your User schema
-          await api.patch("/auth/profile", { teacherOnboardingComplete: true });
+    setIsLoading(true); // Show loading indicator
+    try {
+      // Send a PATCH request to mark the teacher onboarding as complete
+      // Assumes you have a `teacherOnboardingComplete` boolean field in your User schema
+      await api.patch("/auth/profile", { teacherOnboardingComplete: true });
 
-          toast.success("Onboarding complete! Welcome to the teacher community.");
-          onComplete(); // Call the parent's onComplete prop to navigate to the dashboard
-      } catch (error) {
-          console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
-          toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
-      } finally {
-          setIsLoading(false); // Always reset loading state
-      }
+      toast.success("Onboarding complete! Welcome to the teacher community.");
+      onComplete(); // Call the parent's onComplete prop to navigate to the dashboard
+    } catch (error) {
+      console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
+      toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
+    } finally {
+      setIsLoading(false); // Always reset loading state
+    }
   };
 
   // --- Render based on AuthContext loading status ---
   // If AuthContext is still loading initial user data, show a loading message
   if (authLoading) {
-      return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
+    return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
   }
 
   // --- Conditional Rendering for Each Onboarding Step UI ---
@@ -1133,22 +1255,22 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
           <div className="mt-5 mb-2">
             <label htmlFor="customSkill" className="block text-sm font-medium text-gray-700 mb-1">Add Custom Skill</label>
             <div className="flex gap-2">
-                <input
-                    type="text"
-                    id="customSkill"
-                    value={customSkillInput}
-                    onChange={handleCustomSkillInputChange}
-                    placeholder="e.g., Chess Coaching"
-                    className="block w-full p-2 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out flex-grow
-                      border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                />
-                <button
-                    type="button"
-                    onClick={handleAddCustomSkill}
-                    className="bg-blue-500 text-white py-2 px-3 rounded-md border-none cursor-pointer text-sm font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    Add
-                </button>
+              <input
+                type="text"
+                id="customSkill"
+                value={customSkillInput}
+                onChange={handleCustomSkillInputChange}
+                placeholder="e.g., Chess Coaching"
+                className="block w-full p-2 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out flex-grow
+                     border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomSkill}
+                className="bg-blue-500 text-white py-2 px-3 rounded-md border-none cursor-pointer text-sm font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add
+              </button>
             </div>
           </div>
 
@@ -1175,16 +1297,16 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
 
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex justify-between pt-4 gap-4">
-                <button type="button" onClick={onBack} disabled={isLoading || authLoading}
-                  className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                  Back
-                </button>
-                <button type="submit" disabled={isLoading || authLoading}
-                  className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isLoading ? "Saving..." : "Continue"}
-                </button>
-            </div>
+          <div className="flex justify-between pt-4 gap-4">
+            <button type="button" onClick={onBack} disabled={isLoading || authLoading}
+              className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+              Back
+            </button>
+            <button type="submit" disabled={isLoading || authLoading}
+              className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isLoading ? "Saving..." : "Continue"}
+            </button>
+          </div>
         </form>
       </div>
     );
@@ -1194,50 +1316,90 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     return (
       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
         <h2 className="text-2xl font-semibold text-gray-900 mb-6">Set Your Availability</h2>
-        <p className="text-sm text-gray-600 mb-6">
-          Select dates and time slots when you're available to teach.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-base font-medium text-gray-800 mb-2">Select Dates</h3>
-            <div className="rounded-md border border-gray-300 overflow-hidden">
-              <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
+        {errors.googleCalendar && (
+          <p className="text-red-500 text-sm mb-4">{errors.googleCalendar}</p>
+        )}
+
+        {authUser?.googleCalendarConnected ? (
+          // Display existing calendar and time slot selection
+          <>
+            <p className="text-sm text-gray-600 mb-6">
+              Select dates and time slots when you're available to teach. Your Google Calendar busy times will be highlighted.
+            </p>
+            {/* Google Calendar status display */}
+            <div className="flex items-center text-green-600 text-sm mb-4">
+              <CheckIcon className="h-4 w-4 mr-2" />
+              Google Calendar connected. Automatically fetching busy times.
             </div>
-            {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
-          </div>
-          <div>
-            <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {timeSlots.map((slot) => (
-                <div
-                  key={slot}
-                  onClick={() => handleSlotToggle(slot)}
-                  className={`p-2 border rounded-md cursor-pointer transition-colors duration-200 ease-in-out
-                    ${selectedSlots.includes(slot) ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>{slot}</span>
-                    {selectedSlots.includes(slot) && (
-                      <CheckIcon className="h-4 w-4 text-blue-600" />
-                    )}
-                  </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-base font-medium text-gray-800 mb-2">Select Date</h3>
+                <div className="rounded-md border border-gray-300 overflow-hidden">
+                  <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
                 </div>
-              ))}
+                {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+              </div>
+              <div>
+                <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
+                <div className="grid grid-cols-1 gap-2">
+                  {timeSlots.map((slot) => (
+                    <div
+                      key={slot}
+                      onClick={() => {
+                        if (!isSlotBusy(slot)) { // Only allow toggle if not busy
+                          handleSlotToggle(slot);
+                        } else {
+                          toast.info("This slot is unavailable due to your Google Calendar.");
+                        }
+                      }}
+                      className={`p-2 border rounded-md transition-colors duration-200 ease-in-out
+                        ${selectedSlots.includes(slot) ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
+                        ${isSlotBusy(slot) ? "bg-red-100 border-red-300 text-gray-500 cursor-not-allowed opacity-70" : "cursor-pointer"}`} // Add busy styling
+                    >
+                      <div className="flex items-center justify-between">
+                        <span>{slot}</span>
+                        {selectedSlots.includes(slot) && !isSlotBusy(slot) && (
+                          <CheckIcon className="h-4 w-4 text-blue-600" />
+                        )}
+                        {isSlotBusy(slot) && ( // Indicate busy slots
+                          <span className="text-red-500 text-xs font-semibold">BUSY</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {errors.selectedSlots && <p className="text-red-500 text-sm mt-1">{errors.selectedSlots}</p>}
+              </div>
             </div>
-            {errors.selectedSlots && <p className="text-red-500 text-sm mt-1">{errors.selectedSlots}</p>}
+          </>
+        ) : (
+          // Display Connect Google Calendar button if not connected
+          <div className="text-center py-8">
+            <p className="mb-4 text-gray-700">
+              Connect your Google Calendar to automatically sync your availability and avoid booking conflicts. This is a required step to set your availability.
+            </p>
+            <button
+              type="button"
+              onClick={handleConnectGoogleCalendar}
+              disabled={isLoading || authLoading}
+              className="bg-red-500 text-white py-2.5 px-6 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mx-auto"
+            >
+              {isLoading ? "Connecting..." : "Connect Google Calendar"}
+            </button>
           </div>
-        </div>
+        )}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex justify-between pt-4 gap-4">
-                <button type="button" onClick={onBack} disabled={isLoading || authLoading}
-                  className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                  Back
-                </button>
-                <button type="submit" disabled={isLoading || authLoading}
-                  className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
-                  {isLoading ? "Saving..." : "Continue"}
-                </button>
-            </div>
+          <div className="flex justify-between pt-4 gap-4">
+            <button type="button" onClick={onBack} disabled={isLoading || authLoading}
+              className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+              Back
+            </button>
+            <button type="submit" disabled={isLoading || authLoading || !authUser?.googleCalendarConnected}
+              className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+              {isLoading ? "Saving..." : "Continue"}
+            </button>
+          </div>
         </form>
       </div>
     );
@@ -1268,7 +1430,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     );
   }
 
-  return null; // Render nothing if 'step' prop doesn't match
+  return null;
 };
 
 export default TeacherOnboarding;
