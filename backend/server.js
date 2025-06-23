@@ -30,7 +30,7 @@ const calendarApiRoutes = require('./routes/calendarApiRoutes');
 app.use('/auth', authRoutes); 
 app.use('/api/skills', skillRoutes);
 app.use('/api/teacher-profiles', teacherProfileRoutes);
-app.use('/auth/google', googleCalendarAuthRoutes);
+app.use('/auth/calendar', googleCalendarAuthRoutes); 
 app.use('/api/calendar', calendarApiRoutes); 
 
 // Base route
