@@ -745,7 +745,6 @@ import { toast } from "sonner"; // Toast notification library
 
 import { useAuth } from "../../contexts/AuthContext"; // Auth context hook
 
-// --- Static Data for Time Slots and Skills ---
 const timeSlots = [
   "09:00 AM - 10:00 AM",
   "10:00 AM - 11:00 AM",
@@ -773,35 +772,23 @@ const skills = [
   { id: "fitness", label: "Fitness & Exercise" },
 ];
 
-// --- TeacherOnboarding Component ---
 const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
-  // Destructure `api` (Axios instance), `user` (authenticated user data),
-  // and `loading` (auth context loading state) from AuthContext.
   const { api, user: authUser, loading: authLoading } = useAuth();
 
-  // State for form data
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
     bio: "",
   });
-  // State for teaching skills (array of strings)
   const [teachingSkills, setTeachingSkills] = useState([]);
-  // State for custom skill input field
   const [customSkillInput, setCustomSkillInput] = useState("");
-  // State for availability date
   const [date, setDate] = useState(new Date());
-  // State for selected time slots (array of strings)
   const [selectedSlots, setSelectedSlots] = useState([]);
-  // State for Google Calendar busy times fetched from backend
   const [busyTimes, setBusyTimes] = useState([]); // <-- State to store busy times
 
-  // State for form validation errors
   const [errors, setErrors] = useState({});
-  // State for loading/submission status
   const [isLoading, setIsLoading] = useState(false);
 
-  // Effect to pre-fill form data if authUser exists and is loaded
   useEffect(() => {
     console.log("TeacherOnboarding mounted or re-rendered. Current step:", step);
     console.log("Current teachingSkills state in useEffect:", teachingSkills);
@@ -818,7 +805,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       setTeachingSkills(authUser.teachingSkills || []);
     }
 
-    // --- NEW/UPDATED LOGIC FOR GOOGLE CALENDAR REDIRECT HANDLING ---
     const params = new URLSearchParams(window.location.search);
     const calendarAuthStatus = params.get('calendarAuthStatus');
     const calendarAuthError = params.get('error');
@@ -827,12 +813,9 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     if (calendarAuthStatus) {
       if (calendarAuthStatus === 'success') {
         toast.success("Google Calendar connected successfully!");
-        // Important: Re-fetch user data to update AuthContext with new googleCalendarConnected status
-        // and trigger re-render if needed.
         if (typeof api.get === 'function') {
           api.get('/auth/profile', { withCredentials: true })
             .then(response => {
-              // Assuming AuthContext updates its user state with this response
               console.log("Profile refetched after calendar success:", response.data);
             })
             .catch(err => console.error("Failed to refetch user profile after calendar auth:", err));
@@ -845,17 +828,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       // Clean up URL parameters to avoid re-displaying toast on refresh
       window.history.replaceState({}, document.title, window.location.pathname);
     } else if (isGoogleAuthCallback) {
-      // This is the initial redirect *from* Google, but *before* your backend redirects.
-      // The backend `googleAuthCallback` will handle this. We don't need to do anything here,
-      // but it's good to be aware of this case.
-      // We *do not* clean the URL here because the backend still needs the 'code' parameter.
     }
   }, [authUser, authLoading, step, api]); // Added 'api' to dependencies
 
-  // --- NEW: Effect to fetch busy times when date or connection status changes ---
   useEffect(() => {
     const fetchBusyTimes = async () => {
-      // Ensure we have a date, the calendar is connected, and the API instance is available
       if (!date || !authUser?.googleCalendarConnected || !api) {
         setBusyTimes([]); // Clear busy times if conditions aren't met
         return;
@@ -863,7 +840,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
 
       setIsLoading(true);
       try {
-        // Format the date to 'YYYY-MM-DD' for the backend API
         const formattedDate = date.toISOString().split('T')[0];
         const response = await api.get(`/api/calendar/busy-times?date=${formattedDate}`);
         setBusyTimes(response.data.busyTimes || []);
@@ -877,18 +853,14 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       }
     };
 
-    // Only fetch busy times if we are on the availability step
     if (step === "availability") {
       fetchBusyTimes();
     }
   }, [date, authUser?.googleCalendarConnected, api, step]); // Dependencies
 
-  // Helper function to check if a given time slot overlaps with any busy times
   const isSlotBusy = useCallback((slot) => {
     if (!busyTimes || busyTimes.length === 0) return false;
 
-    // Parse the slot string (e.g., "09:00 AM - 10:00 AM") into start and end Date objects
-    // relative to the currently selected `date`.
     const [startTimeStr, endTimeStr] = slot.split(' - ');
     const selectedDateISO = date.toISOString().split('T')[0]; // Get YYYY-MM-DD for consistency
 
@@ -906,12 +878,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     const slotStart = parseTime(startTimeStr);
     const slotEnd = parseTime(endTimeStr);
 
-    // Check for overlap with each busy event
     for (const busyEvent of busyTimes) {
       const busyStart = new Date(busyEvent.start);
       const busyEnd = new Date(busyEvent.end);
 
-      // Overlap condition: (slotStart < busyEnd) AND (slotEnd > busyStart)
       if (slotStart < busyEnd && slotEnd > busyStart) {
         return true; // This slot overlaps with a busy period
       }
@@ -919,19 +889,16 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     return false;
   }, [busyTimes, date]); // Dependencies for useCallback
 
-  // Handler for standard input changes (fullName, phone, bio)
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setErrors((prevErrors) => ({ ...prevErrors, [name]: "" })); // Clear error for this field
   };
 
-  // Handler for custom skill input field changes
   const handleCustomSkillInputChange = (e) => {
     setCustomSkillInput(e.target.value);
   };
 
-  // Handler for toggling predefined skill selection (checkboxes)
   const handleSkillToggle = useCallback((skillId) => {
     setTeachingSkills((prev) => {
       const newState = prev.includes(skillId)
@@ -943,7 +910,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" })); // Clear skill error
   }, []);
 
-  // Handler for removing a skill from the selected skills (tags)
   const handleRemoveSkill = useCallback((skillToRemove) => {
     setTeachingSkills((prev) => {
       const newState = prev.filter((skill) => skill !== skillToRemove);
@@ -953,7 +919,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" })); // Clear skill error
   }, []);
 
-  // Handler for adding a custom skill
   const handleAddCustomSkill = useCallback(() => {
     const trimmedSkill = customSkillInput.trim();
     if (!trimmedSkill) {
@@ -1001,7 +966,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     setIsLoading(true);
     try {
       // Your backend should redirect to Google's OAuth consent screen
-      const response = await api.get("/auth/google/auth-url");
+      const response = await api.get("/auth/calendar/auth-url");
       const { authUrl } = response.data;
       window.location.href = authUrl; // Redirect the user to Google for authentication
     } catch (error) {
