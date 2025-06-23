@@ -605,7 +605,7 @@ const oAuth2Client = new google.auth.OAuth2(
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
+  secure: true,
   sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
   path: '/',
 };
