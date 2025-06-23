@@ -77,11 +77,7 @@ const calendarScopes = [
   'https://www.googleapis.com/auth/calendar.readonly',       // Read calendar list (to get primary calendar if needed)
 ];
 
-/**
- * @desc Generates the Google OAuth URL for calendar connection
- * @route GET /auth/google-calendar/auth-url (Mounted under /auth/google-calendar in app.js)
- * @access Private (Teacher)
- */
+
 exports.googleCalendarAuthUrl = (req, res) => {
   if (!req.user || !req.user._id) {
     return res.status(401).json({ message: 'Authentication required to connect calendar.' });
@@ -97,11 +93,7 @@ exports.googleCalendarAuthUrl = (req, res) => {
   res.json({ authUrl });
 };
 
-/**
- * @desc Handles the Google OAuth callback for calendar connection
- * @route GET /auth/google-calendar/callback (Mounted under /auth/google-calendar in app.js)
- * @access Public (Google redirects here)
- */
+
 exports.googleCalendarAuthCallback = async (req, res) => {
   const { code, state: userId, error } = req.query; // 'state' will be the user ID
 
@@ -159,11 +151,7 @@ exports.googleCalendarAuthCallback = async (req, res) => {
 };
 
 
-/**
- * @desc Fetches busy times for a specific date from Google Calendar
- * @route GET /api/calendar/busy-times (Mounted under /api/calendar in app.js)
- * @access Private (Teacher)
- */
+
 
 exports.getGoogleCalendarBusyTimes = async (req, res) => {
   const { date } = req.query; 
