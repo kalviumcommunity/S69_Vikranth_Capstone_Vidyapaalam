@@ -87,14 +87,14 @@ api.interceptors.response.use(
     if (
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
-      originalRequest.url !== "/auth/refresh"
+      originalRequest.url !== "/auth/refreshtoken" // Changed this line to match backend route
     ) {
       originalRequest._retry = true;
       console.log("Interceptor: Access token expired or invalid. Attempting to refresh token...");
 
       try {
-        const refreshResponse = await axios.post(
-          "https://s69-vikranth-capstone-vidyapaalam.onrender.com/auth/refresh",
+        await axios.post(
+          "https://s69-vikranth-capstone-vidyapaalam.onrender.com/auth/refreshtoken", // Changed this line to match backend route
           {},
           { withCredentials: true }
         );
