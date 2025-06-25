@@ -709,7 +709,7 @@ const skills = [
 ];
 
 const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
-  const { api, user: authUser, loading: authLoading } = useAuth();
+  const { api, user: authUser, loading: authLoading, fetchUser } = useAuth(); 
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -748,17 +748,14 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       if (calendarAuthStatus === 'success') {
         toast.success("Google Calendar connected successfully!");
 
-        // This is the key part: if the URL parameter indicates 'availability',
-        // use the onSetStep prop to tell the parent (OnboardingPage) to change its step.
         if (nextStepParam === 'availability' && typeof onSetStep === 'function') {
           onSetStep('availability');
         }
 
-        // Refetch user profile to get updated Google Calendar connection status.
         if (typeof api.get === 'function') {
           api.get('/auth/profile', { withCredentials: true })
-            .then(response => {
-              // console.log("Profile refetched after calendar success:", response.data);
+            .then(() => { 
+              fetchUser(); 
             })
             .catch(err => console.error("Failed to refetch user profile after calendar auth:", err));
         } else {
@@ -767,18 +764,16 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       } else {
         toast.error(`Failed to connect Google Calendar: ${decodeURIComponent(calendarAuthError || 'Unknown error.')}`);
       }
-      // Clean up URL parameters to prevent re-displaying toast or re-triggering logic on refresh.
       const newSearchParams = new URLSearchParams(location.search);
       newSearchParams.delete('calendarAuthStatus');
       newSearchParams.delete('error');
       newSearchParams.delete('nextStep');
       navigate({ search: newSearchParams.toString() }, { replace: true });
     } 
-  }, [authUser, authLoading, step, api, location.search, navigate, onSetStep]);
+  }, [authUser, authLoading, step, api, location.search, navigate, onSetStep, fetchUser]);
 
   useEffect(() => {
     const fetchBusyTimes = async () => {
-      // Only fetch busy times if a date is selected, user is connected to Google Calendar, and API is available.
       if (!date || !authUser?.googleCalendarConnected || !api) {
         setBusyTimes([]);
         return;
@@ -798,7 +793,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       }
     };
 
-    // Fetch busy times only when on the 'availability' step.
     if (step === "availability") {
       fetchBusyTimes();
     }
@@ -828,8 +822,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       const busyStart = new Date(busyEvent.start);
       const busyEnd = new Date(busyEvent.end);
 
-      // Check for overlap: [slotStart, slotEnd) overlaps with [busyStart, busyEnd)
-      // if slotStart < busyEnd AND slotEnd > busyStart
       if (slotStart < busyEnd && slotEnd > busyStart) {
         return true;
       }
@@ -910,7 +902,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     } catch (error) {
       console.error("Error connecting Google Calendar:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Failed to initiate Google Calendar connection.");
-      setIsLoading(false); // Reset loading if redirection doesn't happen
+      setIsLoading(false); // Reset loading if error occurs
     }
   };
 
@@ -940,7 +932,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         isValid = false;
       }
     } else if (currentStep === "availability") {
-      if (!authUser?.googleCalendarConnected) { // Check if Google Calendar is connected
+      if (!authUser?.googleCalendarConnected) {
         newErrors.googleCalendar = "Please connect your Google Calendar to proceed.";
         isValid = false;
       } else {
@@ -994,10 +986,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         endpoint = "/auth/profile/availability";
       }
 
-      const response = await api.patch(endpoint, dataToSend);
+      await api.patch(endpoint, dataToSend);
 
       toast.success("Information saved successfully!");
-      onNext(); // Advance to the next step
+      onNext();
 
     } catch (error) {
       console.error("Onboarding step failed:", error.response?.data || error.message, error);
@@ -1010,11 +1002,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const handleCompleteOnboarding = async () => {
     setIsLoading(true);
     try {
-      // Mark teacher onboarding as complete in the backend profile.
       await api.patch("/auth/profile", { teacherOnboardingComplete: true });
 
       toast.success("Onboarding complete! Welcome to the teacher community.");
-      onComplete(); // Call parent's onComplete to navigate to dashboard
+      onComplete();
     } catch (error) {
       console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
       toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
@@ -1027,7 +1018,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
   }
 
-  // --- Conditional Rendering for Each Onboarding Step UI ---
   if (step === "info") {
     return (
       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
@@ -1042,7 +1032,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
               value={formData.fullName}
               onChange={handleInputChange}
               placeholder="John Doe"
-              // Removed disabled={isLoading} from input fields
               className={`block w-full p-2.5 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
                 ${errors.fullName ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
             />
@@ -1059,7 +1048,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
               value={formData.phone}
               onChange={handleInputChange}
               placeholder="+1 (555) 123-4567"
-              // Removed disabled={isLoading} from input fields
               className={`block w-full p-2.5 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
                 ${errors.phone ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
             />
@@ -1073,7 +1061,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
               value={formData.bio}
               onChange={handleInputChange}
               placeholder="Share information about your background and teaching style"
-              // Removed disabled={isLoading} from input fields
               className={`block w-full p-2.5 rounded-md border shadow-sm text-base min-h-[80px] outline-none resize-y transition-all duration-200 ease-in-out
                 ${errors.bio ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
             />
