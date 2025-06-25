@@ -9,8 +9,10 @@ const GOOGLE_CALENDAR_CLIENT = new google.auth.OAuth2(
 );
 
 const calendarScopes = [
-  'https://www.googleapis.com/auth/calendar.events.readonly', 
+  'https://www.googleapis.com/auth/calendar.events', 
   'https://www.googleapis.com/auth/calendar.readonly',       
+    'https://www.googleapis.com/auth/userinfo.email', 
+    'https://www.googleapis.com/auth/userinfo.profile', 
 ];
 
 
@@ -31,7 +33,7 @@ exports.googleCalendarAuthUrl = (req, res) => {
     access_type: 'offline', 
     scope: calendarScopes.join(' '), 
     prompt: 'consent', 
-    state: req.user.id.toString(), 
+    state: req.user.id.toString(), // Use req.user.id as set by protect middleware
   });
 
   res.json({ authUrl });
@@ -40,7 +42,7 @@ exports.googleCalendarAuthUrl = (req, res) => {
 
 
 exports.googleCalendarAuthCallback = async (req, res) => {
-  const { code, state: userId, error } = req.query; 
+  const { code, state: userId, error } = req.query; // 'state' will be the user ID
 
   if (error) {
     console.error("Google Calendar Auth Callback Error:", error);
@@ -71,12 +73,14 @@ exports.googleCalendarAuthCallback = async (req, res) => {
 
     await user.save();
 
-    res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=success`);
+    console.log(`Google Calendar connected for user: ${user.email}. Redirecting to availability step.`);
+
+    res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=success&nextStep=availability`);
 
   } catch (err) {
     console.error("Error exchanging Google code for tokens or saving to DB:", err);
     if (err.code === 400 && err.message.includes('invalid_grant')) {
-      const user = await User.findById(userId); 
+      const user = await User.findById(userId); // Fetch user again to clear token status
       if (user) {
         user.googleCalendar.connected = false;
         user.googleCalendar.refreshToken = null;
@@ -140,7 +144,7 @@ exports.getGoogleCalendarBusyTimes = async (req, res) => {
         user.googleCalendar.refreshToken = credentials.refresh_token;
       }
       await user.save();
-      userOAuth2Client.setCredentials(credentials); // Use new tokens
+      userOAuth2Client.setCredentials(credentials); 
     } else if (isAccessTokenExpired && !user.googleCalendar.refreshToken) {
 
       console.error(`Access token expired and no refresh token for user ${userId}. Requires re-authentication.`);
@@ -156,7 +160,7 @@ exports.getGoogleCalendarBusyTimes = async (req, res) => {
 
     const selectedDate = new Date(date);
     if (isNaN(selectedDate.getTime())) {
-      return res.status(400).json({ message: "Invalid date format. Please use THAT-MM-DD." });
+      return res.status(400).json({ message: "Invalid date format. Please use YYYY-MM-DD." }); // Corrected "THAT-MM-DD"
     }
 
     const startOfDay = new Date(selectedDate.setUTCHours(0, 0, 0, 0)).toISOString();
