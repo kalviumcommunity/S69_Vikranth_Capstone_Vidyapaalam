@@ -709,7 +709,6 @@ const skills = [
 ];
 
 const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
-  // Import fetchUser from useAuth to update the context's user state
   const { api, user: authUser, loading: authLoading, fetchUser } = useAuth(); 
 
   const [formData, setFormData] = useState({
@@ -754,9 +753,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         }
 
         if (typeof api.get === 'function') {
+          // Removed 'response' parameter as its data is not directly used here,
+          // fetchUser() will get the latest data.
           api.get('/auth/profile', { withCredentials: true })
-            .then(response => {
-              fetchUser(); 
+            .then(() => { // No 'response' parameter
+              fetchUser(); // This is the CRITICAL ADDITION: Call fetchUser to update AuthContext
             })
             .catch(err => console.error("Failed to refetch user profile after calendar auth:", err));
         } else {
@@ -899,11 +900,12 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     try {
       const response = await api.get("/auth/calendar/auth-url");
       const { authUrl } = response.data;
-      window.location.href = authUrl;
+      setIsLoading(false); // Set loading to false RIGHT BEFORE redirection
+      window.location.href = authUrl; // Redirect user to Google for OAuth flow
     } catch (error) {
       console.error("Error connecting Google Calendar:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Failed to initiate Google Calendar connection.");
-      setIsLoading(false);
+      setIsLoading(false); // Reset loading if error occurs
     }
   };
 
@@ -987,7 +989,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         endpoint = "/auth/profile/availability";
       }
 
-      const response = await api.patch(endpoint, dataToSend);
+      await api.patch(endpoint, dataToSend);
 
       toast.success("Information saved successfully!");
       onNext();
