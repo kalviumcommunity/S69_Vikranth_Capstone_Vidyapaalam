@@ -1,749 +1,9 @@
-
-
-// import React, { useState, useCallback, useEffect } from "react";
-// import { Calendar } from "@/components/ui/calendar";
-// import { CheckIcon } from "lucide-react";
-// import { toast } from "sonner";
-
-// import { useAuth } from "../../contexts/AuthContext";
-
-// const timeSlots = [
-//   "09:00 AM - 10:00 AM",
-//   "10:00 AM - 11:00 AM",
-//   "11:00 AM - 12:00 PM",
-//   "01:00 PM - 02:00 PM",
-//   "02:00 PM - 03:00 PM",
-//   "03:00 PM - 04:00 PM",
-//   "04:00 PM - 05:00 PM",
-//   "05:00 PM - 06:00 PM",
-//   "06:00 PM - 07:00 PM",
-// ];
-
-// const skills = [
-//   { id: "painting", label: "Painting" },
-//   { id: "music", label: "Music" },
-//   { id: "cooking", label: "Cooking" },
-//   { id: "programming", label: "Programming" },
-//   { id: "yoga", label: "Yoga" },
-//   { id: "dancing", label: "Dancing" },
-//   { id: "photography", label: "Photography" },
-//   { id: "writing", label: "Creative Writing" },
-//   { id: "languages", label: "Languages" },
-//   { id: "crafts", label: "Arts & Crafts" },
-//   { id: "gardening", label: "Gardening" },
-//   { id: "fitness", label: "Fitness & Exercise" },
-// ];
-
-// const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
-//   const { api, user: authUser, loading: authLoading } = useAuth();
-
-//   const [formData, setFormData] = useState({
-//     fullName: "",
-//     phone: "",
-//     bio: "",
-//   });
-//   const [teachingSkills, setTeachingSkills] = useState([]);
-//   const [customSkillInput, setCustomSkillInput] = useState(""); // New state for custom skill input
-//   const [date, setDate] = useState(new Date());
-//   const [selectedSlots, setSelectedSlots] = useState([]);
-
-//   const [errors, setErrors] = useState({});
-//   const [isLoading, setIsLoading] = useState(false);
-
-//   useEffect(() => {
-//     console.log("TeacherOnboarding mounted or re-rendered. Current step:", step);
-//     console.log("Current teachingSkills state in useEffect:", teachingSkills);
-//     console.log("Current formData state in useEffect:", formData);
-
-//     if (authUser && step === "info" && !authLoading) {
-//       console.log("Pre-filling form with authUser data:", authUser);
-//       setFormData((prev) => ({
-//         ...prev,
-//         fullName: authUser.name || "",
-//         phone: authUser.phoneNumber || "",
-//         bio: authUser.bio || "",
-//       }));
-//       setTeachingSkills(authUser.teachingSkills || []);
-//     }
-//   }, [authUser, authLoading, step]);
-
-//   const handleInputChange = (e) => {
-//     const { name, value } = e.target;
-//     setFormData((prev) => ({ ...prev, [name]: value }));
-//     setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
-//   };
-
-//   const handleCustomSkillInputChange = (e) => {
-//     setCustomSkillInput(e.target.value);
-//   };
-
-//   const handleSkillToggle = useCallback((skillId) => {
-//     setTeachingSkills((prev) => {
-//       const newState = prev.includes(skillId)
-//         ? prev.filter((id) => id !== skillId)
-//         : [...prev, skillId];
-//       console.log("Skill Toggled. New teachingSkills state:", newState);
-//       return newState;
-//     });
-//     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
-//   }, []);
-
-//   const handleRemoveSkill = useCallback((skillToRemove) => {
-//     setTeachingSkills((prev) => {
-//       const newState = prev.filter((skill) => skill !== skillToRemove);
-//       console.log("Skill Removed. New teachingSkills state:", newState);
-//       return newState;
-//     });
-//     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
-//   }, []);
-
-//   const handleAddCustomSkill = useCallback(() => {
-//     const trimmedSkill = customSkillInput.trim();
-//     if (!trimmedSkill) {
-//       toast.error("Custom skill cannot be empty.");
-//       return;
-//     }
-//     if (teachingSkills.includes(trimmedSkill.toLowerCase())) { // Case-insensitive check for duplicates
-//       toast.error("This skill has already been added.");
-//       return;
-//     }
-
-//     setTeachingSkills((prev) => {
-//       const newState = [...prev, trimmedSkill.toLowerCase()]; // Add in lowercase for consistency
-//       console.log("Custom Skill Added. New teachingSkills state:", newState);
-//       return newState;
-//     });
-//     setCustomSkillInput(""); // Clear the input field
-//     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
-//   }, [customSkillInput, teachingSkills]);
-
-//   const handleSlotToggle = useCallback((slot) => {
-//     setSelectedSlots((prev) => {
-//       const newState = prev.includes(slot)
-//         ? prev.filter((s) => s !== slot)
-//         : [...prev, slot];
-//       console.log("Slot Toggled. New selectedSlots state:", newState);
-//       return newState;
-//     });
-//     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
-//   }, []);
-
-//   const handleDateSelect = useCallback((selectedDate) => {
-//     if (selectedDate instanceof Date) {
-//       setDate(selectedDate);
-//       console.log("Date Selected. New date state:", selectedDate);
-//       setErrors((prevErrors) => ({ ...prevErrors, date: "" }));
-//     }
-//   }, []);
-
-//   const validateForm = (currentStep) => {
-//     let isValid = true;
-//     const newErrors = {};
-
-//     console.group(`--- validateForm called for step: ${currentStep} ---`);
-//     console.log("Initial isValid:", isValid);
-//     console.log("Current teachingSkills (inside validateForm):", teachingSkills);
-//     console.log("Length of teachingSkills (inside validateForm):", teachingSkills.length);
-//     console.log("Current formData (inside validateForm):", formData);
-//     console.log("Current date (inside validateForm):", date);
-//     console.log("Current selectedSlots (inside validateForm):", selectedSlots);
-
-
-//     if (currentStep === "info") {
-//       if (!formData.fullName.trim()) {
-//         newErrors.fullName = "Full Name is required";
-//         isValid = false;
-//       }
-//       if (!formData.phone.trim()) {
-//         newErrors.phone = "Phone Number is required";
-//         isValid = false;
-//       } else if (!/^\+?\d{10,15}$/.test(formData.phone)) {
-//         newErrors.phone = "Invalid phone number format. Use +CountryCode and 10-15 digits.";
-//         isValid = false;
-//       }
-//       if (!formData.bio.trim()) {
-//         newErrors.bio = "A short bio is required";
-//         isValid = false;
-//       }
-//     } else if (currentStep === "expertise") {
-//       console.log("Entering expertise validation block.");
-//       if (teachingSkills.length === 0) {
-//         newErrors.teachingSkills = "Please select or add at least one skill.";
-//         isValid = false;
-//         console.log("Validation: teachingSkills length is 0. Setting isValid to false.");
-//       } else {
-//         console.log("Validation: teachingSkills length is NOT 0. Proceeding.");
-//       }
-//     } else if (currentStep === "availability") {
-//         if (!date) {
-//             newErrors.date = "Please select a date for your availability.";
-//             isValid = false;
-//         }
-//         if (selectedSlots.length === 0) {
-//             newErrors.selectedSlots = "Please select at least one time slot.";
-//             isValid = false;
-//         }
-//     }
-
-//     setErrors(newErrors);
-//     console.log("Errors after setErrors (inside validateForm):", newErrors);
-//     console.log("Final isValid for step", currentStep, ":", isValid);
-//     console.groupEnd();
-//     return isValid;
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     const currentStep = step;
-
-//     console.log(`--- handleSubmit called for step: ${currentStep} ---`);
-
-//     if (!validateForm(currentStep)) {
-//         console.log("handleSubmit: validateForm returned FALSE. Stopping submission.");
-//         toast.error("Please correct the errors in the form before continuing.");
-//         return;
-//     }
-
-//     console.log("handleSubmit: validateForm returned TRUE. Proceeding to API call.");
-//     setIsLoading(true);
-
-//     try {
-//       let dataToSend = {};
-//       let endpoint = "";
-
-//       if (currentStep === "info") {
-//         dataToSend = {
-//           name: formData.fullName,
-//           phone: formData.phone,
-//           bio: formData.bio,
-//         };
-//         endpoint = "/auth/profile";
-//       } else if (currentStep === "expertise") {
-//         dataToSend = {
-//           teachingSkills: teachingSkills,
-//         };
-//         endpoint = "/auth/profile/teaching-skills";
-//         console.log("handleSubmit: Data to send for expertise:", dataToSend);
-//       } else if (currentStep === "availability") {
-//         dataToSend = {
-//           date: date.toISOString(),
-//           slots: selectedSlots,
-//         };
-//         endpoint = "/auth/profile/availability";
-//       }
-
-//       console.log(`handleSubmit: Making API call to ${endpoint} with data:`, dataToSend);
-//       const response = await api.patch(endpoint, dataToSend);
-//       console.log("handleSubmit: API call successful! Response data:", response.data);
-
-//       toast.success("Information saved successfully!");
-//       onNext();
-
-//     } catch (error) {
-//       console.error("handleSubmit: Onboarding step failed in try/catch block:", error.response?.data || error.message, error);
-//       toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
-//     } finally {
-//       setIsLoading(false);
-//       console.log("handleSubmit: Exiting finally block.");
-//     }
-//   };
-
-//   const handleCompleteOnboarding = async () => {
-//       setIsLoading(true);
-//       try {
-//           await api.patch("/auth/profile", { teacherOnboardingComplete: true });
-
-//           toast.success("Onboarding complete! Welcome to the teacher community.");
-//           onComplete();
-//       } catch (error) {
-//           console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
-//           toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
-//       } finally {
-//           setIsLoading(false);
-//       }
-//   };
-
-//   if (authLoading) {
-//       return <div style={styles.loadingContainer}>Loading User Data...</div>;
-//   }
-
-//   if (step === "info") {
-//     return (
-//       <div style={styles.container}>
-//         <h2 style={styles.heading}>Basic Information</h2>
-//         <form onSubmit={handleSubmit} style={styles.form}>
-//           <div style={styles.formGroup}>
-//             <label htmlFor="fullName" style={styles.label}>Full Name</label>
-//             <input
-//               type="text"
-//               id="fullName"
-//               name="fullName"
-//               value={formData.fullName}
-//               onChange={handleInputChange}
-//               placeholder=""
-//               style={{ ...styles.input, ...(errors.fullName ? styles.inputError : {}) }}
-//             />
-//             {errors.fullName && (
-//               <p style={styles.errorText}>{errors.fullName}</p>
-//             )}
-//           </div>
-//           <div style={styles.formGroup}>
-//             <label htmlFor="phone" style={styles.label}>Phone Number</label>
-//             <input
-//               type="text"
-//               id="phone"
-//               name="phone"
-//               value={formData.phone}
-//               onChange={handleInputChange}
-//               placeholder="+1 (555) 123-4567"
-//               style={{ ...styles.input, ...(errors.phone ? styles.inputError : {}) }}
-//             />
-//             {errors.phone && <p style={styles.errorText}>{errors.phone}</p>}
-//           </div>
-//           <div style={styles.formGroup}>
-//             <label htmlFor="bio" style={styles.label}>About You</label>
-//             <textarea
-//               id="bio"
-//               name="bio"
-//               value={formData.bio}
-//               onChange={handleInputChange}
-//               placeholder="Share information about your background and teaching style"
-//               style={{ ...styles.textarea, ...(errors.bio ? styles.inputError : {}) }}
-//             />
-//             {errors.bio && <p style={styles.errorText}>{errors.bio}</p>}
-//           </div>
-//           <div style={styles.buttonGroup}>
-//             <button type="button" onClick={onBack} disabled={isLoading || authLoading} style={styles.buttonOutline}>
-//               Back
-//             </button>
-//             <button type="submit" disabled={isLoading || authLoading} style={styles.buttonPrimary}>
-//               {isLoading ? "Saving..." : "Continue"}
-//             </button>
-//           </div>
-//         </form>
-//       </div>
-//     );
-//   }
-
-//   if (step === "expertise") {
-//     return (
-//       <div style={styles.container}>
-//         <h2 style={styles.heading}>Your Expertise</h2>
-//         <div style={styles.section}>
-//           <h3 style={styles.subheading}>Skills You Can Teach</h3>
-//           <div style={styles.skillsGrid}>
-//             {skills.map((skill) => (
-//               <div key={skill.id} style={styles.skillItem}>
-//                 <input
-//                   type="checkbox"
-//                   id={skill.id}
-//                   checked={teachingSkills.includes(skill.id)}
-//                   onChange={() => handleSkillToggle(skill.id)}
-//                   style={styles.checkbox}
-//                 />
-//                 <label htmlFor={skill.id} style={styles.skillLabel}>
-//                   {skill.label}
-//                 </label>
-//               </div>
-//             ))}
-//           </div>
-//           {errors.teachingSkills && (
-//             <p style={styles.errorText}>{errors.teachingSkills}</p>
-//           )}
-
-//           {/* Custom Skill Input */}
-//           <div style={{ ...styles.formGroup, marginTop: '20px' }}>
-//             <label htmlFor="customSkill" style={styles.label}>Add Custom Skill</label>
-//             <div style={{ display: 'flex', gap: '8px' }}>
-//                 <input
-//                     type="text"
-//                     id="customSkill"
-//                     value={customSkillInput}
-//                     onChange={handleCustomSkillInputChange}
-//                     placeholder="e.g., Chess Coaching"
-//                     style={{ ...styles.input, flexGrow: 1 }}
-//                 />
-//                 <button
-//                     type="button"
-//                     onClick={handleAddCustomSkill}
-//                     style={{ ...styles.buttonPrimary, padding: '8px 12px', fontSize: '0.9rem' }}
-//                 >
-//                     Add
-//                 </button>
-//             </div>
-//           </div>
-
-//           {/* Display Selected Skills (Tags) */}
-//           {teachingSkills.length > 0 && (
-//             <div style={{ marginTop: '20px', borderTop: '1px solid #e2e8f0', paddingTop: '15px' }}>
-//               <h4 style={{ ...styles.subheading, fontSize: '1rem', marginBottom: '10px' }}>Selected Skills:</h4>
-//               <div style={styles.selectedSkillsContainer}>
-//                 {teachingSkills.map((skill, index) => (
-//                   <div key={index} style={styles.skillTag}>
-//                     <span>{skill}</span>
-//                     <button
-//                       type="button"
-//                       onClick={() => handleRemoveSkill(skill)}
-//                       style={styles.removeSkillButton}
-//                     >
-//                       &times;
-//                     </button>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-//           )}
-
-//         </div>
-//         <form onSubmit={handleSubmit} style={styles.form}>
-//             <div style={styles.buttonGroup}>
-//                 <button type="button" onClick={onBack} disabled={isLoading || authLoading} style={styles.buttonOutline}>
-//                 Back
-//                 </button>
-//                 <button type="submit" disabled={isLoading || authLoading} style={styles.buttonPrimary}>
-//                 {isLoading ? "Saving..." : "Continue"}
-//                 </button>
-//             </div>
-//         </form>
-//       </div>
-//     );
-//   }
-
-//   if (step === "availability") {
-//     return (
-//       <div style={styles.container}>
-//         <h2 style={styles.heading}>Set Your Availability</h2>
-//         <p style={styles.description}>
-//           Select dates and time slots when you're available to teach.
-//         </p>
-//         <div style={styles.gridColumns}>
-//           <div>
-//             <h3 style={styles.subheading}>Select Dates</h3>
-//             <div style={styles.calendarContainer}>
-//               <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
-//             </div>
-//             {errors.date && <p style={styles.errorText}>{errors.date}</p>}
-//           </div>
-//           <div>
-//             <h3 style={styles.subheading}>Available Time Slots</h3>
-//             <div style={styles.timeSlotsGrid}>
-//               {timeSlots.map((slot) => (
-//                 <div
-//                   key={slot}
-//                   style={{
-//                     ...styles.timeSlotItem,
-//                     ...(selectedSlots.includes(slot) ? styles.timeSlotItemSelected : {})
-//                   }}
-//                   onClick={() => handleSlotToggle(slot)}
-//                 >
-//                   <div style={styles.timeSlotContent}>
-//                     <span>{slot}</span>
-//                     {selectedSlots.includes(slot) && (
-//                       <CheckIcon style={styles.checkIcon} />
-//                     )}
-//                   </div>
-//                 </div>
-//               ))}
-//             </div>
-//             {errors.selectedSlots && <p style={styles.errorText}>{errors.selectedSlots}</p>}
-//           </div>
-//         </div>
-//         <form onSubmit={handleSubmit} style={styles.form}>
-//             <div style={styles.buttonGroup}>
-//                 <button type="button" onClick={onBack} disabled={isLoading || authLoading} style={styles.buttonOutline}>
-//                 Back
-//                 </button>
-//                 <button type="submit" disabled={isLoading || authLoading} style={styles.buttonPrimary}>
-//                 {isLoading ? "Saving..." : "Continue"}
-//                 </button>
-//             </div>
-//         </form>
-//       </div>
-//     );
-//   }
-
-//   if (step === "complete") {
-//     return (
-//       <div style={styles.completeContainer}>
-//         <div style={styles.checkIconContainer}>
-//           <div style={styles.checkIconCircle}>
-//             <CheckIcon style={styles.checkIconLarge} />
-//           </div>
-//         </div>
-//         <div>
-//           <h2 style={styles.heading}>You're All Set!</h2>
-//           <p style={styles.description}>
-//             Your teacher profile has been created. Start sharing your knowledge with eager students!
-//           </p>
-//         </div>
-//         <button
-//           onClick={handleCompleteOnboarding}
-//           disabled={isLoading || authLoading}
-//           style={{...styles.buttonPrimary, ...styles.buttonLarge}}
-//         >
-//           {isLoading ? "Loading..." : "Go to Dashboard"}
-//         </button>
-//       </div>
-//     );
-//   }
-
-//   return null;
-// };
-
-// // --- Inline Styles Object ---
-// const styles = {
-//   container: {
-//     maxWidth: '480px',
-//     margin: '0 auto',
-//     padding: '24px',
-//     borderRadius: '8px',
-//     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-//     backgroundColor: '#fff',
-//     fontFamily: 'Inter, sans-serif',
-//   },
-//   completeContainer: {
-//     maxWidth: '480px',
-//     margin: '0 auto',
-//     padding: '24px',
-//     textAlign: 'center',
-//     fontFamily: 'Inter, sans-serif',
-//   },
-//   heading: {
-//     fontSize: '1.875rem',
-//     fontWeight: '600',
-//     color: '#1a202c',
-//     marginBottom: '24px',
-//   },
-//   subheading: {
-//     fontSize: '1.125rem',
-//     fontWeight: '500',
-//     color: '#2d3748',
-//     marginBottom: '8px',
-//   },
-//   description: {
-//     fontSize: '0.875rem',
-//     color: '#4a5568',
-//     marginTop: '8px',
-//     marginBottom: '24px',
-//   },
-//   form: {
-//     display: 'flex',
-//     flexDirection: 'column',
-//     gap: '16px',
-//   },
-//   formGroup: {
-//     marginBottom: '10px',
-//   },
-//   label: {
-//     display: 'block',
-//     fontSize: '0.875rem',
-//     fontWeight: '500',
-//     color: '#4a5568',
-//     marginBottom: '4px',
-//   },
-//   input: {
-//     display: 'block',
-//     width: '100%',
-//     padding: '10px 12px',
-//     borderRadius: '6px',
-//     border: '1px solid #cbd5e0',
-//     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-//     fontSize: '1rem',
-//     outline: 'none',
-//     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-//   },
-//   inputError: {
-//     borderColor: '#ef4444',
-//   },
-//   textarea: {
-//     display: 'block',
-//     width: '100%',
-//     padding: '10px 12px',
-//     borderRadius: '6px',
-//     border: '1px solid #cbd5e0',
-//     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-//     fontSize: '1rem',
-//     minHeight: '80px',
-//     outline: 'none',
-//     resize: 'vertical',
-//     transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-//   },
-//   buttonGroup: {
-//     display: 'flex',
-//     justifyContent: 'space-between',
-//     paddingTop: '16px',
-//     gap: '16px',
-//   },
-//   buttonPrimary: {
-//     backgroundColor: '#3b82f6',
-//     color: '#fff',
-//     padding: '10px 20px',
-//     borderRadius: '6px',
-//     border: 'none',
-//     cursor: 'pointer',
-//     fontSize: '1rem',
-//     fontWeight: '500',
-//     transition: 'background-color 0.2s ease, opacity 0.2s ease',
-//     flexGrow: 1,
-//   },
-//   buttonOutline: {
-//     backgroundColor: 'transparent',
-//     color: '#4a5568',
-//     padding: '10px 20px',
-//     borderRadius: '6px',
-//     border: '1px solid #cbd5e0',
-//     cursor: 'pointer',
-//     fontSize: '1rem',
-//     fontWeight: '500',
-//     transition: 'background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease',
-//     flexGrow: 1,
-//   },
-//   buttonLarge: {
-//     padding: '12px 24px',
-//     fontSize: '1.125rem',
-//     width: '100%',
-//   },
-//   errorText: {
-//     color: '#ef4444',
-//     fontSize: '0.875rem',
-//     marginTop: '4px',
-//   },
-//   section: {
-//     marginBottom: '24px',
-//   },
-//   skillsGrid: {
-//     display: 'grid',
-//     gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))',
-//     gap: '12px',
-//   },
-//   skillItem: {
-//     display: 'flex',
-//     alignItems: 'center',
-//     gap: '8px',
-//   },
-//   checkbox: {
-//     height: '16px',
-//     width: '16px',
-//     borderRadius: '3px',
-//     border: '1px solid #cbd5e0',
-//     accentColor: '#3b82f6',
-//     cursor: 'pointer',
-//   },
-//   skillLabel: {
-//     fontSize: '0.875rem',
-//     fontWeight: '500',
-//     color: '#4a5568',
-//   },
-//   // Styles for displaying selected skills as tags
-//   selectedSkillsContainer: {
-//     display: 'flex',
-//     flexWrap: 'wrap',
-//     gap: '8px',
-//     marginTop: '10px',
-//   },
-//   skillTag: {
-//     display: 'inline-flex',
-//     alignItems: 'center',
-//     backgroundColor: '#e0f2fe', // Light blue background
-//     color: '#0369a1', // Darker blue text
-//     padding: '6px 10px',
-//     borderRadius: '16px', // Pill shape
-//     fontSize: '0.85rem',
-//     fontWeight: '500',
-//     gap: '6px',
-//     boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-//   },
-//   removeSkillButton: {
-//     backgroundColor: 'transparent',
-//     border: 'none',
-//     color: '#0369a1',
-//     cursor: 'pointer',
-//     fontSize: '1rem',
-//     lineHeight: '1',
-//     padding: '0 2px',
-//     marginLeft: '4px',
-//     transition: 'color 0.2s ease',
-//   },
-//   'removeSkillButton:hover': { // This will need to be applied via a CSS file or CSS-in-JS for true hover
-//     color: '#ef4444', // Red on hover
-//   },
-//   gridColumns: {
-//     display: 'grid',
-//     gridTemplateColumns: '1fr',
-//     gap: '24px',
-//   },
-//   '@media (min-width: 768px)': {
-//     gridColumns: {
-//       gridTemplateColumns: '1fr 1fr',
-//     },
-//   },
-//   calendarContainer: {
-//     borderRadius: '6px',
-//     border: '1px solid #cbd5e0',
-//     overflow: 'hidden',
-//   },
-//   timeSlotsGrid: {
-//     display: 'grid',
-//     gridTemplateColumns: '1fr',
-//     gap: '8px',
-//   },
-//   timeSlotItem: {
-//     padding: '8px',
-//     border: '1px solid #cbd5e0',
-//     borderRadius: '6px',
-//     cursor: 'pointer',
-//     transition: 'background-color 0.2s ease, border-color 0.2s ease',
-//   },
-//   timeSlotItemSelected: {
-//     backgroundColor: '#eff6ff',
-//     borderColor: '#3b82f6',
-//   },
-//   timeSlotContent: {
-//     display: 'flex',
-//     alignItems: 'center',
-//     justifyContent: 'space-between',
-//   },
-//   checkIcon: {
-//     height: '16px',
-//     width: '16px',
-//     color: '#2563eb',
-//   },
-//   checkIconContainer: {
-//     display: 'flex',
-//     justifyContent: 'center',
-//     marginBottom: '32px',
-//   },
-//   checkIconCircle: {
-//     height: '96px',
-//     width: '96px',
-//     borderRadius: '9999px',
-//     backgroundColor: '#d1fae5',
-//     display: 'flex',
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//   },
-//   checkIconLarge: {
-//     height: '48px',
-//     width: '48px',
-//     color: '#047857',
-//   },
-//   loadingContainer: {
-//       textAlign: 'center',
-//       padding: '50px',
-//       fontSize: '1.2rem',
-//       color: '#4a5568',
-//       fontFamily: 'Inter, sans-serif',
-//   }
-// };
-
-// export default TeacherOnboarding;
-
 import React, { useState, useCallback, useEffect } from "react";
-import { Calendar } from "@/components/ui/calendar"; // Assuming this component uses Tailwind internally or is styled separately
-import { CheckIcon } from "lucide-react"; // Icon component
-import { toast } from "sonner"; // Toast notification library
-
-import { useAuth } from "../../contexts/AuthContext"; // Auth context hook
+import { Calendar } from "@/components/ui/calendar";
+import { CheckIcon } from "lucide-react";
+import { toast } from "sonner";
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from "../../contexts/AuthContext";
 
 const timeSlots = [
   "09:00 AM - 10:00 AM",
@@ -772,7 +32,7 @@ const skills = [
   { id: "fitness", label: "Fitness & Exercise" },
 ];
 
-const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
+const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const { api, user: authUser, loading: authLoading } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -784,10 +44,13 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
   const [customSkillInput, setCustomSkillInput] = useState("");
   const [date, setDate] = useState(new Date());
   const [selectedSlots, setSelectedSlots] = useState([]);
-  const [busyTimes, setBusyTimes] = useState([]); // <-- State to store busy times
+  const [busyTimes, setBusyTimes] = useState([]);
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     console.log("TeacherOnboarding mounted or re-rendered. Current step:", step);
@@ -805,14 +68,20 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       setTeachingSkills(authUser.teachingSkills || []);
     }
 
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(location.search);
     const calendarAuthStatus = params.get('calendarAuthStatus');
     const calendarAuthError = params.get('error');
-    const isGoogleAuthCallback = params.has('code') && params.has('state'); // Check for the initial Google Auth redirect
+    const nextStepParam = params.get('nextStep');
 
     if (calendarAuthStatus) {
       if (calendarAuthStatus === 'success') {
         toast.success("Google Calendar connected successfully!");
+
+        if (nextStepParam === 'availability' && typeof onSetStep === 'function') {
+          console.log("TeacherOnboarding: Redirecting to availability step based on URL param.");
+          onSetStep('availability');
+        }
+
         if (typeof api.get === 'function') {
           api.get('/auth/profile', { withCredentials: true })
             .then(response => {
@@ -825,16 +94,18 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       } else {
         toast.error(`Failed to connect Google Calendar: ${decodeURIComponent(calendarAuthError || 'Unknown error.')}`);
       }
-      // Clean up URL parameters to avoid re-displaying toast on refresh
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (isGoogleAuthCallback) {
-    }
-  }, [authUser, authLoading, step, api]); // Added 'api' to dependencies
+      const newSearchParams = new URLSearchParams(location.search);
+      newSearchParams.delete('calendarAuthStatus');
+      newSearchParams.delete('error');
+      newSearchParams.delete('nextStep');
+      navigate({ search: newSearchParams.toString() }, { replace: true });
+    } 
+  }, [authUser, authLoading, step, api, location.search, navigate, onSetStep, teachingSkills, formData]);
 
   useEffect(() => {
     const fetchBusyTimes = async () => {
       if (!date || !authUser?.googleCalendarConnected || !api) {
-        setBusyTimes([]); // Clear busy times if conditions aren't met
+        setBusyTimes([]);
         return;
       }
 
@@ -847,7 +118,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       } catch (error) {
         console.error("Failed to fetch busy times:", error.response?.data || error.message);
         toast.error(error.response?.data?.message || "Failed to fetch busy times from Google Calendar.");
-        setBusyTimes([]); // Clear busy times on error
+        setBusyTimes([]);
       } finally {
         setIsLoading(false);
       }
@@ -856,22 +127,22 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     if (step === "availability") {
       fetchBusyTimes();
     }
-  }, [date, authUser?.googleCalendarConnected, api, step]); // Dependencies
+  }, [date, authUser?.googleCalendarConnected, api, step]);
 
   const isSlotBusy = useCallback((slot) => {
     if (!busyTimes || busyTimes.length === 0) return false;
 
     const [startTimeStr, endTimeStr] = slot.split(' - ');
-    const selectedDateISO = date.toISOString().split('T')[0]; // Get YYYY-MM-DD for consistency
+    const selectedDateISO = date.toISOString().split('T')[0];
 
     const parseTime = (timeStr) => {
       const [time, period] = timeStr.split(' ');
       let [hours, minutes] = time.split(':').map(Number);
       if (period === 'PM' && hours !== 12) hours += 12;
-      if (period === 'AM' && hours === 12) hours = 0; // Midnight (12 AM) is 0 hours
+      if (period === 'AM' && hours === 12) hours = 0;
 
-      const d = new Date(selectedDateISO); // Start with the selected date
-      d.setHours(hours, minutes, 0, 0); // Set hours, minutes, seconds, milliseconds
+      const d = new Date(selectedDateISO);
+      d.setHours(hours, minutes, 0, 0);
       return d;
     };
 
@@ -883,16 +154,16 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       const busyEnd = new Date(busyEvent.end);
 
       if (slotStart < busyEnd && slotEnd > busyStart) {
-        return true; // This slot overlaps with a busy period
+        return true;
       }
     }
     return false;
-  }, [busyTimes, date]); // Dependencies for useCallback
+  }, [busyTimes, date]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prevErrors) => ({ ...prevErrors, [name]: "" })); // Clear error for this field
+    setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
   };
 
   const handleCustomSkillInputChange = (e) => {
@@ -907,7 +178,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       console.log("Skill Toggled. New teachingSkills state:", newState);
       return newState;
     });
-    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" })); // Clear skill error
+    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
   }, []);
 
   const handleRemoveSkill = useCallback((skillToRemove) => {
@@ -916,7 +187,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       console.log("Skill Removed. New teachingSkills state:", newState);
       return newState;
     });
-    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" })); // Clear skill error
+    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
   }, []);
 
   const handleAddCustomSkill = useCallback(() => {
@@ -925,22 +196,20 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       toast.error("Custom skill cannot be empty.");
       return;
     }
-    // Check for duplicates (case-insensitive) among existing skills
     if (teachingSkills.includes(trimmedSkill.toLowerCase())) {
       toast.error("This skill has already been added.");
       return;
     }
 
     setTeachingSkills((prev) => {
-      const newState = [...prev, trimmedSkill.toLowerCase()]; // Add in lowercase for consistency
+      const newState = [...prev, trimmedSkill.toLowerCase()];
       console.log("Custom Skill Added. New teachingSkills state:", newState);
       return newState;
     });
-    setCustomSkillInput(""); // Clear the input field after adding
-    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" })); // Clear skill error
+    setCustomSkillInput("");
+    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
   }, [customSkillInput, teachingSkills]);
 
-  // Handler for toggling time slot selection
   const handleSlotToggle = useCallback((slot) => {
     setSelectedSlots((prev) => {
       const newState = prev.includes(slot)
@@ -949,34 +218,30 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       console.log("Slot Toggled. New selectedSlots state:", newState);
       return newState;
     });
-    setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" })); // Clear slot error
+    setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
   }, []);
 
-  // Handler for calendar date selection
   const handleDateSelect = useCallback((selectedDate) => {
     if (selectedDate instanceof Date) {
       setDate(selectedDate);
       console.log("Date Selected. New date state:", selectedDate);
-      setErrors((prevErrors) => ({ ...prevErrors, date: "" })); // Clear date error
+      setErrors((prevErrors) => ({ ...prevErrors, date: "" }));
     }
   }, []);
 
-  // --- NEW: Google Calendar Connection Handler ---
   const handleConnectGoogleCalendar = async () => {
     setIsLoading(true);
     try {
-      // Your backend should redirect to Google's OAuth consent screen
       const response = await api.get("/auth/calendar/auth-url");
       const { authUrl } = response.data;
-      window.location.href = authUrl; // Redirect the user to Google for authentication
+      window.location.href = authUrl;
     } catch (error) {
       console.error("Error connecting Google Calendar:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Failed to initiate Google Calendar connection.");
-      setIsLoading(false); // Only set loading to false if we don't redirect
+      setIsLoading(false);
     }
   };
 
-  // Form validation logic based on the current step
   const validateForm = (currentStep) => {
     let isValid = true;
     const newErrors = {};
@@ -988,7 +253,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     console.log("Current formData (inside validateForm):", formData);
     console.log("Current date (inside validateForm):", date);
     console.log("Current selectedSlots (inside validateForm):", selectedSlots);
-
 
     if (currentStep === "info") {
       if (!formData.fullName.trim()) {
@@ -1008,7 +272,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
       }
     } else if (currentStep === "expertise") {
       console.log("Entering expertise validation block.");
-      if (teachingSkills.length === 0) { // Must select or add at least one skill
+      if (teachingSkills.length === 0) {
         newErrors.teachingSkills = "Please select or add at least one skill.";
         isValid = false;
         console.log("Validation: teachingSkills length is 0. Setting isValid to false.");
@@ -1020,11 +284,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
         newErrors.googleCalendar = "Please connect your Google Calendar to proceed.";
         isValid = false;
       } else {
-        if (!date) { // A date must be selected
+        if (!date) {
           newErrors.date = "Please select a date for your availability.";
           isValid = false;
         }
-        if (selectedSlots.length === 0) { // At least one time slot must be selected
+        if (selectedSlots.length === 0) {
           newErrors.selectedSlots = "Please select at least one time slot.";
           isValid = false;
         }
@@ -1038,93 +302,80 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
     return isValid;
   };
 
-  // Main submission handler for each step of the onboarding
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent default browser form submission
+    e.preventDefault();
     const currentStep = step;
 
     console.log(`--- handleSubmit called for step: ${currentStep} ---`);
 
-    // First, run client-side validation
     if (!validateForm(currentStep)) {
       console.log("handleSubmit: validateForm returned FALSE. Stopping submission.");
       toast.error("Please correct the errors in the form before continuing.");
-      return; // Halt execution if validation fails
+      return;
     }
 
     console.log("handleSubmit: validateForm returned TRUE. Proceeding to API call.");
-    setIsLoading(true); // Show loading indicator
+    setIsLoading(true);
 
     try {
-      let dataToSend = {}; // Data payload for the API request
-      let endpoint = "";  // API endpoint for the current step
+      let dataToSend = {};
+      let endpoint = "";
 
-      // Determine the data and endpoint based on the current step
       if (currentStep === "info") {
         dataToSend = {
           name: formData.fullName,
           phoneNumber: formData.phone,
           bio: formData.bio,
         };
-        endpoint = "/auth/profile"; // Endpoint for general profile updates
+        endpoint = "/auth/profile";
       } else if (currentStep === "expertise") {
         dataToSend = {
-          teachingSkills: teachingSkills, // Array of selected skills
+          teachingSkills: teachingSkills,
         };
-        endpoint = "/auth/profile/teaching-skills"; // Endpoint for teaching skills update
+        endpoint = "/auth/profile/teaching-skills";
         console.log("handleSubmit: Data to send for expertise:", dataToSend);
       } else if (currentStep === "availability") {
         dataToSend = {
-          date: date.toISOString(), // Convert Date object to ISO string
-          slots: selectedSlots, // Array of selected time slots
+          date: date.toISOString(),
+          slots: selectedSlots,
         };
-        endpoint = "/auth/profile/availability"; // Endpoint for availability update
+        endpoint = "/auth/profile/availability";
       }
 
       console.log(`handleSubmit: Making API call to ${endpoint} with data:`, dataToSend);
-      // Use the `api` Axios instance from AuthContext. It handles `withCredentials: true` automatically.
       const response = await api.patch(endpoint, dataToSend);
       console.log("handleSubmit: API call successful! Response data:", response.data);
 
-      toast.success("Information saved successfully!"); // Show success toast
-      onNext(); // Advance to the next step in the onboarding process
+      toast.success("Information saved successfully!");
+      onNext();
 
     } catch (error) {
-      // Axios errors have a `response` object containing details from the backend
       console.error("handleSubmit: Onboarding step failed in try/catch block:", error.response?.data || error.message, error);
       toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
     } finally {
-      setIsLoading(false); // Always reset loading state
+      setIsLoading(false);
       console.log("handleSubmit: Exiting finally block.");
     }
   };
 
-  // Handler for when the entire onboarding flow is completed
   const handleCompleteOnboarding = async () => {
-    setIsLoading(true); // Show loading indicator
+    setIsLoading(true);
     try {
-      // Send a PATCH request to mark the teacher onboarding as complete
-      // Assumes you have a `teacherOnboardingComplete` boolean field in your User schema
       await api.patch("/auth/profile", { teacherOnboardingComplete: true });
 
       toast.success("Onboarding complete! Welcome to the teacher community.");
-      onComplete(); // Call the parent's onComplete prop to navigate to the dashboard
+      onComplete();
     } catch (error) {
       console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
       toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
     } finally {
-      setIsLoading(false); // Always reset loading state
+      setIsLoading(false);
     }
   };
 
-  // --- Render based on AuthContext loading status ---
-  // If AuthContext is still loading initial user data, show a loading message
   if (authLoading) {
     return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
   }
-
-  // --- Conditional Rendering for Each Onboarding Step UI ---
-  // Each step's UI is rendered using Tailwind CSS classes.
 
   if (step === "info") {
     return (
@@ -1216,7 +467,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
             <p className="text-red-500 text-sm mt-1">{errors.teachingSkills}</p>
           )}
 
-          {/* Custom Skill Input */}
           <div className="mt-5 mb-2">
             <label htmlFor="customSkill" className="block text-sm font-medium text-gray-700 mb-1">Add Custom Skill</label>
             <div className="flex gap-2">
@@ -1226,8 +476,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
                 value={customSkillInput}
                 onChange={handleCustomSkillInputChange}
                 placeholder="e.g., Chess Coaching"
-                className="block w-full p-2 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out flex-grow
-                     border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                className="block w-full p-2 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
+                  border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
               <button
                 type="button"
@@ -1239,7 +489,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
             </div>
           </div>
 
-          {/* Display Selected Skills (Tags) */}
           {teachingSkills.length > 0 && (
             <div className="mt-5 pt-4 border-t border-gray-200">
               <h4 className="text-base font-medium text-gray-800 mb-2">Selected Skills:</h4>
@@ -1259,7 +508,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
               </div>
             </div>
           )}
-
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex justify-between pt-4 gap-4">
@@ -1286,12 +534,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
         )}
 
         {authUser?.googleCalendarConnected ? (
-          // Display existing calendar and time slot selection
           <>
             <p className="text-sm text-gray-600 mb-6">
               Select dates and time slots when you're available to teach. Your Google Calendar busy times will be highlighted.
             </p>
-            {/* Google Calendar status display */}
             <div className="flex items-center text-green-600 text-sm mb-4">
               <CheckIcon className="h-4 w-4 mr-2" />
               Google Calendar connected. Automatically fetching busy times.
@@ -1312,7 +558,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
                     <div
                       key={slot}
                       onClick={() => {
-                        if (!isSlotBusy(slot)) { // Only allow toggle if not busy
+                        if (!isSlotBusy(slot)) {
                           handleSlotToggle(slot);
                         } else {
                           toast.info("This slot is unavailable due to your Google Calendar.");
@@ -1320,14 +566,14 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
                       }}
                       className={`p-2 border rounded-md transition-colors duration-200 ease-in-out
                         ${selectedSlots.includes(slot) ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
-                        ${isSlotBusy(slot) ? "bg-red-100 border-red-300 text-gray-500 cursor-not-allowed opacity-70" : "cursor-pointer"}`} // Add busy styling
+                        ${isSlotBusy(slot) ? "bg-red-100 border-red-300 text-gray-500 cursor-not-allowed opacity-70" : "cursor-pointer"}`}
                     >
                       <div className="flex items-center justify-between">
                         <span>{slot}</span>
                         {selectedSlots.includes(slot) && !isSlotBusy(slot) && (
                           <CheckIcon className="h-4 w-4 text-blue-600" />
                         )}
-                        {isSlotBusy(slot) && ( // Indicate busy slots
+                        {isSlotBusy(slot) && (
                           <span className="text-red-500 text-xs font-semibold">BUSY</span>
                         )}
                       </div>
@@ -1339,7 +585,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete }) => {
             </div>
           </>
         ) : (
-          // Display Connect Google Calendar button if not connected
           <div className="text-center py-8">
             <p className="mb-4 text-gray-700">
               Connect your Google Calendar to automatically sync your availability and avoid booking conflicts. This is a required step to set your availability.
