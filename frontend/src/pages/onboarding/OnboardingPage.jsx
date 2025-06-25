@@ -162,6 +162,8 @@
 
 // src/pages/onboarding/OnboardingPage.jsx
 
+// src/pages/onboarding/OnboardingPage.jsx
+
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -169,12 +171,12 @@ import { useAuth } from "../../contexts/AuthContext.jsx";
 import RoleSelection from "./RoleSelection.jsx";
 import StudentOnboarding from "./StudentOnboarding.jsx";
 import TeacherOnboarding from "./TeacherOnboarding.jsx";
-import { toast } from "sonner";
+import { toast } from "sonner"; // Ensure toast is imported
 
 const OnboardingPage = () => {
   const { api, fetchUser, user: authUser, loading: authLoading } = useAuth();
   const [role, setRole] = useState(null);
-  const [step, setStep] = useState("role");
+  const [step, setStep] = useState("role"); // Default step is 'role'
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -188,62 +190,72 @@ const OnboardingPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!authLoading && authUser) {
-      if (authUser.role && !role) {
-        setRole(authUser.role);
+
+    if (authLoading) {
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const calendarAuthStatus = params.get('calendarAuthStatus');
+    const nextStepParam = params.get('nextStep');
+
+    if (calendarAuthStatus === 'success' && nextStepParam === 'availability') {
+
+      if (role !== 'teacher') {
+        setRole('teacher');
       }
 
-      const params = new URLSearchParams(location.search);
-      const calendarAuthStatus = params.get('calendarAuthStatus');
-      const nextStepParam = params.get('nextStep');
+      handleSetStep('availability');
 
-      if (calendarAuthStatus === 'success' && nextStepParam === 'availability') {
-        if (authUser.role === 'teacher' || !role) {
-          if (!role) setRole('teacher');
-          handleSetStep('availability');
-          const newSearchParams = new URLSearchParams(location.search);
-          newSearchParams.delete('calendarAuthStatus');
-          newSearchParams.delete('error');
-          newSearchParams.delete('nextStep');
-          navigate({ search: newSearchParams.toString() }, { replace: true });
-        }
-      } else if (authUser.role) {
-        if (authUser.role === 'student') {
-            if (authUser.bio && authUser.phoneNumber && authUser.interestedSkills?.length > 0) {
-                handleSetStep('complete');
-            } else if (authUser.bio && authUser.phoneNumber) {
-                handleSetStep('interests');
-            } else {
-                handleSetStep('info');
-            }
-        } else if (authUser.role === 'teacher') {
-            if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0 && authUser.googleCalendar?.connected) {
-                handleSetStep('complete');
-            } else if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0) {
-                handleSetStep('availability');
-            } else if (authUser.bio && authUser.phoneNumber) {
-                handleSetStep('expertise');
-            } else {
-                handleSetStep('info');
-            }
-        } else {
-            handleSetStep('role');
-        }
+      const newSearchParams = new URLSearchParams(location.search);
+      newSearchParams.delete('calendarAuthStatus');
+      newSearchParams.delete('error');
+      newSearchParams.delete('nextStep');
+      navigate({ search: newSearchParams.toString() }, { replace: true });
+
+      return;
+    }
+
+
+    if (authUser) {
+      if (authUser.role && !role) {
+        setRole(authUser.role); // Set the local role state.
+      }
+
+      if (authUser.role === 'student') {
+          if (authUser.bio && authUser.phoneNumber && authUser.interestedSkills?.length > 0) {
+              handleSetStep('complete'); // Student has completed all steps
+          } else if (authUser.bio && authUser.phoneNumber) {
+              handleSetStep('interests'); // Student has basic info, needs interests
+          } else {
+              handleSetStep('info'); // Student needs basic info
+          }
+      } else if (authUser.role === 'teacher') {
+          if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0 && authUser.googleCalendar?.connected) {
+              handleSetStep('complete'); // Teacher has completed all steps including GC
+          } else if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0) {
+              handleSetStep('availability'); // Teacher has skills, needs availability (GC connection or slot selection)
+          } else if (authUser.bio && authUser.phoneNumber) {
+              handleSetStep('expertise'); // Teacher has basic info, needs expertise
+          } else {
+              handleSetStep('info'); // Teacher needs basic info
+          }
+      } else {
+          handleSetStep('role');
       }
     }
-  }, [authUser, authLoading, location.search, navigate, role, handleSetStep]);
+  }, [authUser, authLoading, location.search, navigate, role, handleSetStep, fetchUser]);
 
   const handleRoleSelect = async (selectedRole) => {
     const backendRole = roleMap[selectedRole];
     try {
       await api.patch("/auth/profile/role", { role: backendRole });
-      await fetchUser();
+      await fetchUser(); // Refetch user to update AuthContext with new role
 
       setRole(selectedRole);
-      setStep("info");
+      setStep("info"); // Always go to info after role selection
     } catch (err) {
       console.error("Failed to save role:", err);
-      // Changed from alert to toast.error
       toast.error("Could not save role. Please try again.");
     }
   };
@@ -276,17 +288,17 @@ const OnboardingPage = () => {
   const stepLabels = {
     role: "Choose Role",
     info: "Basic Information",
-    interests: "Interests",
-    expertise: "Expertise",
-    availability: "Availability",
+    interests: "Interests", // Student-specific
+    expertise: "Expertise", // Teacher-specific
+    availability: "Availability", // Teacher-specific
     complete: "Complete",
   };
   const progressMap = {
     role: "20%",
     info: "40%",
     interests: "60%",
-    expertise: "60%",
-    availability: "80%",
+    expertise: "60%", // Teacher step 2
+    availability: "80%", // Teacher step 3
     complete: "100%",
   };
 
@@ -362,6 +374,7 @@ const OnboardingPage = () => {
                 onNext={handleNext}
                 onBack={handleBack}
                 onComplete={handleComplete}
+                onSetStep={handleSetStep} // Keep this for consistency, though student onboarding might not use it
               />
             )}
 
@@ -371,7 +384,7 @@ const OnboardingPage = () => {
                 onNext={handleNext}
                 onBack={handleBack}
                 onComplete={handleComplete}
-                onSetStep={handleSetStep}
+                onSetStep={handleSetStep} // THIS IS CRUCIAL FOR TEACHERONBOARDING TO JUMP STEPS
               />
             )}
           </motion.div>
