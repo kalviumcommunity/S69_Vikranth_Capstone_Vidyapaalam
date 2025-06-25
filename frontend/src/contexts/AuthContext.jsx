@@ -121,55 +121,49 @@
 //   );
 // }
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 
-// Create context and hook
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
-// Axios API instance
+// Axios instance
 export const api = axios.create({
   baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
   withCredentials: true,
 });
 
-// Helper to clear auth cookies
-function clearAuthCookies() {
+// 🔧 Utility: Clear cookies
+const clearAuthCookies = () => {
   Cookies.remove("accessToken", { path: '/' });
   Cookies.remove("refreshToken", { path: '/' });
-}
+};
 
-// Axios interceptor for token refresh
+// ✅ Improved interceptor with full failure handling
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    const isTokenExpired =
+    const shouldRefresh =
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
       !originalRequest.url.includes("/auth/refreshtoken");
 
-    if (!isTokenExpired) return Promise.reject(error);
+    if (!shouldRefresh) return Promise.reject(error);
 
     originalRequest._retry = true;
-    console.warn("Interceptor: Access token expired, trying to refresh...");
 
     try {
-      await axios.post(
-        `${api.defaults.baseURL}/auth/refreshtoken`,
-        {},
-        { withCredentials: true }
-      );
-      console.info("Interceptor: Token refreshed. Retrying original request...");
+      await axios.post(`${api.defaults.baseURL}/auth/refreshtoken`, {}, { withCredentials: true });
       return api(originalRequest);
     } catch (refreshError) {
-      console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
+      console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
 
-      if (window.location.pathname !== "/login") {
-        clearAuthCookies(); // Only clear cookies when redirecting
+      clearAuthCookies();
+
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
 
@@ -178,74 +172,69 @@ api.interceptors.response.use(
   }
 );
 
+// 🎯 Relaxed validation while ensuring core structure
+const validateUserData = (userData) => {
+  return (
+    userData &&
+    typeof userData === "object" &&
+    userData.id != null &&
+    typeof userData.name === "string" &&
+    typeof userData.email === "string"
+  );
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
 
-  // 🔁 Fetch user profile
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/auth/profile");
       const userData = data?.user || data;
-      setUser(userData);
+      if (isMountedRef.current) setUser(userData);
       return userData;
     } catch (err) {
-      console.error("AuthContext: Failed to fetch user profile:", err.response?.data || err.message);
-      setUser(null);
+      if (isMountedRef.current) {
+        console.error("Failed to fetch user:", err.response?.data || err.message);
+        setUser(null);
+      }
       if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       return null;
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, []);
 
-  // 🧠 Improved: Prevent race condition on unmount
   useEffect(() => {
+    isMountedRef.current = true;
     const tokenExists = Cookies.get("accessToken");
-    if (!tokenExists) {
+
+    if (tokenExists) {
+      fetchUser();
+    } else {
       setLoading(false);
-      return;
     }
 
-    const controller = new AbortController();
-
-    (async () => {
-      try {
-        const user = await fetchUser();
-        if (!controller.signal.aborted) setUser(user);
-      } catch {
-        if (!controller.signal.aborted) setUser(null);
-      }
-    })();
-
-    return () => controller.abort();
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchUser]);
-
-  // ✅ Strict response validation
-  const validateUserData = (userData) => {
-    return (
-      userData &&
-      typeof userData === "object" &&
-      typeof userData.id === "string" &&
-      typeof userData.name === "string" &&
-      typeof userData.email === "string"
-    );
-  };
 
   const login = async (email, password) => {
     try {
       const { data } = await api.post("/auth/login", { email, password });
       const userData = data?.user || data;
 
-      if (!validateUserData(userData)) {
-        throw new Error("Invalid user data returned from login API");
+      if (validateUserData(userData)) {
+        setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
       }
-
-      setUser(userData);
-      return userData;
     } catch (err) {
-      console.error("AuthContext: Login error:", err.response?.data || err.message);
+      console.error("Login error:", err.response?.data || err.message);
       throw err;
     }
   };
@@ -255,14 +244,14 @@ export function AuthProvider({ children }) {
       const { data } = await api.post("/auth/signup", { name, email, password });
       const userData = data?.user || data;
 
-      if (!validateUserData(userData)) {
-        throw new Error("Invalid user data returned from signup API");
+      if (validateUserData(userData)) {
+        setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
       }
-
-      setUser(userData);
-      return userData;
     } catch (err) {
-      console.error("AuthContext: Signup error:", err.response?.data || err.message);
+      console.error("Signup error:", err.response?.data || err.message);
       throw err;
     }
   };
@@ -273,7 +262,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       clearAuthCookies();
     } catch (err) {
-      console.error("AuthContext: Logout failed:", err.response?.data || err.message);
+      console.error("Logout error:", err.response?.data || err.message);
       throw err;
     }
   };
