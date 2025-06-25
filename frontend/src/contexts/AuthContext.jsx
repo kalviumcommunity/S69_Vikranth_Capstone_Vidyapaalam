@@ -121,7 +121,6 @@
 //   );
 // }
 
-// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
@@ -134,6 +133,11 @@ export const api = axios.create({
   withCredentials: true,
 });
 
+function clearAuthCookies() {
+  Cookies.remove("accessToken", { path: '/' });
+  Cookies.remove("refreshToken", { path: '/' });
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -142,33 +146,32 @@ api.interceptors.response.use(
     if (
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
-      originalRequest.url !== "/auth/refreshtoken"
+      originalRequest.url !== `${api.defaults.baseURL}/auth/refreshtoken`
     ) {
       originalRequest._retry = true;
       console.log("Interceptor: Access token expired or invalid. Attempting to refresh token...");
 
       try {
         await axios.post(
-          "https://s69-vikranth-capstone-vidyapaalam.onrender.com/auth/refreshtoken",
+          `${api.defaults.baseURL}/auth/refreshtoken`,
           {},
           { withCredentials: true }
         );
         console.log("Interceptor: Token refresh successful!");
-
-        return api(originalRequest);
-
+        return api(originalRequest); // Retry original request
       } catch (refreshError) {
         console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
-        Cookies.remove("accessToken", { path: '/' });
-        Cookies.remove("refreshToken", { path: '/' });
-        window.location.href = "/login";
+        clearAuthCookies();
+
+        if (window.location.pathname !== "/login") {
+          window.location.href = "/login";
+        }
         return Promise.reject(refreshError);
       }
     }
     return Promise.reject(error);
   }
 );
-
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -178,16 +181,14 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       const { data } = await api.get("/auth/profile");
-      // Correctly extract the user object, assuming it might be nested
-      const userData = data && data.user ? data.user : data;
+      const userData = data?.user || data;
       setUser(userData);
       return userData;
     } catch (err) {
       console.error("AuthContext: Error fetching user profile:", err.response?.data || err.message);
       setUser(null);
       if (err.response?.status === 401 || err.response?.status === 403) {
-        Cookies.remove("accessToken", { path: '/' });
-        Cookies.remove("refreshToken", { path: '/' });
+        clearAuthCookies();
       }
       return null;
     } finally {
@@ -197,54 +198,70 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const tokenExists = Cookies.get("accessToken");
-    if (tokenExists) {
-      fetchUser();
-    } else {
+    if (!tokenExists) {
       setLoading(false);
+      return;
     }
+
+    let isMounted = true;
+    const loadUser = async () => {
+      if (isMounted) await fetchUser();
+    };
+    loadUser();
+    return () => { isMounted = false };
   }, [fetchUser]);
 
   const login = async (email, password) => {
-    const response = await api.post("/auth/login", { email, password });
-    // Use response.data if it contains the user object for an optimistic update
-    const loggedInUserData = response.data && response.data.user ? response.data.user : response.data;
-    if (loggedInUserData) {
-        setUser(loggedInUserData); // Optimistically set user data from login response
+    try {
+      const response = await api.post("/auth/login", { email, password });
+      const userData = response.data?.user || response.data;
+      if (userData?.email && userData?.id && userData?.name) {
+        setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
+      }
+    } catch (error) {
+      console.error("AuthContext: Login failed:", error.response?.data || error.message);
+      throw error;
     }
-    // Then call fetchUser to ensure the user state is fully synchronized and complete
-    const finalUserData = await fetchUser(); 
-    return finalUserData;
   };
 
   const signup = async (name, email, password) => {
-    const response = await api.post("/auth/signup", { name, email, password });
-    // Use response.data if it contains the user object for an optimistic update
-    const signedUpUserData = response.data && response.data.user ? response.data.user : response.data;
-    if (signedUpUserData) {
-        setUser(signedUpUserData); // Optimistically set user data from signup response
+    try {
+      const response = await api.post("/auth/signup", { name, email, password });
+      const userData = response.data?.user || response.data;
+      if (userData?.email && userData?.id && userData?.name) {
+        setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
+      }
+    } catch (error) {
+      console.error("AuthContext: Signup failed:", error.response?.data || error.message);
+      throw error;
     }
-    // Then call fetchUser to ensure the user state is fully synchronized and complete
-    const finalUserData = await fetchUser();
-    return finalUserData;
   };
 
   const logout = async () => {
     try {
       await api.post("/auth/logout");
       setUser(null);
-      Cookies.remove("accessToken", { path: '/' });
-      Cookies.remove("refreshToken", { path: '/' });
+      clearAuthCookies();
     } catch (error) {
-      console.error("Error logging out:", error.response?.data || error.message);
+      console.error("AuthContext: Logout failed:", error.response?.data || error.message);
       throw error;
     }
   };
+
+  const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
+        isAuthenticated,
         login,
         signup,
         logout,
