@@ -125,51 +125,56 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import axios from "axios";
 import Cookies from "js-cookie";
 
+// Create context and hook
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
+// Axios API instance
 export const api = axios.create({
   baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
   withCredentials: true,
 });
 
+// Helper to clear auth cookies
 function clearAuthCookies() {
   Cookies.remove("accessToken", { path: '/' });
   Cookies.remove("refreshToken", { path: '/' });
 }
 
+// Axios interceptor for token refresh
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (
+    const isTokenExpired =
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
-      originalRequest.url !== `${api.defaults.baseURL}/auth/refreshtoken`
-    ) {
-      originalRequest._retry = true;
-      console.log("Interceptor: Access token expired or invalid. Attempting to refresh token...");
+      !originalRequest.url.includes("/auth/refreshtoken");
 
-      try {
-        await axios.post(
-          `${api.defaults.baseURL}/auth/refreshtoken`,
-          {},
-          { withCredentials: true }
-        );
-        console.log("Interceptor: Token refresh successful!");
-        return api(originalRequest); // Retry original request
-      } catch (refreshError) {
-        console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
-        clearAuthCookies();
+    if (!isTokenExpired) return Promise.reject(error);
 
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
-        }
-        return Promise.reject(refreshError);
+    originalRequest._retry = true;
+    console.warn("Interceptor: Access token expired, trying to refresh...");
+
+    try {
+      await axios.post(
+        `${api.defaults.baseURL}/auth/refreshtoken`,
+        {},
+        { withCredentials: true }
+      );
+      console.info("Interceptor: Token refreshed. Retrying original request...");
+      return api(originalRequest);
+    } catch (refreshError) {
+      console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
+
+      if (window.location.pathname !== "/login") {
+        clearAuthCookies(); // Only clear cookies when redirecting
+        window.location.href = "/login";
       }
+
+      return Promise.reject(refreshError);
     }
-    return Promise.reject(error);
   }
 );
 
@@ -177,6 +182,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // 🔁 Fetch user profile
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
@@ -185,17 +191,16 @@ export function AuthProvider({ children }) {
       setUser(userData);
       return userData;
     } catch (err) {
-      console.error("AuthContext: Error fetching user profile:", err.response?.data || err.message);
+      console.error("AuthContext: Failed to fetch user profile:", err.response?.data || err.message);
       setUser(null);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        clearAuthCookies();
-      }
+      if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       return null;
     } finally {
       setLoading(false);
     }
   }, []);
 
+  // 🧠 Improved: Prevent race condition on unmount
   useEffect(() => {
     const tokenExists = Cookies.get("accessToken");
     if (!tokenExists) {
@@ -203,43 +208,62 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    let isMounted = true;
-    const loadUser = async () => {
-      if (isMounted) await fetchUser();
-    };
-    loadUser();
-    return () => { isMounted = false };
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        const user = await fetchUser();
+        if (!controller.signal.aborted) setUser(user);
+      } catch {
+        if (!controller.signal.aborted) setUser(null);
+      }
+    })();
+
+    return () => controller.abort();
   }, [fetchUser]);
+
+  // ✅ Strict response validation
+  const validateUserData = (userData) => {
+    return (
+      userData &&
+      typeof userData === "object" &&
+      typeof userData.id === "string" &&
+      typeof userData.name === "string" &&
+      typeof userData.email === "string"
+    );
+  };
 
   const login = async (email, password) => {
     try {
-      const response = await api.post("/auth/login", { email, password });
-      const userData = response.data?.user || response.data;
-      if (userData?.email && userData?.id && userData?.name) {
-        setUser(userData);
-        return userData;
-      } else {
-        return await fetchUser();
+      const { data } = await api.post("/auth/login", { email, password });
+      const userData = data?.user || data;
+
+      if (!validateUserData(userData)) {
+        throw new Error("Invalid user data returned from login API");
       }
-    } catch (error) {
-      console.error("AuthContext: Login failed:", error.response?.data || error.message);
-      throw error;
+
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error("AuthContext: Login error:", err.response?.data || err.message);
+      throw err;
     }
   };
 
   const signup = async (name, email, password) => {
     try {
-      const response = await api.post("/auth/signup", { name, email, password });
-      const userData = response.data?.user || response.data;
-      if (userData?.email && userData?.id && userData?.name) {
-        setUser(userData);
-        return userData;
-      } else {
-        return await fetchUser();
+      const { data } = await api.post("/auth/signup", { name, email, password });
+      const userData = data?.user || data;
+
+      if (!validateUserData(userData)) {
+        throw new Error("Invalid user data returned from signup API");
       }
-    } catch (error) {
-      console.error("AuthContext: Signup failed:", error.response?.data || error.message);
-      throw error;
+
+      setUser(userData);
+      return userData;
+    } catch (err) {
+      console.error("AuthContext: Signup error:", err.response?.data || err.message);
+      throw err;
     }
   };
 
@@ -248,20 +272,18 @@ export function AuthProvider({ children }) {
       await api.post("/auth/logout");
       setUser(null);
       clearAuthCookies();
-    } catch (error) {
-      console.error("AuthContext: Logout failed:", error.response?.data || error.message);
-      throw error;
+    } catch (err) {
+      console.error("AuthContext: Logout failed:", err.response?.data || err.message);
+      throw err;
     }
   };
-
-  const isAuthenticated = !!user;
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        isAuthenticated,
+        isAuthenticated: !!user,
         login,
         signup,
         logout,
