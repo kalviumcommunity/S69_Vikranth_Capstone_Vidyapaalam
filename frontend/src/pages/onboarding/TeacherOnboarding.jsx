@@ -753,11 +753,9 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         }
 
         if (typeof api.get === 'function') {
-          // Removed 'response' parameter as its data is not directly used here,
-          // fetchUser() will get the latest data.
           api.get('/auth/profile', { withCredentials: true })
-            .then(() => { // No 'response' parameter
-              fetchUser(); // This is the CRITICAL ADDITION: Call fetchUser to update AuthContext
+            .then(() => { 
+              fetchUser(); 
             })
             .catch(err => console.error("Failed to refetch user profile after calendar auth:", err));
         } else {
@@ -772,7 +770,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       newSearchParams.delete('nextStep');
       navigate({ search: newSearchParams.toString() }, { replace: true });
     } 
-  }, [authUser, authLoading, step, api, location.search, navigate, onSetStep, fetchUser]); // Added fetchUser to dependencies
+  }, [authUser, authLoading, step, api, location.search, navigate, onSetStep, fetchUser]);
 
   useEffect(() => {
     const fetchBusyTimes = async () => {
@@ -900,7 +898,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     try {
       const response = await api.get("/auth/calendar/auth-url");
       const { authUrl } = response.data;
-      setIsLoading(false); // Set loading to false RIGHT BEFORE redirection
       window.location.href = authUrl; // Redirect user to Google for OAuth flow
     } catch (error) {
       console.error("Error connecting Google Calendar:", error.response?.data || error.message);
@@ -1179,7 +1176,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
           <p className="text-red-500 text-sm mb-4">{errors.googleCalendar}</p>
         )}
 
-        {/* Conditional rendering based on authUser?.googleCalendarConnected */}
         {authUser?.googleCalendarConnected ? (
           <>
             <p className="text-sm text-gray-600 mb-6">
@@ -1233,7 +1229,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
             </div>
           </>
         ) : (
-          // If authUser?.googleCalendarConnected is false, show the connect button
           <div className="text-center py-8">
             <p className="mb-4 text-gray-700">
               Connect your Google Calendar to automatically sync your availability and avoid booking conflicts. This is a required step to set your availability.
