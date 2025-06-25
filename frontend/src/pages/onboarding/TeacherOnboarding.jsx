@@ -724,11 +724,22 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  // NEW STATE: Local state to track calendar connection status more immediately
+  const [isCalendarConnected, setIsCalendarConnected] = useState(authUser?.googleCalendarConnected || false);
 
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Effect to synchronize local isCalendarConnected with global authUser state
   useEffect(() => {
+    if (!authLoading && authUser) {
+      setIsCalendarConnected(authUser.googleCalendarConnected || false);
+    }
+  }, [authUser, authLoading]); 
+
+  // Main effect for initial form data and handling Google Calendar redirect
+  useEffect(() => {
+    // Pre-fill form data if on 'info' step and authUser is available
     if (authUser && step === "info" && !authLoading) {
       setFormData((prev) => ({
         ...prev,
@@ -744,14 +755,19 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     const calendarAuthError = params.get('error');
     const nextStepParam = params.get('nextStep');
 
+    // Handle Google Calendar OAuth callback parameters
     if (calendarAuthStatus) {
       if (calendarAuthStatus === 'success') {
         toast.success("Google Calendar connected successfully!");
+        // Immediately update local state to reflect connection success for UI rendering
+        setIsCalendarConnected(true); 
 
+        // If nextStepParam indicates 'availability', tell the parent OnboardingPage to change step
         if (nextStepParam === 'availability' && typeof onSetStep === 'function') {
           onSetStep('availability');
         }
 
+        // Refetch user profile to update global AuthContext with latest connection status
         if (typeof api.get === 'function') {
           api.get('/auth/profile', { withCredentials: true })
             .then(() => { 
@@ -763,7 +779,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         }
       } else {
         toast.error(`Failed to connect Google Calendar: ${decodeURIComponent(calendarAuthError || 'Unknown error.')}`);
+        // Ensure local state is false if connection failed
+        setIsCalendarConnected(false); 
       }
+      // Clean up URL parameters to prevent re-triggering this logic on subsequent renders/refreshes
       const newSearchParams = new URLSearchParams(location.search);
       newSearchParams.delete('calendarAuthStatus');
       newSearchParams.delete('error');
@@ -772,9 +791,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     } 
   }, [authUser, authLoading, step, api, location.search, navigate, onSetStep, fetchUser]);
 
+  // Effect to fetch busy times when on 'availability' step and calendar is connected
   useEffect(() => {
     const fetchBusyTimes = async () => {
-      if (!date || !authUser?.googleCalendarConnected || !api) {
+      // Use the local isCalendarConnected state for conditional fetching
+      if (!date || !isCalendarConnected || !api) { 
         setBusyTimes([]);
         return;
       }
@@ -796,7 +817,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     if (step === "availability") {
       fetchBusyTimes();
     }
-  }, [date, authUser?.googleCalendarConnected, api, step]);
+  }, [date, isCalendarConnected, api, step]); // Depend on local isCalendarConnected
 
   const isSlotBusy = useCallback((slot) => {
     if (!busyTimes || busyTimes.length === 0) return false;
@@ -822,6 +843,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       const busyStart = new Date(busyEvent.start);
       const busyEnd = new Date(busyEvent.end);
 
+      // Check for overlap: [slotStart, slotEnd) overlaps with [busyStart, busyEnd)
+      // if slotStart < busyEnd AND slotEnd > busyStart
       if (slotStart < busyEnd && slotEnd > busyStart) {
         return true;
       }
@@ -898,11 +921,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     try {
       const response = await api.get("/auth/calendar/auth-url");
       const { authUrl } = response.data;
-      window.location.href = authUrl; // Redirect user to Google for OAuth flow
+      window.location.href = authUrl; 
     } catch (error) {
       console.error("Error connecting Google Calendar:", error.response?.data || error.message);
       toast.error(error.response?.data?.message || "Failed to initiate Google Calendar connection.");
-      setIsLoading(false); // Reset loading if error occurs
+      setIsLoading(false); 
     }
   };
 
@@ -932,7 +955,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         isValid = false;
       }
     } else if (currentStep === "availability") {
-      if (!authUser?.googleCalendarConnected) {
+      // Use the local isCalendarConnected state for validation
+      if (!isCalendarConnected) { 
         newErrors.googleCalendar = "Please connect your Google Calendar to proceed.";
         isValid = false;
       } else {
@@ -1176,7 +1200,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
           <p className="text-red-500 text-sm mb-4">{errors.googleCalendar}</p>
         )}
 
-        {authUser?.googleCalendarConnected ? (
+        {/* Conditional rendering based on the new local isCalendarConnected state */}
+        {isCalendarConnected ? ( 
           <>
             <p className="text-sm text-gray-600 mb-6">
               Select dates and time slots when you're available to teach. Your Google Calendar busy times will be highlighted.
@@ -1249,7 +1274,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
               className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
               Back
             </button>
-            <button type="submit" disabled={isLoading || authLoading || !authUser?.googleCalendarConnected}
+            <button type="submit" disabled={isLoading || authLoading || !isCalendarConnected}
               className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
               {isLoading ? "Saving..." : "Continue"}
             </button>
