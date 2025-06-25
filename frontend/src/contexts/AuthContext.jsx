@@ -1,52 +1,107 @@
 
-
-// src/contexts/AuthContext.jsx
-// import React, { createContext, useContext, useEffect, useState } from "react";
+// // src/contexts/AuthContext.jsx
+// import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 // import axios from "axios";
+// import Cookies from "js-cookie";
 
 // const AuthContext = createContext();
 // export const useAuth = () => useContext(AuthContext);
 
-// const api = axios.create({
-//   baseURL: "http://localhost:3400",
+// export const api = axios.create({
+//   baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
 //   withCredentials: true,
 // });
+
+// api.interceptors.response.use(
+//   (response) => response,
+//   async (error) => {
+//     const originalRequest = error.config;
+
+//     if (
+//       (error.response?.status === 401 || error.response?.status === 403) &&
+//       !originalRequest._retry &&
+//       originalRequest.url !== "/auth/refreshtoken" // Changed this line to match backend route
+//     ) {
+//       originalRequest._retry = true;
+//       console.log("Interceptor: Access token expired or invalid. Attempting to refresh token...");
+
+//       try {
+//         await axios.post(
+//           "https://s69-vikranth-capstone-vidyapaalam.onrender.com/auth/refreshtoken", // Changed this line to match backend route
+//           {},
+//           { withCredentials: true }
+//         );
+//         console.log("Interceptor: Token refresh successful!");
+
+//         return api(originalRequest);
+
+//       } catch (refreshError) {
+//         console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
+//         Cookies.remove("accessToken", { path: '/' });
+//         Cookies.remove("refreshToken", { path: '/' });
+//         window.location.href = "/login";
+//         return Promise.reject(refreshError);
+//       }
+//     }
+//     return Promise.reject(error);
+//   }
+// );
+
 
 // export function AuthProvider({ children }) {
 //   const [user, setUser] = useState(null);
 //   const [loading, setLoading] = useState(true);
 
-//   const fetchUser = async () => {
+//   const fetchUser = useCallback(async () => {
 //     try {
 //       setLoading(true);
 //       const { data } = await api.get("/auth/profile");
 //       setUser(data);
+//       return data;
 //     } catch (err) {
-//       console.error("Error fetching user:", err.response?.data || err.message);
+//       console.error("Error fetching user profile:", err.response?.data || err.message);
 //       setUser(null);
+//       if (err.response?.status === 401 || err.response?.status === 403) {
+//         Cookies.remove("accessToken", { path: '/' });
+//         Cookies.remove("refreshToken", { path: '/' });
+//       }
+//       return null;
 //     } finally {
 //       setLoading(false);
 //     }
-//   };
-
-//   // Load user once on mount
-//   useEffect(() => {
-//     fetchUser();
 //   }, []);
 
+//   useEffect(() => {
+//     const tokenExists = Cookies.get("accessToken");
+//     if (tokenExists) {
+//       fetchUser();
+//     } else {
+//       setLoading(false);
+//     }
+//   }, [fetchUser]);
+
 //   const login = async (email, password) => {
-//     await api.post("/auth/login", { email, password });
-//     await fetchUser();
+//     const response = await api.post("/auth/login", { email, password });
+//     const userData = await fetchUser();
+//     return userData;
 //   };
 
 //   const signup = async (name, email, password) => {
 //     await api.post("/auth/signup", { name, email, password });
-//     await fetchUser();
+//     const userData = await fetchUser();
+//     return userData;
 //   };
 
 //   const logout = async () => {
-//     await api.post("/auth/logout");
-//     setUser(null);
+//     try {
+//       await api.post("/auth/logout");
+//       setUser(null);
+//       Cookies.remove("accessToken", { path: '/' });
+//       Cookies.remove("refreshToken", { path: '/' });
+//     } catch (error) {
+//       console.error("Error logging out:", error.response?.data || error.message);
+//       throw error;
+//     }
 //   };
 
 //   return (
@@ -66,108 +121,149 @@
 //   );
 // }
 
-// src/contexts/AuthContext.jsx
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import axios from "axios";
 import Cookies from "js-cookie";
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
+// Axios instance
 export const api = axios.create({
   baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
   withCredentials: true,
 });
 
+// 🔧 Utility: Clear cookies
+const clearAuthCookies = () => {
+  Cookies.remove("accessToken", { path: '/' });
+  Cookies.remove("refreshToken", { path: '/' });
+};
+
+// ✅ Improved interceptor with full failure handling
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
-    if (
+    const shouldRefresh =
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
-      originalRequest.url !== "/auth/refreshtoken" // Changed this line to match backend route
-    ) {
-      originalRequest._retry = true;
-      console.log("Interceptor: Access token expired or invalid. Attempting to refresh token...");
+      !originalRequest.url.includes("/auth/refreshtoken");
 
-      try {
-        await axios.post(
-          "https://s69-vikranth-capstone-vidyapaalam.onrender.com/auth/refreshtoken", // Changed this line to match backend route
-          {},
-          { withCredentials: true }
-        );
-        console.log("Interceptor: Token refresh successful!");
+    if (!shouldRefresh) return Promise.reject(error);
 
-        return api(originalRequest);
+    originalRequest._retry = true;
 
-      } catch (refreshError) {
-        console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
-        Cookies.remove("accessToken", { path: '/' });
-        Cookies.remove("refreshToken", { path: '/' });
+    try {
+      await axios.post(`${api.defaults.baseURL}/auth/refreshtoken`, {}, { withCredentials: true });
+      return api(originalRequest);
+    } catch (refreshError) {
+      console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
+
+      clearAuthCookies();
+
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
         window.location.href = "/login";
-        return Promise.reject(refreshError);
       }
+
+      return Promise.reject(refreshError);
     }
-    return Promise.reject(error);
   }
 );
 
+// 🎯 Relaxed validation while ensuring core structure
+const validateUserData = (userData) => {
+  return (
+    userData &&
+    typeof userData === "object" &&
+    userData.id != null &&
+    typeof userData.name === "string" &&
+    typeof userData.email === "string"
+  );
+};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isMountedRef = useRef(true);
 
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
       const { data } = await api.get("/auth/profile");
-      setUser(data);
-      return data;
+      const userData = data?.user || data;
+      if (isMountedRef.current) setUser(userData);
+      return userData;
     } catch (err) {
-      console.error("Error fetching user profile:", err.response?.data || err.message);
-      setUser(null);
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        Cookies.remove("accessToken", { path: '/' });
-        Cookies.remove("refreshToken", { path: '/' });
+      if (isMountedRef.current) {
+        console.error("Failed to fetch user:", err.response?.data || err.message);
+        setUser(null);
       }
+      if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       return null;
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    isMountedRef.current = true;
     const tokenExists = Cookies.get("accessToken");
+
     if (tokenExists) {
       fetchUser();
     } else {
       setLoading(false);
     }
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [fetchUser]);
 
   const login = async (email, password) => {
-    const response = await api.post("/auth/login", { email, password });
-    const userData = await fetchUser();
-    return userData;
+    try {
+      const { data } = await api.post("/auth/login", { email, password });
+      const userData = data?.user || data;
+
+      if (validateUserData(userData)) {
+        setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
+      }
+    } catch (err) {
+      console.error("Login error:", err.response?.data || err.message);
+      throw err;
+    }
   };
 
   const signup = async (name, email, password) => {
-    await api.post("/auth/signup", { name, email, password });
-    const userData = await fetchUser();
-    return userData;
+    try {
+      const { data } = await api.post("/auth/signup", { name, email, password });
+      const userData = data?.user || data;
+
+      if (validateUserData(userData)) {
+        setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
+      }
+    } catch (err) {
+      console.error("Signup error:", err.response?.data || err.message);
+      throw err;
+    }
   };
 
   const logout = async () => {
     try {
       await api.post("/auth/logout");
       setUser(null);
-      Cookies.remove("accessToken", { path: '/' });
-      Cookies.remove("refreshToken", { path: '/' });
-    } catch (error) {
-      console.error("Error logging out:", error.response?.data || error.message);
-      throw error;
+      clearAuthCookies();
+    } catch (err) {
+      console.error("Logout error:", err.response?.data || err.message);
+      throw err;
     }
   };
 
@@ -176,6 +272,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         loading,
+        isAuthenticated: !!user,
         login,
         signup,
         logout,
