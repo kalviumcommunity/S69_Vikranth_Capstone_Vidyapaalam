@@ -1,67 +1,3 @@
-
-// const { google } = require('googleapis');
-// const User = require('../models/User'); 
-
-// const createOAuth2ClientForUser = (refreshToken) => {
-//   const oAuth2Client = new google.auth.OAuth2(
-//     process.env.GOOGLE_CLIENT_ID,
-//     process.env.GOOGLE_CLIENT_SECRET,
-//     process.env.GOOGLE_CALENDAR_REDIRECT_URI
-//   );
-//   oAuth2Client.setCredentials({ refresh_token: refreshToken });
-//   return oAuth2Client;
-// };
-
-// exports.getGoogleCalendarAvailability = async (req, res) => {
-//   try {
-//     const user = await User.findById(req.user.id).select('+googleCalendar.refreshToken');
-//     if (!user) {
-//       return res.status(404).json({ message: 'User not found.' });
-//     }
-//     if (user.role !== 'teacher') {
-//       return res.status(403).json({ message: 'Only teachers can fetch calendar availability.' });
-//     }
-//     if (!user.googleCalendar || !user.googleCalendar.connected || !user.googleCalendar.refreshToken) {
-//       return res.status(400).json({ message: 'Google Calendar not connected for this user.' });
-//     }
-
-//     const calendarOAuth2Client = createOAuth2ClientForUser(user.googleCalendar.refreshToken);
-//     const calendar = google.calendar({ version: 'v3', auth: calendarOAuth2Client });
-
-//     const timeMin = new Date(); 
-//     const timeMax = new Date();
-//     timeMax.setDate(timeMax.getDate() + 7); 
-
-//     const response = await calendar.freebusy.query({
-//       requestBody: {
-//         timeMin: timeMin.toISOString(),
-//         timeMax: timeMax.toISOString(),
-//         items: [{ id: 'primary' }], // Check the user's primary calendar
-//       },
-//     });
-
-//     const busyTimes = response.data.calendars.primary.busy;
-
-//     res.status(200).json({
-//       message: 'Google Calendar busy times fetched successfully.',
-//       busyTimes: busyTimes,
-//     });
-
-//   } catch (error) {
-//     console.error('Error fetching Google Calendar availability:', error.message);
-//     if (error.code === 401 || (error.response && error.response.data && error.response.data.error === 'invalid_grant')) {
-//       const user = await User.findById(req.user.id);
-//       if (user) {
-//         user.googleCalendar.connected = false;
-//         user.googleCalendar.refreshToken = null; 
-//         await user.save();
-//       }
-//       return res.status(401).json({ message: 'Google Calendar connection expired. Please reconnect.', needsReauth: true });
-//     }
-//     res.status(500).json({ message: 'Failed to fetch Google Calendar availability.', error: error.message });
-//   }
-// };
-
 // controllers/calendarController.js
 const { google } = require('googleapis');
 const User = require('../models/User'); 
@@ -73,43 +9,41 @@ const GOOGLE_CALENDAR_CLIENT = new google.auth.OAuth2(
 );
 
 const calendarScopes = [
-  'https://www.googleapis.com/auth/calendar.events.readonly', // Read events (for busy times)
-  'https://www.googleapis.com/auth/calendar.readonly',       // Read calendar list (to get primary calendar if needed)
+  'https://www.googleapis.com/auth/calendar.events.readonly', 
+  'https://www.googleapis.com/auth/calendar.readonly',       
 ];
 
 
 exports.googleCalendarAuthUrl = (req, res) => {
-    // ADD THESE LOGS:
-    console.log("calendarController.googleCalendarAuthUrl: Entered function.");
-    console.log("calendarController.googleCalendarAuthUrl: req.user at start:", req.user); 
-    console.log("calendarController.googleCalendarAuthUrl: req.user.id at start:", req.user ? req.user.id : "N/A");
-    console.log("calendarController.googleCalendarAuthUrl: req.user._id at start (if any):", req.user ? req.user._id : "N/A"); // Check for _id too, just in case
+    console.log("calendarController.googleCalendarAuthUrl: Entered function.");
+    console.log("calendarController.googleCalendarAuthUrl: req.user at start:", req.user); 
+    console.log("calendarController.googleCalendarAuthUrl: req.user.id at start:", req.user ? req.user.id : "N/A");
+    console.log("calendarController.googleCalendarAuthUrl: req.user._id at start (if any):", req.user ? req.user._id : "N/A"); // Check for _id too, just in case
 
-  if (!req.user || !req.user.id) { // Ensure you check req.user.id here as protect sets 'id'
-    console.log("calendarController.googleCalendarAuthUrl: req.user is NOT present or req.user.id is missing. Sending 401.");
+  if (!req.user || !req.user.id) { 
+    console.log("calendarController.googleCalendarAuthUrl: req.user is NOT present or req.user.id is missing. Sending 401.");
     return res.status(401).json({ message: 'Authentication required to connect calendar.' });
   }
-    console.log("calendarController.googleCalendarAuthUrl: req.user.id is present. Proceeding to generate auth URL.");
+    console.log("calendarController.googleCalendarAuthUrl: req.user.id is present. Proceeding to generate auth URL.");
 
 
   const authUrl = GOOGLE_CALENDAR_CLIENT.generateAuthUrl({
     access_type: 'offline', 
     scope: calendarScopes.join(' '), 
     prompt: 'consent', 
-    state: req.user.id.toString(), // Use req.user.id as set by protect middleware
+    state: req.user.id.toString(), 
   });
 
   res.json({ authUrl });
-    console.log("calendarController.googleCalendarAuthUrl: Sent auth URL to frontend.");
+    console.log("calendarController.googleCalendarAuthUrl: Sent auth URL to frontend.");
 };
 
 
 exports.googleCalendarAuthCallback = async (req, res) => {
-  const { code, state: userId, error } = req.query; // 'state' will be the user ID
+  const { code, state: userId, error } = req.query; 
 
   if (error) {
     console.error("Google Calendar Auth Callback Error:", error);
-    // Redirect to frontend's onboarding page with an error status
     return res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent(error)}`);
   }
 
@@ -127,7 +61,6 @@ exports.googleCalendarAuthCallback = async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent('User not found during calendar callback.')}`);
     }
 
-    // Update user in database with Google Calendar tokens and connection status
     user.googleCalendar.accessToken = tokens.access_token;
     user.googleCalendar.accessTokenExpiryDate = new Date(tokens.expiry_date);
     if (tokens.refresh_token) {
@@ -138,14 +71,12 @@ exports.googleCalendarAuthCallback = async (req, res) => {
 
     await user.save();
 
-    // Redirect back to frontend's onboarding page with success status
     res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=success`);
 
   } catch (err) {
     console.error("Error exchanging Google code for tokens or saving to DB:", err);
-    // Handle specific Google API errors, e.g., invalid_grant for expired refresh tokens
     if (err.code === 400 && err.message.includes('invalid_grant')) {
-      const user = await User.findById(userId); // Fetch user again to clear token status
+      const user = await User.findById(userId); 
       if (user) {
         user.googleCalendar.connected = false;
         user.googleCalendar.refreshToken = null;
@@ -159,8 +90,6 @@ exports.googleCalendarAuthCallback = async (req, res) => {
     res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent(errorMessage)}`);
   }
 };
-
-
 
 
 exports.getGoogleCalendarBusyTimes = async (req, res) => {
