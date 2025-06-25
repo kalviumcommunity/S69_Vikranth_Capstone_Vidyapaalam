@@ -178,18 +178,10 @@ export function AuthProvider({ children }) {
     try {
       setLoading(true);
       const { data } = await api.get("/auth/profile");
-      // --- CRITICAL CORRECTION HERE ---
-      // Check if the user data is nested under a 'user' key in the response
-      if (data && data.user) {
-        setUser(data.user); // Set the user state to the nested user object
-        console.log("AuthContext: User fetched (nested data.user):", data.user); // DEBUG LOG
-        return data.user;
-      } else {
-        setUser(data); // Assume data is the user object directly
-        console.log("AuthContext: User fetched (direct data):", data); // DEBUG LOG
-        return data;
-      }
-      // --- END CRITICAL CORRECTION ---
+      // Correctly extract the user object, assuming it might be nested
+      const userData = data && data.user ? data.user : data;
+      setUser(userData);
+      return userData;
     } catch (err) {
       console.error("AuthContext: Error fetching user profile:", err.response?.data || err.message);
       setUser(null);
@@ -214,16 +206,26 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const response = await api.post("/auth/login", { email, password });
-    // This part should also use the corrected fetchUser's return value for consistency
-    const userData = await fetchUser(); // fetchUser now returns the correct user object
-    return userData;
+    // Use response.data if it contains the user object for an optimistic update
+    const loggedInUserData = response.data && response.data.user ? response.data.user : response.data;
+    if (loggedInUserData) {
+        setUser(loggedInUserData); // Optimistically set user data from login response
+    }
+    // Then call fetchUser to ensure the user state is fully synchronized and complete
+    const finalUserData = await fetchUser(); 
+    return finalUserData;
   };
 
   const signup = async (name, email, password) => {
-    await api.post("/auth/signup", { name, email, password });
-    // This part should also use the corrected fetchUser's return value for consistency
-    const userData = await fetchUser(); // fetchUser now returns the correct user object
-    return userData;
+    const response = await api.post("/auth/signup", { name, email, password });
+    // Use response.data if it contains the user object for an optimistic update
+    const signedUpUserData = response.data && response.data.user ? response.data.user : response.data;
+    if (signedUpUserData) {
+        setUser(signedUpUserData); // Optimistically set user data from signup response
+    }
+    // Then call fetchUser to ensure the user state is fully synchronized and complete
+    const finalUserData = await fetchUser();
+    return finalUserData;
   };
 
   const logout = async () => {
