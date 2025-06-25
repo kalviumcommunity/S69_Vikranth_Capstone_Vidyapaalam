@@ -1,36 +1,90 @@
 // src/pages/onboarding/OnboardingPage.jsx
 
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react"; // Added useEffect, useCallback
+import { useNavigate, useLocation } from "react-router-dom"; // Added useLocation
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 import RoleSelection from "./RoleSelection.jsx";
 import StudentOnboarding from "./StudentOnboarding.jsx";
-import TeacherOnboarding from "./TeacherOnboarding.jsx";
+import TeacherOnboarding from "./TeacherOnboarding.jsx"; // Ensure this path is correct
 
 const OnboardingPage = () => {
-  const { api, fetchUser } = useAuth();  // grab fetchUser as well
+  const { api, fetchUser, user: authUser, loading: authLoading } = useAuth(); // Grab authUser and authLoading
   const [role, setRole] = useState(null);
   const [step, setStep] = useState("role");
   const navigate = useNavigate();
+  const location = useLocation(); // Hook to read URL parameters
 
-  // Map front-end role to backend role enum
   const roleMap = {
     student: "student",
     teacher: "teacher",
   };
 
+  const handleSetStep = useCallback((newStep) => {
+    console.log("OnboardingPage: handleSetStep called, setting step to:", newStep);
+    setStep(newStep);
+  }, []); 
+
+  useEffect(() => {
+    if (!authLoading && authUser) {
+      if (authUser.role && !role) { // Only set if role isn't already set locally
+        setRole(authUser.role);
+        console.log("OnboardingPage: Initializing role from authUser:", authUser.role);
+      }
+
+      const params = new URLSearchParams(location.search);
+      const calendarAuthStatus = params.get('calendarAuthStatus');
+      const nextStepParam = params.get('nextStep');
+
+      if (calendarAuthStatus === 'success' && nextStepParam === 'availability') {
+        if (authUser.role === 'teacher' || !role) { // If already teacher, or role not yet set (assume teacher for calendar onboarding)
+          if (!role) setRole('teacher'); // Ensure role is set if not already
+          console.log("OnboardingPage: Detected calendar success, jumping to availability.");
+          handleSetStep('availability'); // Jump to availability step
+          const newSearchParams = new URLSearchParams(location.search);
+          newSearchParams.delete('calendarAuthStatus');
+          newSearchParams.delete('error');
+          newSearchParams.delete('nextStep');
+          navigate({ search: newSearchParams.toString() }, { replace: true });
+        }
+      } else if (authUser.role) {
+        if (authUser.role === 'student') {
+            if (authUser.bio && authUser.phoneNumber && authUser.interestedSkills?.length > 0) {
+                handleSetStep('complete'); // Assuming 'complete' means profile fully filled
+            } else if (authUser.bio && authUser.phoneNumber) {
+                handleSetStep('interests');
+            } else {
+                handleSetStep('info');
+            }
+        } else if (authUser.role === 'teacher') {
+            if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0 && authUser.googleCalendar?.connected) {
+                handleSetStep('complete'); // Assuming 'complete' for teacher means all filled
+            } else if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0) {
+                handleSetStep('availability');
+            } else if (authUser.bio && authUser.phoneNumber) {
+                handleSetStep('expertise');
+            } else {
+                handleSetStep('info');
+            }
+        } else {
+            handleSetStep('role'); // If no role or profile data, start from role selection
+        }
+      }
+    }
+  }, [authUser, authLoading, location.search, navigate, role, handleSetStep]);
+
+
   const handleRoleSelect = async (selectedRole) => {
     const backendRole = roleMap[selectedRole];
     try {
-    await api.patch("/auth/profile/role", { role: backendRole });
-      await fetchUser();
+      await api.patch("/auth/profile/role", { role: backendRole });
+      await fetchUser(); // Refetch user to update AuthContext with new role
 
       setRole(selectedRole);
-      setStep("info");
+      setStep("info"); // Always go to info after role selection
     } catch (err) {
       console.error("Failed to save role:", err);
-      alert("Could not save role. Please try again.");
+      alert("Could not save role. Please try again."); // Use a toast here
     }
   };
 
@@ -38,7 +92,7 @@ const OnboardingPage = () => {
     if (role === "student") {
       if (step === "info") setStep("interests");
       else if (step === "interests") setStep("complete");
-    } else if( role === "teacher") {
+    } else if (role === "teacher") {
       if (step === "info") setStep("expertise");
       else if (step === "expertise") setStep("availability");
       else if (step === "availability") setStep("complete");
@@ -62,19 +116,28 @@ const OnboardingPage = () => {
   const stepLabels = {
     role: "Choose Role",
     info: "Basic Information",
-    interests: "Interests",
-    expertise: "Expertise",
-    availability: "Availability",
+    interests: "Interests", // Student-specific
+    expertise: "Expertise", // Teacher-specific
+    availability: "Availability", // Teacher-specific
     complete: "Complete",
   };
   const progressMap = {
     role: "20%",
     info: "40%",
     interests: "60%",
-    expertise: "60%",
-    availability: "80%",
+    expertise: "60%", // Teacher step 2
+    availability: "80%", // Teacher step 3
     complete: "100%",
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+        <p className="text-xl text-gray-700">Loading your profile...</p>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-16 px-4">
@@ -149,6 +212,7 @@ const OnboardingPage = () => {
                 onNext={handleNext}
                 onBack={handleBack}
                 onComplete={handleComplete}
+                onSetStep={handleSetStep} 
               />
             )}
           </motion.div>
