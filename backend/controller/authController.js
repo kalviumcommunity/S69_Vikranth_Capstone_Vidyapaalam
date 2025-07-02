@@ -1662,7 +1662,7 @@ const { google } = require('googleapis');
 const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 
 
 const GOOGLE_CALENDAR_CLIENT = new google.auth.OAuth2(
