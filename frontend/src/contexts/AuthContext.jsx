@@ -165,7 +165,7 @@ api.interceptors.response.use(
 
       // --- CRITICAL FIX: Redirect to homepage (/) instead of /login ---
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.href = "/"; // Redirect to the homepage
+        window.location.href = "/onboarding"; // Redirect to the homepage
       }
       // --- END CRITICAL FIX ---
 
