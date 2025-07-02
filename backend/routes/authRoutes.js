@@ -80,62 +80,42 @@
 // module.exports = router;
 
 const express = require('express');
-const router = express.Router();
 const {
   registerUser,
   loginUser,
   getMe,
+  refreshToken,
   logoutUser,
   googleCalendarAuthUrl,
   googleCalendarAuthCallback,
-  refreshToken,
+  getGoogleCalendarBusyTimes,
   saveRole,
-  updateInterestedSkills, // Make sure this function is exported from authController.js
   updateUserProfile,
+  updateInterestedSkills, 
   updateTeachingSkills,
   updateAvailability,
-} = require('../controller/authController'); // Corrected path: changed 'controller' to 'controllers'
+} = require('../controller/authController');
 
 const { protect } = require('../middleware/authMiddleware');
 
-const { loginLimiter } = require('../config/rateLimiter');
-const {
-  signupValidationRules,
-  loginValidationRules,
-  validate
-} = require('../middleware/validation');
+const router = express.Router();
 
-router.post(
-  '/signup',
-  signupValidationRules,
-  validate,
-  registerUser
-);
+router.post('/register', registerUser);
+router.post('/login', loginUser);
+router.post('/refresh-token', refreshToken);
+router.post('/logout', logoutUser);
 
-router.post(
-  '/login',
-  loginLimiter,
-  loginValidationRules,
-  validate,
-  loginUser
-);
+router.get('/me', protect, getMe);
+router.put('/profile', protect, updateUserProfile);
+router.put('/save-role', protect, saveRole);
+router.put('/update-interested-skills', protect, updateInterestedSkills);
+router.put('/update-teaching-skills', protect, updateTeachingSkills);
+router.put('/update-availability', protect, updateAvailability);
 
-router.get('/profile', protect, getMe);
 
-router.post('/logout', protect, logoutUser);
+router.get('/google-calendar/auth-url', protect, googleCalendarAuthUrl);
+router.get('/google-calendar/callback', googleCalendarAuthCallback);
+router.get('/google-calendar/busy-times', protect, getGoogleCalendarBusyTimes);
 
-router.get('/google', protect, googleCalendarAuthUrl); // Added 'protect' middleware as per authController logic
-router.get('/google/callback', googleCalendarAuthCallback); // This route does not need protection
-
-router.post('/refreshtoken', refreshToken); // Consider using GET for refresh token if it only reads cookies
-
-router.patch('/profile/role', protect, saveRole);
-
-router.patch('/profile/interested-skills', protect, updateInterestedSkills);
-
-router.patch('/profile', protect, updateUserProfile);
-
-router.patch('/profile/teaching-skills', protect, updateTeachingSkills);
-router.patch('/profile/availability', protect, updateAvailability);
 
 module.exports = router;
