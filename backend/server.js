@@ -6,12 +6,12 @@ require('dotenv').config();
 const cookieParser = require('cookie-parser');
 
 const app = express();
-const port = process.env.PORT || 5000; // Added a fallback port
+const port = process.env.PORT || 5000; 
 
 app.use(express.json());
 
 app.use(cors({
-  origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', // Your frontend URL
+  origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', 
   credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
   allowedHeaders: ['Content-Type', 'Authorization']
