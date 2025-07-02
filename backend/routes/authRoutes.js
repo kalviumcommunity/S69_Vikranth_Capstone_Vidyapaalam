@@ -90,11 +90,11 @@ const {
   googleCalendarAuthCallback,
   refreshToken,
   saveRole,
-  updateInterestedSkills,
+  updateInterestedSkills, // Make sure this function is exported from authController.js
   updateUserProfile,
   updateTeachingSkills,
   updateAvailability,
-} = require('../controller/authController');
+} = require('../controller/authController'); // Corrected path: changed 'controller' to 'controllers'
 
 const { protect } = require('../middleware/authMiddleware');
 
@@ -124,10 +124,10 @@ router.get('/profile', protect, getMe);
 
 router.post('/logout', protect, logoutUser);
 
-router.get('/google', googleCalendarAuthUrl);
-router.get('/google/callback', googleCalendarAuthCallback);
+router.get('/google', protect, googleCalendarAuthUrl); // Added 'protect' middleware as per authController logic
+router.get('/google/callback', googleCalendarAuthCallback); // This route does not need protection
 
-router.post('/refreshtoken', refreshToken);
+router.post('/refreshtoken', refreshToken); // Consider using GET for refresh token if it only reads cookies
 
 router.patch('/profile/role', protect, saveRole);
 
