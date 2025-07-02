@@ -134,13 +134,13 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// 🔧 Utility: Clear cookies
+// Utility: Clear cookies
 const clearAuthCookies = () => {
   Cookies.remove("accessToken", { path: '/' });
   Cookies.remove("refreshToken", { path: '/' });
 };
 
-// ✅ Improved interceptor with full failure handling
+// Improved interceptor with full failure handling
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -163,16 +163,18 @@ api.interceptors.response.use(
 
       clearAuthCookies();
 
-      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      // --- CRITICAL FIX: Redirect to homepage (/) instead of /login ---
+      if (typeof window !== "undefined" && window.location.pathname !== "/") {
+        window.location.href = "/"; // Redirect to the homepage
       }
+      // --- END CRITICAL FIX ---
 
       return Promise.reject(refreshError);
     }
   }
 );
 
-// 🎯 Relaxed validation while ensuring core structure
+// Relaxed validation while ensuring core structure
 const validateUserData = (userData) => {
   return (
     userData &&
@@ -188,9 +190,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(true);
 
+  // Cleanup effect for isMountedRef
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchUser = useCallback(async () => {
     try {
-      setLoading(true);
+      if (isMountedRef.current) setLoading(true);
       const { data } = await api.get("/auth/profile");
       const userData = data?.user || data;
       if (isMountedRef.current) setUser(userData);
@@ -208,7 +217,6 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    isMountedRef.current = true;
     const tokenExists = Cookies.get("accessToken");
 
     if (tokenExists) {
@@ -261,6 +269,11 @@ export function AuthProvider({ children }) {
       await api.post("/auth/logout");
       setUser(null);
       clearAuthCookies();
+      // --- CRITICAL FIX: Redirect to homepage (/) after logout ---
+      if (typeof window !== "undefined" && window.location.pathname !== "/") {
+        window.location.href = "/"; // Redirect to the homepage
+      }
+      // --- END CRITICAL FIX ---
     } catch (err) {
       console.error("Logout error:", err.response?.data || err.message);
       throw err;
