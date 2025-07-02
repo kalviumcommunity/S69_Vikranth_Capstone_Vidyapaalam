@@ -140,7 +140,6 @@ const clearAuthCookies = () => {
   Cookies.remove("refreshToken", { path: '/' });
 };
 
-// Improved interceptor with full failure handling
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -157,15 +156,16 @@ api.interceptors.response.use(
 
     try {
       await axios.post(`${api.defaults.baseURL}/auth/refreshtoken`, {}, { withCredentials: true });
-      return api(originalRequest);
+      return api(originalRequest); // Retry original request
     } catch (refreshError) {
       console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
 
       clearAuthCookies();
 
       // --- CRITICAL FIX: Redirect to homepage (/) instead of /login ---
+      // Only redirect if not already on the homepage
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.href = "/onboarding"; // Redirect to the homepage
+        window.location.href = "/"; // Redirect to the homepage
       }
       // --- END CRITICAL FIX ---
 
@@ -201,7 +201,7 @@ export function AuthProvider({ children }) {
     try {
       if (isMountedRef.current) setLoading(true);
       const { data } = await api.get("/auth/profile");
-      const userData = data?.user || data;
+      const userData = data?.user || data; // Handle nested or direct user data
       if (isMountedRef.current) setUser(userData);
       return userData;
     } catch (err) {
@@ -270,6 +270,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       clearAuthCookies();
       // --- CRITICAL FIX: Redirect to homepage (/) after logout ---
+      // Only redirect if not already on the homepage
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
         window.location.href = "/"; // Redirect to the homepage
       }
