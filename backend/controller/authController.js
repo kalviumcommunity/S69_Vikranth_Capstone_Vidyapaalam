@@ -1120,21 +1120,13 @@ const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 function generateAccessToken(user) {
   const payload = { id: user._id, email: user.email, role: user.role };
-    console.log("--- Generating Access Token ---");
-    console.log("  Server Time (ISO String):", new Date().toISOString());
-    console.log("  Server Time (Milliseconds since Epoch):", Date.now());
-    console.log("  Token Payload:", payload);
-    console.log("  JWT_SECRET (first 5 chars):", process.env.JWT_SECRET ? process.env.JWT_SECRET.substring(0, 5) : 'N/A');
+   
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1h' });
 }
 
 function generateRefreshToken(user) {
   const payload = { id: user._id, email: user.email };
-    console.log("--- Generating Refresh Token ---");
-    console.log("  Server Time (ISO String):", new Date().toISOString());
-    console.log("  Server Time (Milliseconds since Epoch):", Date.now());
-    console.log("  Token Payload:", payload);
-    console.log("  JWT_REFRESH_SECRET (first 5 chars):", process.env.JWT_REFRESH_SECRET ? process.env.JWT_REFRESH_SECRET.substring(0, 5) : 'N/A');
+   
   return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 }
 
