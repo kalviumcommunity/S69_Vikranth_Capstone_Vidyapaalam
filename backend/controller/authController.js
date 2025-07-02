@@ -568,30 +568,24 @@ const jwt = require('jsonwebtoken');
 const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
-const Skill = require('../models/Skill'); // Assuming this is still used somewhere
-const BlacklistedToken = require('../models/BlacklistedToken');
-const asyncHandler = require("express-async-handler"); // Assuming you use this for async functions
+const Skill = require('../models/Skill');
+const BlacklistedToken = require('../models/BlackListedToken');
+const asyncHandler = require("express-async-handler"); 
 
 
-// Original oAuth2Client (can remain for initial login)
 const oAuth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.BASE_URL + '/auth/google/callback' // Primary login callback
+  process.env.BASE_URL + '/auth/google/callback' 
 );
 
-// New oAuth2Client for Calendar specific flow (if needed, but for now we'll combine scopes)
-// const calendarOAuth2Client = new google.auth.OAuth2(
-//   process.env.GOOGLE_CLIENT_ID,
-//   process.env.GOOGLE_CLIENT_SECRET,
-//   process.env.BASE_URL + '/auth/calendar/callback' // Calendar specific callback
-// );
+
 
 
 const cookieOptions = {
   httpOnly: true,
-  secure: true, // Should be true in production (which you have in .env)
-  sameSite: "None", // Essential for cross-origin (frontend on Netlify, backend on Render)
+  secure: true,
+  sameSite: "None", 
   path: '/',
 };
 
@@ -618,18 +612,17 @@ function generateRefreshToken(user) {
   return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 }
 
-// --- MODIFIED: googleAuth to include calendar scope ---
 async function googleAuth(req, res) {
   const scopes = [
     'https://www.googleapis.com/auth/userinfo.email',
     'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/calendar', // Added calendar scope
+    'https://www.googleapis.com/auth/calendar', 
   ];
 
   const authUrl = oAuth2Client.generateAuthUrl({
-    access_type: 'offline', // Request refresh token for offline access
+    access_type: 'offline', 
     scope: scopes.join(' '),
-    prompt: 'consent', // Always ask for consent to ensure refresh token is granted
+    prompt: 'consent', 
   });
   res.redirect(authUrl);
 }
@@ -681,16 +674,13 @@ async function googleAuthCallback(req, res) {
       }
     }
 
-    // --- NEW LOGIC: Save Google Calendar tokens and status ---
-    user.googleCalendar = user.googleCalendar || {}; // Ensure googleCalendar object exists
+    user.googleCalendar = user.googleCalendar || {};
     user.googleCalendar.connected = true;
     user.googleCalendar.accessToken = tokens.access_token;
-    // Store refresh token only if it's provided (only on first consent or if prompt=consent is used)
     if (tokens.refresh_token) {
         user.googleCalendar.refreshToken = tokens.refresh_token;
     }
     user.googleCalendar.expiryDate = new Date(tokens.expiry_date);
-    // --- END NEW LOGIC ---
 
     await user.save(); 
 
@@ -701,7 +691,6 @@ async function googleAuthCallback(req, res) {
     user.refreshToken = refreshToken;
     await user.save();
 
-    // Redirect to /onboarding after successful Google Login
     const redirectUrl = `${process.env.FRONTEND_URL}/onboarding?googleAuthSuccess=true&isNewUser=${isNewUser}`;
 
     res
@@ -849,18 +838,15 @@ async function signup(req, res) {
 async function login(req, res) {
   try {
     const { email, password } = req.body;
-    // Ensure password, activeToken, and refreshToken are selected
     const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password +activeToken +refreshToken +googleCalendar'); 
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    // Generate new tokens on successful login
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    // Update user with new tokens
     user.activeToken = accessToken;
     user.refreshToken = refreshToken;
     await user.save();
@@ -885,7 +871,6 @@ async function logout(req, res) {
     const accessToken = req.cookies.accessToken;
     const refreshToken = req.cookies.refreshToken;
 
-    // Blacklist current access token
     if (accessToken) {
         try {
             await BlacklistedToken.create({ token: accessToken });
@@ -899,7 +884,6 @@ async function logout(req, res) {
         }
     }
 
-    // Clear refreshToken and activeToken from user in DB
     if (req.user && req.user.id) { // req.user is set by 'protect' middleware
       const user = await User.findById(req.user.id);
       if (user) {
@@ -908,7 +892,7 @@ async function logout(req, res) {
         await user.save();
         console.log('Logout: User active and refresh tokens cleared from DB.');
       }
-    } else if (refreshToken) { // Fallback if protect middleware didn't run (e.g., direct logout from frontend after token expired)
+    } else if (refreshToken) { 
       try {
         const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
         const user = await User.findById(decoded.id);
@@ -930,18 +914,17 @@ async function logout(req, res) {
     console.log('Logout: Cookies cleared and logout response sent.');
 
   } catch (error) {
-    console.error('Error logging out:', error); // Keep this for unexpected errors
+    console.error('Error logging out:', error); 
     res.status(500).json({ error: 'Internal Server Error during logout.' });
   }
 }
 
-// --- MODIFIED: profile to return googleCalendar object ---
 async function profile(req, res) {
   try {
     const user = await User.findById(req.user.id)
-      .select("-password -refreshToken -activeToken") // Exclude sensitive token fields from profile response
+      .select("-password -refreshToken -activeToken")
       .populate('interestedSkills')
-      .select('+googleCalendar'); // Select the entire googleCalendar object
+      .select('+googleCalendar'); 
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
@@ -953,7 +936,6 @@ async function profile(req, res) {
       email: user.email,
       role: user.role || null,
       interestedSkills: user.interestedSkills,
-      // Now return the full googleCalendar object, with a default if it doesn't exist
       googleCalendar: user.googleCalendar || { connected: false, accessToken: null, refreshToken: null, expiryDate: null },
     });
 
@@ -1091,7 +1073,7 @@ async function updateProfile(req, res) {
         phone: user.phoneNumber,
         bio: user.bio,
         interestedSkills: user.interestedSkills,
-        googleCalendar: user.googleCalendar || { connected: false } // Ensure googleCalendar is included
+        googleCalendar: user.googleCalendar || { connected: false } 
       }
     });
   } catch (err) {
