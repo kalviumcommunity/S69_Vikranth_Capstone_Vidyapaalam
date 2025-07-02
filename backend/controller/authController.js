@@ -108,7 +108,7 @@ async function googleAuthCallback(req, res) {
     user.refreshToken = refreshToken;
     await user.save();
 
-    const redirectUrl = `${process.env.FRONTEND_URL}/?googleAuthSuccess=true&isNewUser=${isNewUser}`;
+    const redirectUrl = `${process.env.FRONTEND_URL}/onboarding/?googleAuthSuccess=true&isNewUser=${isNewUser}`;
 
     res
       .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
