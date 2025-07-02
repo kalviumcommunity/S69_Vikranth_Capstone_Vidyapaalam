@@ -94,7 +94,7 @@ const {
   updateUserProfile,
   updateTeachingSkills,
   updateAvailability,
-} = require('../controllers/authController');
+} = require('../controller/authController');
 
 const { protect } = require('../middleware/authMiddleware');
 
