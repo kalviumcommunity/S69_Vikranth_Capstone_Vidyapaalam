@@ -1666,7 +1666,7 @@ const { google } = require('googleapis');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const Skill = require('../models/Skill'); // Assuming this is still used somewhere
-const BlacklistedToken = require('../models/BlacklistedToken');
+const BlacklistedToken = require('../models/BlackListedToken');
 
 
 const oAuth2Client = new google.auth.OAuth2(
