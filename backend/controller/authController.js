@@ -1662,8 +1662,7 @@ const { google } = require('googleapis');
 const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-
+const bcrypt = require('bcrypt'); // Changed from 'bcryptjs' to 'bcrypt'
 
 const GOOGLE_CALENDAR_CLIENT = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -1701,13 +1700,14 @@ exports.registerUser = async (req, res) => {
     return res.status(400).json({ message: 'User already exists' });
   }
 
+  // Hash password before saving
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
   const user = await User.create({
     name,
     email,
-    password: hashedPassword,
+    password: hashedPassword, // Save the hashed password
     role: null,
     googleCalendar: {
       connected: false,
@@ -1752,12 +1752,15 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  // Select password to be able to compare it
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
+  // Compare provided password with hashed password in DB
+  // Assumes user model has a method like 'matchPassword' that uses bcrypt.compare
   const isMatch = await user.matchPassword(password);
 
   if (user && isMatch) {
@@ -1819,6 +1822,7 @@ exports.refreshToken = async (req, res) => {
     return res.status(401).json({ message: 'No refresh token provided' });
   }
 
+  // Check if the refresh token is blacklisted
   const isBlacklisted = await BlacklistedToken.findOne({ token: refreshTokenCookie });
   if (isBlacklisted) {
     console.log('Blacklisted refresh token detected:', refreshTokenCookie);
@@ -1860,6 +1864,7 @@ exports.logoutUser = async (req, res) => {
 
   if (refreshTokenCookie) {
     try {
+      // Add the refresh token to the blacklist
       await BlacklistedToken.create({ token: refreshTokenCookie });
       console.log('Refresh token blacklisted:', refreshTokenCookie);
     } catch (error) {
@@ -2142,6 +2147,53 @@ exports.updateUserProfile = async (req, res) => {
   }
 };
 
+exports.updateInterestedSkills = async (req, res) => {
+  console.log("authController.updateInterestedSkills: Entered function.");
+  console.log("authController.updateInterestedSkills: req.user:", req.user);
+  console.log("authController.updateInterestedSkills: req.body:", req.body);
+
+  if (!req.user || !req.user.id) {
+    console.error("authController.updateInterestedSkills: User not authenticated.");
+    return res.status(401).json({ message: 'Authentication required.' });
+  }
+
+  const { interestedSkills } = req.body;
+
+  if (!Array.isArray(interestedSkills)) {
+    console.error("authController.updateInterestedSkills: interestedSkills must be an array.");
+    return res.status(400).json({ message: 'Interested skills must be an array.' });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      console.error(`authController.updateInterestedSkills: User not found for ID: ${req.user.id}`);
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    user.interestedSkills = interestedSkills;
+    await user.save();
+    console.log(`authController.updateInterestedSkills: Interested skills updated successfully for user ${user.id}.`);
+
+    res.status(200).json({
+      message: 'Interested skills updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        interestedSkills: user.interestedSkills,
+        googleCalendar: user.googleCalendar
+      }
+    });
+
+  } catch (error) {
+    console.error('authController.updateInterestedSkills: Error updating interested skills:', error);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+};
+
 exports.updateTeachingSkills = async (req, res) => {
   console.log("authController.updateTeachingSkills: Entered function.");
   console.log("authController.updateTeachingSkills: req.user:", req.user);
@@ -2214,12 +2266,17 @@ exports.updateAvailability = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Ensure user.availability is initialized as an array if it doesn't exist
+    if (!user.availability) {
+      user.availability = [];
+    }
+
     let existingAvailability = user.availability.find(a => new Date(a.date).toDateString() === new Date(date).toDateString());
 
     if (existingAvailability) {
         existingAvailability.slots = slots;
     } else {
-        user.availability.push({ date: new Date(date), slots: slots });
+      user.availability.push({ date: new Date(date), slots: slots });
     }
 
     await user.save();
