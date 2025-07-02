@@ -1660,9 +1660,10 @@
 
 const { google } = require('googleapis');
 const User = require('../models/User');
-const BlacklistedToken = require('../models/BlackListedToken'); 
+const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs'); 
+const bcrypt = require('bcryptjs');
+
 
 const GOOGLE_CALENDAR_CLIENT = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -1700,15 +1701,14 @@ exports.registerUser = async (req, res) => {
     return res.status(400).json({ message: 'User already exists' });
   }
 
-  // Hash password before saving
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
   const user = await User.create({
     name,
     email,
-    password: hashedPassword, // Save the hashed password
-    role: null, 
+    password: hashedPassword,
+    role: null,
     googleCalendar: {
       connected: false,
       accessToken: null,
@@ -1752,15 +1752,12 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  // Select password to be able to compare it
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
-  // Compare provided password with hashed password in DB
-  // Assumes user model has a method like 'matchPassword' that uses bcrypt.compare
   const isMatch = await user.matchPassword(password);
 
   if (user && isMatch) {
@@ -1822,7 +1819,6 @@ exports.refreshToken = async (req, res) => {
     return res.status(401).json({ message: 'No refresh token provided' });
   }
 
-  // Check if the refresh token is blacklisted
   const isBlacklisted = await BlacklistedToken.findOne({ token: refreshTokenCookie });
   if (isBlacklisted) {
     console.log('Blacklisted refresh token detected:', refreshTokenCookie);
@@ -1864,7 +1860,6 @@ exports.logoutUser = async (req, res) => {
 
   if (refreshTokenCookie) {
     try {
-      // Add the refresh token to the blacklist
       await BlacklistedToken.create({ token: refreshTokenCookie });
       console.log('Refresh token blacklisted:', refreshTokenCookie);
     } catch (error) {
