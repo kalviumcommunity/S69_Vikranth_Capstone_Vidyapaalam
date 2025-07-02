@@ -1752,14 +1752,14 @@ async function googleAuthCallback(req, res) {
       user = await User.findOne({ email });
 
       if (user) {
-        // Existing user, but connecting Google for the first time
+        // Existing user, connecting Google for the first time
         if (!user.googleId) {
           user.googleId = googleId;
           user.isGoogleUser = true;
-          if (!user.name) user.name = name; // Update name if missing
+          if (!user.name) user.name = name;
         }
       } else {
-        // Completely new user via Google
+        // New Google user
         user = new User({
           name,
           email,
@@ -1767,24 +1767,22 @@ async function googleAuthCallback(req, res) {
           isGoogleUser: true,
           isVerified: true,
           password: null,
-          role: null, // --- CRITICAL FIX: Set role to null for new Google users ---
+          role: null, // Set null for new Google users
         });
         isNewUser = true;
       }
     }
 
-    // --- CRITICAL FIX: Save Google Calendar tokens and status ---
-    user.googleCalendar = user.googleCalendar || {}; // Ensure googleCalendar object exists
+    // Store Google Calendar tokens
+    user.googleCalendar = user.googleCalendar || {};
     user.googleCalendar.connected = true;
     user.googleCalendar.accessToken = tokens.access_token;
-    // Store refresh token only if it's provided (only on first consent or if prompt=consent is used)
     if (tokens.refresh_token) {
-        user.googleCalendar.refreshToken = tokens.refresh_token;
+      user.googleCalendar.refreshToken = tokens.refresh_token;
     }
     user.googleCalendar.expiryDate = new Date(tokens.expiry_date);
-    // --- END CRITICAL FIX ---
 
-    await user.save(); 
+    await user.save();
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
@@ -1793,9 +1791,7 @@ async function googleAuthCallback(req, res) {
     user.refreshToken = refreshToken;
     await user.save();
 
-    // --- CRITICAL FIX: Redirect to /onboarding after successful Google Login ---
     const redirectUrl = `${process.env.FRONTEND_URL}/onboarding?googleAuthSuccess=true&isNewUser=${isNewUser}`;
-    // --- END CRITICAL FIX ---
 
     res
       .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
@@ -1808,6 +1804,7 @@ async function googleAuthCallback(req, res) {
     res.redirect(errorRedirectUrl);
   }
 }
+
 
 // --- MODIFIED: refreshToken to select and refresh googleCalendar tokens ---
 async function refreshToken(req, res) {
