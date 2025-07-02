@@ -162,8 +162,6 @@
 
 // src/pages/onboarding/OnboardingPage.jsx
 
-// src/pages/onboarding/OnboardingPage.jsx
-
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -190,60 +188,105 @@ const OnboardingPage = () => {
   }, []);
 
   useEffect(() => {
+    // This useEffect handles initial step determination based on auth status and URL params.
+    // It runs on component mount and whenever its dependencies change.
 
+    // If authUser data is still loading, do nothing and wait.
     if (authLoading) {
       return;
     }
 
+    // --- PRIORITY 1: Handle users who have already completed onboarding ---
+    // If the user object exists and their onboarding is marked complete in the backend,
+    // redirect them directly to their respective dashboard.
+    if (authUser && (authUser.teacherOnboardingComplete || authUser.studentOnboardingComplete)) {
+      console.log("OnboardingPage: User already onboarded. Redirecting to dashboard.");
+      if (authUser.role === 'student') {
+        navigate("/student/overview", { replace: true });
+      } else if (authUser.role === 'teacher') {
+        navigate("/teacher/overview", { replace: true });
+      }
+      return; // Exit early as user is already onboarded
+    }
+
+    // --- PRIORITY 2: Handle Google Calendar redirect ---
+    // Check if the current URL contains parameters from a Google Calendar OAuth callback.
     const params = new URLSearchParams(location.search);
     const calendarAuthStatus = params.get('calendarAuthStatus');
     const nextStepParam = params.get('nextStep');
 
     if (calendarAuthStatus === 'success' && nextStepParam === 'availability') {
+      // If we are redirected from a successful Google Calendar connection
+      // AND the `nextStep` parameter specifically indicates 'availability'.
 
+      // Ensure the local 'role' state is explicitly set to 'teacher'.
+      // This is crucial for OnboardingPage to render the TeacherOnboarding component,
+      // as its rendering is conditional on `role === 'teacher'`.
       if (role !== 'teacher') {
         setRole('teacher');
       }
 
+      // Immediately set the current step to 'availability' in the parent component's state.
       handleSetStep('availability');
 
+      // Clean up the URL parameters to prevent this logic from re-firing
+      // on subsequent renders or if the user refreshes the page.
       const newSearchParams = new URLSearchParams(location.search);
       newSearchParams.delete('calendarAuthStatus');
       newSearchParams.delete('error');
       newSearchParams.delete('nextStep');
       navigate({ search: newSearchParams.toString() }, { replace: true });
 
+      // After handling this specific redirect, exit the useEffect early.
+      // This prevents the "Normal Onboarding Flow" logic from overriding the desired step.
       return;
     }
+    // --- END PRIORITY 2 LOGIC ---
 
 
+    // --- PRIORITY 3: Normal Onboarding Flow (runs if not a calendar redirect and not fully onboarded) ---
+    // This block determines the starting step for users based on their existing profile data.
     if (authUser) {
+      // If the authenticated user has a role assigned from the backend
+      // and the local `role` state hasn't been set yet (e.g., initial load).
       if (authUser.role && !role) {
         setRole(authUser.role); // Set the local role state.
       }
 
+      // Determine the current step based on the authenticated user's profile completeness.
+      // This ensures that returning users don't start from the beginning.
       if (authUser.role === 'student') {
-          if (authUser.bio && authUser.phoneNumber && authUser.interestedSkills?.length > 0) {
-              handleSetStep('complete'); // Student has completed all steps
-          } else if (authUser.bio && authUser.phoneNumber) {
-              handleSetStep('interests'); // Student has basic info, needs interests
+          // Student onboarding steps: info -> interests -> complete
+          if (!authUser.name || !authUser.phoneNumber || !authUser.bio) {
+              handleSetStep('info');
+          } else if (!authUser.interestedSkills || authUser.interestedSkills.length === 0) {
+              handleSetStep('interests');
           } else {
-              handleSetStep('info'); // Student needs basic info
+              // If all student-specific fields are filled, mark as complete.
+              handleSetStep('complete');
           }
       } else if (authUser.role === 'teacher') {
-          if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0 && authUser.googleCalendar?.connected) {
-              handleSetStep('complete'); // Teacher has completed all steps including GC
-          } else if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0) {
-              handleSetStep('availability'); // Teacher has skills, needs availability (GC connection or slot selection)
-          } else if (authUser.bio && authUser.phoneNumber) {
-              handleSetStep('expertise'); // Teacher has basic info, needs expertise
+          // Teacher onboarding steps: info -> expertise -> availability -> complete
+          if (!authUser.name || !authUser.phoneNumber || !authUser.bio) {
+              handleSetStep('info');
+          } else if (!authUser.teachingSkills || authUser.teachingSkills.length === 0) {
+              handleSetStep('expertise');
+          } else if (!authUser.googleCalendar?.connected) { // Check for Google Calendar connection
+              handleSetStep('availability');
+          } else if (!authUser.availability?.slots || authUser.availability.slots.length === 0) { // Check for availability slots
+              handleSetStep('availability');
           } else {
-              handleSetStep('info'); // Teacher needs basic info
+              // If all teacher-specific fields are filled, mark as complete.
+              handleSetStep('complete');
           }
       } else {
+          // If authUser exists but has no recognized role, or if it's a new user,
+          // direct them to the role selection.
           handleSetStep('role');
       }
     }
+    // Note: If authUser is null (user not logged in), the component will naturally
+    // remain at the default `step` of "role" because `authUser` condition above won't be met.
   }, [authUser, authLoading, location.search, navigate, role, handleSetStep, fetchUser]);
 
   const handleRoleSelect = async (selectedRole) => {
@@ -281,6 +324,8 @@ const OnboardingPage = () => {
   };
 
   const handleComplete = () => {
+    // This function is called when the final step's "Complete" button is clicked.
+    // It should navigate the user to their respective dashboard.
     if (role === "student") navigate("/student/overview");
     else navigate("/teacher/overview");
   };
@@ -368,6 +413,7 @@ const OnboardingPage = () => {
               <RoleSelection onSelectRole={handleRoleSelect} />
             )}
 
+            {/* Render StudentOnboarding if role is student */}
             {step !== "role" && role === "student" && (
               <StudentOnboarding
                 step={step}
@@ -378,6 +424,7 @@ const OnboardingPage = () => {
               />
             )}
 
+            {/* Render TeacherOnboarding if role is teacher */}
             {step !== "role" && role === "teacher" && (
               <TeacherOnboarding
                 step={step}
