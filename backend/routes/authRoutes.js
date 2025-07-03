@@ -86,15 +86,13 @@ const {
   loginUser,
   getMe,
   logoutUser,
-  googleCalendarAuthUrl,
-  googleCalendarAuthCallback,
   refreshToken,
   saveRole,
-  updateInterestedSkills,
+  updateInterestedSkills, 
   updateUserProfile,
   updateTeachingSkills,
   updateAvailability,
-} = require('../controllers/authController');
+} = require('../controller/authController');
 
 const { protect } = require('../middleware/authMiddleware');
 
@@ -124,18 +122,17 @@ router.get('/profile', protect, getMe);
 
 router.post('/logout', protect, logoutUser);
 
-router.get('/google', googleCalendarAuthUrl);
-router.get('/google/callback', googleCalendarAuthCallback);
+// Routes for Google Calendar Integration
 
 router.post('/refreshtoken', refreshToken);
 
-router.patch('/profile/role', protect, saveRole);
+router.patch('/role', protect, saveRole);
 
-router.patch('/profile/interested-skills', protect, updateInterestedSkills);
+router.patch('/interested-skills', protect, updateInterestedSkills);
 
 router.patch('/profile', protect, updateUserProfile);
 
-router.patch('/profile/teaching-skills', protect, updateTeachingSkills);
-router.patch('/profile/availability', protect, updateAvailability);
+router.patch('/teaching-skills', protect, updateTeachingSkills);
+router.patch('/availability', protect, updateAvailability);
 
 module.exports = router;

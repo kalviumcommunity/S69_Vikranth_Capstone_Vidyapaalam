@@ -396,7 +396,6 @@
 
 // export default OnboardingPage;
 
-
 // src/pages/onboarding/OnboardingPage.jsx
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -409,7 +408,7 @@ import TeacherOnboarding from "./TeacherOnboarding.jsx";
 import { toast } from "sonner";
 
 const OnboardingPage = () => {
-  const { api, fetchUser, user: authUser, loading: authLoading } = useAuth();
+  const { fetchUser, user: authUser, loading: authLoading, updateRole } = useAuth();
   const [role, setRole] = useState(null);
   const [step, setStep] = useState("role");
   const navigate = useNavigate();
@@ -431,49 +430,61 @@ const OnboardingPage = () => {
 
     const params = new URLSearchParams(location.search);
     const calendarAuthStatus = params.get('calendarAuthStatus');
-    const nextStepParam = params.get('nextStep');
+    const errorMessage = params.get('error');
 
-    // Handle Google Calendar redirect first
-    if (calendarAuthStatus === 'success' && nextStepParam === 'availability') {
-      if (role !== 'teacher') {
-        setRole('teacher');
-      }
-      handleSetStep('availability');
-
+    if (calendarAuthStatus) {
       const newSearchParams = new URLSearchParams(location.search);
       newSearchParams.delete('calendarAuthStatus');
       newSearchParams.delete('error');
       newSearchParams.delete('nextStep');
       navigate({ search: newSearchParams.toString() }, { replace: true });
+
+      if (calendarAuthStatus === 'success') {
+        toast.success("Google Calendar connected successfully!");
+        fetchUser();
+      } else if (calendarAuthStatus === 'failed') {
+        toast.error(`Failed to connect Google Calendar: ${decodeURIComponent(errorMessage || 'Unknown error')}`);
+      }
       return;
     }
 
-    // Normal onboarding flow logic
     if (authUser) {
+      if (authUser.teacherOnboardingComplete || authUser.studentOnboardingComplete) {
+        if (authUser.role === "student") {
+          navigate("/student/overview", { replace: true });
+        } else if (authUser.role === "teacher") {
+          navigate("/teacher/overview", { replace: true });
+        }
+        return;
+      }
+
       if (authUser.role && !role) {
         setRole(authUser.role);
       }
 
+      if (!authUser.role) {
+        handleSetStep('role');
+        return;
+      }
+
       if (authUser.role === 'student') {
-          if (authUser.bio && authUser.phoneNumber && authUser.interestedSkills?.length > 0) {
-              handleSetStep('complete');
-          } else if (authUser.bio && authUser.phoneNumber) {
-              handleSetStep('interests');
-          } else {
-              handleSetStep('info');
-          }
+        if (!authUser.bio || !authUser.phoneNumber) {
+          handleSetStep('info');
+        } else if (!authUser.interestedSkills || authUser.interestedSkills.length === 0) {
+          handleSetStep('interests');
+        } else {
+          handleSetStep('complete');
+        }
       } else if (authUser.role === 'teacher') {
-          if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0 && authUser.googleCalendar?.connected) {
-              handleSetStep('complete');
-          } else if (authUser.bio && authUser.phoneNumber && authUser.teachingSkills?.length > 0) {
-              handleSetStep('availability');
-          } else if (authUser.bio && authUser.phoneNumber) {
-              handleSetStep('expertise');
-          } else {
-              handleSetStep('info');
-          }
-      } else {
-          handleSetStep('role');
+        if (!authUser.bio || !authUser.phoneNumber) {
+          handleSetStep('info');
+        } else if (!authUser.teachingSkills || authUser.teachingSkills.length === 0) {
+          handleSetStep('expertise');
+        } else if (!authUser.googleCalendar?.connected) {
+          handleSetStep('availability');
+        } else {
+          handleSetStep('complete');
+        }
       }
     }
   }, [authUser, authLoading, location.search, navigate, role, handleSetStep, fetchUser]);
@@ -481,9 +492,8 @@ const OnboardingPage = () => {
   const handleRoleSelect = async (selectedRole) => {
     const backendRole = roleMap[selectedRole];
     try {
-      await api.patch("/auth/profile/role", { role: backendRole });
+      await updateRole(backendRole);
       await fetchUser();
-
       setRole(selectedRole);
       setStep("info");
     } catch (err) {
@@ -545,7 +555,7 @@ const OnboardingPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-16 px-4">
       <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
-        
+
         <header className="mb-12 text-center">
           <motion.h1
             className="text-4xl font-extrabold text-gray-900 mb-4"
@@ -606,6 +616,7 @@ const OnboardingPage = () => {
                 onNext={handleNext}
                 onBack={handleBack}
                 onComplete={handleComplete}
+                authUser={authUser}
               />
             )}
 
@@ -616,6 +627,7 @@ const OnboardingPage = () => {
                 onBack={handleBack}
                 onComplete={handleComplete}
                 onSetStep={handleSetStep}
+                authUser={authUser}
               />
             )}
           </motion.div>
