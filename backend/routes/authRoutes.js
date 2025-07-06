@@ -83,37 +83,33 @@ const express = require('express');
 const {
   registerUser,
   loginUser,
-  getMe,
+  getMe, // Added getMe as it's a core auth function
   refreshToken,
   logoutUser,
-  googleCalendarAuthUrl,
-  googleCalendarAuthCallback,
   saveRole,
   updateInterestedSkills,
   updateUserProfile,
   updateTeachingSkills,
   updateAvailability,
-} = require('../controller/authController');
+} = require('../controller/authController'); // Make sure this path is correct: `../controllers/authController` vs `../controller/authController`
 
-const { protect } = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware'); // Make sure this path is correct
 
 const router = express.Router();
 
-// Auth routes
+// Public routes (no authentication required)
 router.post('/register', registerUser);
 router.post('/login', loginUser);
-router.post('/refresh-token', refreshToken);
+router.post('/refresh-token', refreshToken); // Primary refresh token route
 router.post('/logout', logoutUser);
 
-// Google Calendar OAuth routes
-router.get('/google', googleCalendarAuthUrl);
-router.get('/google/callback', googleCalendarAuthCallback);
+// Protected routes (authentication required using 'protect' middleware)
+router.get('/me', protect, getMe); // Get authenticated user's profile
 
-// Profile routes
 router.patch('/profile/role', protect, saveRole);
-router.patch('/profile/interested-skills', protect, updateInterestedSkills);
-router.patch('/profile', protect, updateUserProfile);
-router.patch('/profile/teaching-skills', protect, updateTeachingSkills);
-router.patch('/profile/availability', protect, updateAvailability);
+router.patch('/profile', protect, updateUserProfile); // General profile updates (name, phone, bio, teacherOnboardingComplete)
+router.patch('/profile/interested-skills', protect, updateInterestedSkills); // Student-specific skills
+router.patch('/profile/teaching-skills', protect, updateTeachingSkills); // Teacher-specific skills
+router.patch('/profile/availability', protect, updateAvailability); // Teacher availability
 
 module.exports = router;
