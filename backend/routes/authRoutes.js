@@ -83,7 +83,7 @@ const express = require('express');
 const {
   registerUser,
   loginUser,
-  getMe, // Added getMe as it's a core auth function
+  getMe,
   refreshToken,
   logoutUser,
   saveRole,
@@ -91,25 +91,35 @@ const {
   updateUserProfile,
   updateTeachingSkills,
   updateAvailability,
-} = require('../controller/authController'); // Make sure this path is correct: `../controllers/authController` vs `../controller/authController`
+  googleAuthUrl,
+  googleAuthCallback,
+} = require('../controller/authController');
 
-const { protect } = require('../middleware/authMiddleware'); // Make sure this path is correct
+const { protect } = require('../middleware/authMiddleware');
+
+const {
+  signupValidationRules,
+  loginValidationRules,
+  validate
+} = require('../middleware/validation');
 
 const router = express.Router();
 
-// Public routes (no authentication required)
-router.post('/register', registerUser);
-router.post('/login', loginUser);
-router.post('/refresh-token', refreshToken); // Primary refresh token route
+router.post('/register', signupValidationRules, validate, registerUser);
+router.post('/login', loginValidationRules, validate, loginUser);
+
+router.post('/refresh-token', refreshToken);
 router.post('/logout', logoutUser);
 
-// Protected routes (authentication required using 'protect' middleware)
-router.get('/me', protect, getMe); // Get authenticated user's profile
+router.get('/google', googleAuthUrl);
+router.get('/google/callback', googleAuthCallback);
+
+router.get('/me', protect, getMe);
 
 router.patch('/profile/role', protect, saveRole);
-router.patch('/profile', protect, updateUserProfile); // General profile updates (name, phone, bio, teacherOnboardingComplete)
-router.patch('/profile/interested-skills', protect, updateInterestedSkills); // Student-specific skills
-router.patch('/profile/teaching-skills', protect, updateTeachingSkills); // Teacher-specific skills
-router.patch('/profile/availability', protect, updateAvailability); // Teacher availability
+router.patch('/profile', protect, updateUserProfile);
+router.patch('/profile/interested-skills', protect, updateInterestedSkills);
+router.patch('/profile/teaching-skills', protect, updateTeachingSkills);
+router.patch('/profile/availability', protect, updateAvailability);
 
 module.exports = router;
