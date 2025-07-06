@@ -88,8 +88,9 @@ const {
   logoutUser,
   googleCalendarAuthUrl,
   googleCalendarAuthCallback,
-  getGoogleCalendarBusyTimes,
+  refreshToken,
   saveRole,
+  updateInterestedSkills,
   updateUserProfile,
   updateInterestedSkills, 
   updateTeachingSkills,
@@ -105,17 +106,18 @@ router.post('/login', loginUser);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logoutUser);
 
-router.get('/me', protect, getMe);
-router.put('/profile', protect, updateUserProfile);
-router.put('/save-role', protect, saveRole);
-router.put('/update-interested-skills', protect, updateInterestedSkills);
-router.put('/update-teaching-skills', protect, updateTeachingSkills);
-router.put('/update-availability', protect, updateAvailability);
+router.get('/google', googleCalendarAuthUrl);
+router.get('/google/callback', googleCalendarAuthCallback);
 
+router.post('/refreshtoken', refreshToken);
 
-router.get('/google-calendar/auth-url', protect, googleCalendarAuthUrl);
-router.get('/google-calendar/callback', googleCalendarAuthCallback);
-router.get('/google-calendar/busy-times', protect, getGoogleCalendarBusyTimes);
+router.patch('/profile/role', protect, saveRole);
 
+router.patch('/profile/interested-skills', protect, updateInterestedSkills);
+
+router.patch('/profile', protect, updateUserProfile);
+
+router.patch('/profile/teaching-skills', protect, updateTeachingSkills);
+router.patch('/profile/availability', protect, updateAvailability);
 
 module.exports = router;

@@ -121,42 +121,34 @@
 // export default RoleSelection;
 
 
-
 // src/components/onboarding/RoleSelection.jsx
 
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react"; 
-import { useAuth } from "../../contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../contexts/AuthContext.jsx";
+import { toast } from "sonner";
 
 const RoleSelection = ({ onSelectRole }) => {
-  const { user, api, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, updateRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // Log auth state when component renders or auth state changes
   useEffect(() => {
-    console.log("RoleSelection Component Render/Auth State Change:");
-    console.log("  authLoading:", authLoading);
-    console.log("  user:", user);
     if (authLoading) {
       setError("Loading user information...");
     } else if (!user) {
       setError("User not authenticated. Please log in again.");
     } else {
-      setError(""); // Clear error if user is loaded
+      setError("");
     }
   }, [authLoading, user]);
 
   const handleRoleSelect = async (role) => {
-    console.log("handleRoleSelect triggered for role:", role); // Confirm click is registered
-
     if (authLoading) {
-      console.log("handleRoleSelect: authLoading is TRUE. Returning early.");
       setError("Please wait, user information is still loading.");
       return;
     }
     if (!user) {
-      console.log("handleRoleSelect: user is NULL. Returning early.");
       setError("User not authenticated. Please log in again.");
       return;
     }
@@ -165,22 +157,14 @@ const RoleSelection = ({ onSelectRole }) => {
     setError("");
 
     try {
-      console.log("Attempting to PATCH /auth/profile/role with role:", role);
-      const response = await api.patch("/auth/profile/role", { role });
-
-      if (response.status === 200) {
-        console.log("Role saved successfully via API. Calling onSelectRole.");
-        onSelectRole(role);
-      } else {
-        console.error("API response status not 200:", response.status, response.data);
-        setError("Failed to save role. Please try again.");
-      }
+      await updateRole(role);
+      onSelectRole(role);
     } catch (err) {
       console.error("Error saving role in handleRoleSelect:", err.response?.data || err.message, err);
       setError(err.response?.data?.message || "Could not save role. An unexpected error occurred.");
+      toast.error(err.response?.data?.message || "Could not save role. Please try again.");
     } finally {
       setLoading(false);
-      console.log("handleRoleSelect finished. Loading state:", loading);
     }
   };
 
@@ -197,7 +181,7 @@ const RoleSelection = ({ onSelectRole }) => {
           <button
             className="w-full h-auto p-8 flex flex-col items-center justify-center gap-6 border border-gray-300 rounded-2xl shadow-md hover:shadow-lg hover:border-blue-500 transition-all duration-300"
             onClick={() => handleRoleSelect("student")}
-            disabled={loading || authLoading || !user} // Disable if auth is loading or user is null
+            disabled={loading || authLoading || !user}
           >
             <div className="p-6 bg-blue-100 rounded-full">
               <svg
@@ -234,7 +218,7 @@ const RoleSelection = ({ onSelectRole }) => {
           <button
             className="w-full h-auto p-8 flex flex-col items-center justify-center gap-6 border border-gray-300 rounded-2xl shadow-md hover:shadow-lg hover:border-blue-500 transition-all duration-300"
             onClick={() => handleRoleSelect("teacher")}
-            disabled={loading || authLoading || !user} // Disable if auth is loading or user is null
+            disabled={loading || authLoading || !user}
           >
             <div className="p-6 bg-blue-100 rounded-full">
               <svg

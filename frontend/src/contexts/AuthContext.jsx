@@ -121,76 +121,21 @@
 //   );
 // }
 
+
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import axios from "axios";
 import Cookies from "js-cookie";
+import { api } from "../api/axios";
+import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
 const AuthContext = createContext();
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
-
-// Axios instance
-export const api = axios.create({
-  baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
-  withCredentials: true,
-});
-
-// Utility: Clear cookies
-const clearAuthCookies = () => {
-  Cookies.remove("accessToken", { path: '/' });
-  Cookies.remove("refreshToken", { path: '/' });
-};
-
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    const shouldRefresh =
-      (error.response?.status === 401 || error.response?.status === 403) &&
-      !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/refreshtoken");
-
-    if (!shouldRefresh) return Promise.reject(error);
-
-    originalRequest._retry = true;
-
-    try {
-      await axios.post(`${api.defaults.baseURL}/auth/refreshtoken`, {}, { withCredentials: true });
-      return api(originalRequest); // Retry original request
-    } catch (refreshError) {
-      console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
-
-      clearAuthCookies();
-
-      // --- CRITICAL FIX: Redirect to homepage (/) instead of /login ---
-      // Only redirect if not already on the homepage
-      if (typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.href = "/"; // Redirect to the homepage
-      }
-      // --- END CRITICAL FIX ---
-
-      return Promise.reject(refreshError);
-    }
-  }
-);
-
-// Relaxed validation while ensuring core structure
-const validateUserData = (userData) => {
-  return (
-    userData &&
-    typeof userData === "object" &&
-    userData.id != null &&
-    typeof userData.name === "string" &&
-    typeof userData.email === "string"
-  );
-};
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(true);
 
-  // Cleanup effect for isMountedRef
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -200,10 +145,21 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async () => {
     try {
       if (isMountedRef.current) setLoading(true);
-      const { data } = await api.get("/auth/profile");
-      const userData = data?.user || data; // Handle nested or direct user data
-      if (isMountedRef.current) setUser(userData);
-      return userData;
+      const { data } = await api.get("/api/auth/profile");
+      const userData = data;
+
+      if (isMountedRef.current) {
+        if (validateUserData(userData)) {
+          setUser(userData);
+          return userData;
+        } else {
+          console.warn("Fetched user data is invalid or incomplete:", userData);
+          setUser(null);
+          clearAuthCookies();
+          return null;
+        }
+      }
+      return null;
     } catch (err) {
       if (isMountedRef.current) {
         console.error("Failed to fetch user:", err.response?.data || err.message);
@@ -224,19 +180,15 @@ export function AuthProvider({ children }) {
     } else {
       setLoading(false);
     }
-
-    return () => {
-      isMountedRef.current = false;
-    };
   }, [fetchUser]);
 
   const login = async (email, password) => {
     try {
-      const { data } = await api.post("/auth/login", { email, password });
-      const userData = data?.user || data;
+      const { data } = await api.post("/api/auth/login", { email, password });
+      const userData = data?.user;
 
       if (validateUserData(userData)) {
-        setUser(userData);
+        if (isMountedRef.current) setUser(userData);
         return userData;
       } else {
         return await fetchUser();
@@ -249,11 +201,11 @@ export function AuthProvider({ children }) {
 
   const signup = async (name, email, password) => {
     try {
-      const { data } = await api.post("/auth/signup", { name, email, password });
-      const userData = data?.user || data;
+      const { data } = await api.post("/api/auth/signup", { name, email, password });
+      const userData = data?.user;
 
       if (validateUserData(userData)) {
-        setUser(userData);
+        if (isMountedRef.current) setUser(userData);
         return userData;
       } else {
         return await fetchUser();
@@ -266,18 +218,59 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post("/auth/logout");
-      setUser(null);
+      await api.post("/api/auth/logout");
+      if (isMountedRef.current) setUser(null);
       clearAuthCookies();
-      // --- CRITICAL FIX: Redirect to homepage (/) after logout ---
-      // Only redirect if not already on the homepage
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.href = "/"; // Redirect to the homepage
+        window.location.href = "/";
       }
-      // --- END CRITICAL FIX ---
     } catch (err) {
       console.error("Logout error:", err.response?.data || err.message);
       throw err;
+    }
+  };
+
+  const updateProfileData = useCallback(async (endpointSuffix, dataToUpdate) => {
+    try {
+      const { data } = await api.patch(`/api/auth/profile${endpointSuffix}`, dataToUpdate);
+      const updatedUser = data?.user;
+
+      if (isMountedRef.current && validateUserData(updatedUser)) {
+        setUser(updatedUser);
+        return updatedUser;
+      } else {
+        console.warn("Updated user data is invalid or incomplete after patch:", updatedUser);
+        return await fetchUser();
+      }
+    } catch (err) {
+      console.error(`Error updating profile data for ${endpointSuffix}:`, err.response?.data || err.message);
+      throw err;
+    }
+  }, [fetchUser]);
+
+  const updateRole = (role) => updateProfileData('/role', { role });
+  const updateInterestedSkills = (skills) => updateProfileData('/interested-skills', { interestedSkills: skills });
+  const updateTeachingSkills = (skills) => updateProfileData('/teaching-skills', { teachingSkills: skills });
+  const updateAvailability = (date, slots) => updateProfileData('/availability', { date, slots });
+  const updateGeneralProfile = (profileData) => updateProfileData('', profileData);
+
+  const connectGoogleCalendar = async () => {
+    try {
+      const response = await api.get('/api/calendar/google');
+      return response.data.authUrl;
+    } catch (error) {
+      console.error('Error initiating Google Calendar connection:', error.response?.data || error.message);
+      throw error;
+    }
+  };
+
+  const getGoogleCalendarBusyTimes = async (date) => {
+    try {
+      const response = await api.get(`/api/calendar/google/busy-times?date=${date}`);
+      return response.data.busyTimes;
+    } catch (error) {
+      console.error('Error fetching Google Calendar busy times:', error.response?.data || error.message);
+      throw error;
     }
   };
 
@@ -291,7 +284,13 @@ export function AuthProvider({ children }) {
         signup,
         logout,
         fetchUser,
-        api,
+        updateRole,
+        updateInterestedSkills,
+        updateTeachingSkills,
+        updateAvailability,
+        updateGeneralProfile,
+        connectGoogleCalendar,
+        getGoogleCalendarBusyTimes,
       }}
     >
       {children}

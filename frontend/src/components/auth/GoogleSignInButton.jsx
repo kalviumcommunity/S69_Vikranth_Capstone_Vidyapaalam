@@ -43,21 +43,24 @@ const backendUrl = import.meta.env.VITE_REACT_APP_BACKEND_URL;
 
   return (
     <button
-      onClick={handleGoogleLogin}
-      className="
-        w-full px-5 py-2.5 rounded-md text-white font-semibold text-base
-        bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
-        flex items-center justify-center gap-3
-        transition duration-200 ease-in-out
-      "
-    >
-      <img
-        src="https://www.gstatic.com/images/icons/material/system/2x/search_white_24dp.png"
-        alt="Google logo"
-        className="h-5 w-5"
-      />
-      Sign in with Google
-    </button>
+  onClick={handleGoogleLogin}
+  className="
+    w-full px-6 py-3 rounded-2xl font-medium text-sm sm:text-base
+    text-gray-700 bg-white border border-gray-300 shadow-md
+    hover:bg-gray-50 hover:shadow-lg active:scale-[0.98]
+    transition-all duration-200 ease-in-out
+    flex items-center justify-center gap-3
+    focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500
+  "
+>
+  <img
+    src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+    alt="Google logo"
+    className="h-5 w-5"
+  />
+  Continue with Google
+</button>
+
   );
 };
 

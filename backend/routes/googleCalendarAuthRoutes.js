@@ -1,12 +1,16 @@
-// // routes/googleCalendarAuthRoutes.js
-// const express = require('express');
-// const calendarController = require('../controller/calendarController'); // Ensure correct path
-// const { protect } = require('../middleware/authMiddleware'); // Your authentication middleware
+// backend/routes/calendarRoutes.js
+const express = require('express');
+const router = express.Router();
+const { protect } = require('../middleware/authMiddleware'); // Adjust path as needed
 
-// const router = express.Router();
+const {
+  googleCalendarAuthUrl,
+  googleCalendarAuthCallback,
+  getGoogleCalendarBusyTimes,
+} = require('../controller/calendarController'); // Adjust path as needed
 
-// router.get('/auth-url', protect, calendarController.googleCalendarAuthUrl);
+router.get('/google', protect, googleCalendarAuthUrl);
+router.get('/google/callback', googleCalendarAuthCallback);
+router.get('/google/busy-times', protect, getGoogleCalendarBusyTimes);
 
-// router.get('/calendar-callback', calendarController.googleCalendarAuthCallback);
-
-// module.exports = router;
+module.exports = router;

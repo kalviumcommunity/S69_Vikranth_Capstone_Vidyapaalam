@@ -1662,20 +1662,8 @@ const { google } = require('googleapis');
 const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt'); // Changed from 'bcryptjs' to 'bcrypt'
 
-const GOOGLE_CALENDAR_CLIENT = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_CALENDAR_REDIRECT_URI
-);
-
-const calendarScopes = [
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/calendar.readonly',
-  'https://www.googleapis.com/auth/userinfo.email',
-  'https://www.googleapis.com/auth/userinfo.profile',
-];
+const bcrypt = require('bcrypt');
 
 const generateTokens = (id) => {
   const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -1700,14 +1688,13 @@ exports.registerUser = async (req, res) => {
     return res.status(400).json({ message: 'User already exists' });
   }
 
-  // Hash password before saving
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(password, salt);
 
   const user = await User.create({
     name,
     email,
-    password: hashedPassword, // Save the hashed password
+    password: hashedPassword, 
     role: null,
     googleCalendar: {
       connected: false,
@@ -1752,15 +1739,12 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
-  // Select password to be able to compare it
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
-  // Compare provided password with hashed password in DB
-  // Assumes user model has a method like 'matchPassword' that uses bcrypt.compare
   const isMatch = await user.matchPassword(password);
 
   if (user && isMatch) {
@@ -1822,7 +1806,6 @@ exports.refreshToken = async (req, res) => {
     return res.status(401).json({ message: 'No refresh token provided' });
   }
 
-  // Check if the refresh token is blacklisted
   const isBlacklisted = await BlacklistedToken.findOne({ token: refreshTokenCookie });
   if (isBlacklisted) {
     console.log('Blacklisted refresh token detected:', refreshTokenCookie);
@@ -1864,7 +1847,6 @@ exports.logoutUser = async (req, res) => {
 
   if (refreshTokenCookie) {
     try {
-      // Add the refresh token to the blacklist
       await BlacklistedToken.create({ token: refreshTokenCookie });
       console.log('Refresh token blacklisted:', refreshTokenCookie);
     } catch (error) {
@@ -1875,186 +1857,6 @@ exports.logoutUser = async (req, res) => {
   res.clearCookie('accessToken', { path: '/' });
   res.clearCookie('refreshToken', { path: '/' });
   res.status(200).json({ message: 'Logged out successfully' });
-};
-
-exports.googleCalendarAuthUrl = (req, res) => {
-  console.log("calendarController.googleCalendarAuthUrl: Entered function.");
-  console.log("calendarController.googleCalendarAuthUrl: req.user at start:", req.user);
-  console.log("calendarController.googleCalendarAuthUrl: req.user.id at start:", req.user ? req.user.id : "N/A");
-  console.log("calendarController.googleCalendarAuthUrl: req.user._id at start (if any):", req.user ? req.user._id : "N/A");
-
-  if (!req.user || !req.user.id) {
-    console.log("calendarController.googleCalendarAuthUrl: req.user is NOT present or req.user.id is missing. Sending 401.");
-    return res.status(401).json({ message: 'Authentication required to connect calendar.' });
-  }
-  console.log("calendarController.googleCalendarAuthUrl: req.user.id is present. Proceeding to generate auth URL.");
-
-  const authUrl = GOOGLE_CALENDAR_CLIENT.generateAuthUrl({
-    access_type: 'offline',
-    scope: calendarScopes.join(' '),
-    prompt: 'consent',
-    state: req.user.id.toString(),
-  });
-
-  res.json({ authUrl });
-  console.log("calendarController.googleCalendarAuthUrl: Sent auth URL to frontend.");
-};
-
-exports.googleCalendarAuthCallback = async (req, res) => {
-  const { code, state: userId, error } = req.query;
-
-  if (error) {
-    console.error("Google Calendar Auth Callback Error:", error);
-    return res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent(error)}`);
-  }
-
-  if (!code || !userId) {
-    console.error("Missing code or state (userId) in Google Calendar OAuth callback.");
-    return res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent('Missing authentication parameters.')}`);
-  }
-
-  try {
-    const { tokens } = await GOOGLE_CALENDAR_CLIENT.getToken(code);
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent('User not found during calendar callback.')}`);
-    }
-
-    user.googleCalendar.accessToken = tokens.access_token;
-    user.googleCalendar.accessTokenExpiryDate = new Date(tokens.expiry_date);
-    if (tokens.refresh_token) {
-      user.googleCalendar.refreshToken = tokens.refresh_token;
-    }
-    user.googleCalendar.connected = true;
-    user.googleCalendar.lastConnected = new Date();
-
-    await user.save();
-
-    console.log(`Google Calendar connected for user: ${user.email}. Redirecting to availability step.`);
-
-    res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=success&nextStep=availability`);
-
-  } catch (err) {
-    console.error("Error exchanging Google code for tokens or saving to DB:", err);
-    if (err.code === 400 && err.message.includes('invalid_grant')) {
-      const user = await User.findById(userId);
-      if (user) {
-        user.googleCalendar.connected = false;
-        user.googleCalendar.refreshToken = null;
-        user.googleCalendar.accessToken = null;
-        user.googleCalendar.accessTokenExpiryDate = null;
-        await user.save();
-      }
-      return res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent('Google Calendar connection expired. Please reconnect.')}`);
-    }
-    const errorMessage = err.message || "Failed to connect Google Calendar.";
-    res.redirect(`${process.env.FRONTEND_URL}/onboarding?calendarAuthStatus=failed&error=${encodeURIComponent(errorMessage)}`);
-  }
-};
-
-exports.getGoogleCalendarBusyTimes = async (req, res) => {
-  const { date } = req.query;
-  const userId = req.user.id;
-
-  if (!date) {
-    return res.status(400).json({ message: "Date parameter is required (YYYY-MM-DD)." });
-  }
-
-  try {
-    const user = await User.findById(userId).select('+googleCalendar.refreshToken +googleCalendar.accessToken +googleCalendar.accessTokenExpiryDate');
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-    if (user.role !== 'teacher') {
-      return res.status(403).json({ message: 'Only teachers can fetch calendar availability.' });
-    }
-    if (!user.googleCalendar || !user.googleCalendar.connected || !user.googleCalendar.refreshToken) {
-      return res.status(400).json({ message: 'Google Calendar not connected for this user. Please connect your calendar.' });
-    }
-
-    const userOAuth2Client = new google.auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_CALENDAR_REDIRECT_URI
-    );
-
-    userOAuth2Client.setCredentials({
-      access_token: user.googleCalendar.accessToken,
-      refresh_token: user.googleCalendar.refreshToken,
-      expiry_date: user.googleCalendar.accessTokenExpiryDate?.getTime(),
-    });
-
-    const FIVE_MINUTES = 5 * 60 * 1000;
-    const isAccessTokenExpired = !user.googleCalendar.accessToken ||
-      !user.googleCalendar.accessTokenExpiryDate ||
-      (new Date().getTime() + FIVE_MINUTES) >= user.googleCalendar.accessTokenExpiryDate.getTime();
-
-    if (isAccessTokenExpired && user.googleCalendar.refreshToken) {
-      console.log(`Access token expired for user ${userId}. Attempting to refresh.`);
-      const { credentials } = await userOAuth2Client.refreshAccessToken();
-
-      user.googleCalendar.accessToken = credentials.access_token;
-      user.googleCalendar.accessTokenExpiryDate = new Date(credentials.expiry_date);
-      if (credentials.refresh_token) {
-        user.googleCalendar.refreshToken = credentials.refresh_token;
-      }
-      await user.save();
-      userOAuth2Client.setCredentials(credentials);
-    } else if (isAccessTokenExpired && !user.googleCalendar.refreshToken) {
-      console.error(`Access token expired and no refresh token for user ${userId}. Requires re-authentication.`);
-      user.googleCalendar.connected = false;
-      user.googleCalendar.refreshToken = null;
-      user.googleCalendar.accessToken = null;
-      user.googleCalendar.accessTokenExpiryDate = null;
-      await user.save();
-      return res.status(401).json({ message: "Google Calendar token expired. Please reconnect your calendar.", needsReauth: true });
-    }
-
-    const calendar = google.calendar({ version: 'v3', auth: userOAuth2Client });
-
-    const selectedDate = new Date(date);
-    if (isNaN(selectedDate.getTime())) {
-      return res.status(400).json({ message: "Invalid date format. Please useYYYY-MM-DD." });
-    }
-
-    const startOfDay = new Date(selectedDate.setUTCHours(0, 0, 0, 0)).toISOString();
-    const endOfDay = new Date(selectedDate.setUTCHours(23, 59, 59, 999)).toISOString();
-
-    const busyResponse = await calendar.freebusy.query({
-      requestBody: {
-        timeMin: startOfDay,
-        timeMax: endOfDay,
-        items: [{ id: 'primary' }],
-      },
-    });
-
-    const busyTimes = busyResponse.data.calendars.primary.busy || [];
-
-    res.status(200).json({
-      message: 'Google Calendar busy times fetched successfully.',
-      busyTimes: busyTimes,
-    });
-
-  } catch (error) {
-    console.error('Error fetching Google Calendar busy times:', error.message);
-
-    if (error.code === 401 || (error.response && error.response.data && error.response.data.error === 'invalid_grant')) {
-      const user = await User.findById(req.user.id);
-      if (user) {
-        user.googleCalendar.connected = false;
-        user.googleCalendar.refreshToken = null;
-        user.googleCalendar.accessToken = null;
-        user.googleCalendar.accessTokenExpiryDate = null;
-        await user.save();
-      }
-      return res.status(401).json({ message: 'Google Calendar connection expired. Please reconnect.', needsReauth: true });
-    }
-    const errorMessage = error.message || "Failed to fetch Google Calendar busy times.";
-    res.status(500).json({ message: 'Failed to fetch Google Calendar busy times.', error: errorMessage });
-  }
 };
 
 exports.saveRole = async (req, res) => {
@@ -2266,17 +2068,22 @@ exports.updateAvailability = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Ensure user.availability is initialized as an array if it doesn't exist
-    if (!user.availability) {
-      user.availability = [];
+    const inputDate = new Date(date);
+    if (isNaN(inputDate.getTime())) {
+        return res.status(400).json({ message: 'Invalid date format provided.' });
     }
+    inputDate.setUTCHours(0, 0, 0, 0); 
 
-    let existingAvailability = user.availability.find(a => new Date(a.date).toDateString() === new Date(date).toDateString());
+    let existingAvailability = user.availability.find(a => {
+        const storedDate = new Date(a.date);
+        storedDate.setUTCHours(0, 0, 0, 0); // Normalize stored date to UTC start of day
+        return storedDate.getTime() === inputDate.getTime();
+    });
 
     if (existingAvailability) {
         existingAvailability.slots = slots;
     } else {
-      user.availability.push({ date: new Date(date), slots: slots });
+        user.availability.push({ date: inputDate, slots: slots });
     }
 
     await user.save();
