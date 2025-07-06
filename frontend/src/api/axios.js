@@ -23,7 +23,7 @@ api.interceptors.response.use(
     originalRequest._retry = true;
 
     try {
-      await axios.post(`${api.defaults.baseURL}/api/auth/refreshtoken`, {}, { withCredentials: true });
+      await axios.post(`${api.defaults.baseURL}/auth/refreshtoken`, {}, { withCredentials: true });
       return api(originalRequest); 
     } catch (refreshError) {
       console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
