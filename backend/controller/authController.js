@@ -1662,9 +1662,8 @@ const { google } = require('googleapis');
 const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
+
 const bcrypt = require('bcrypt');
-
-
 
 const generateTokens = (id) => {
   const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -1996,7 +1995,6 @@ exports.updateInterestedSkills = async (req, res) => {
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
-
 
 exports.updateTeachingSkills = async (req, res) => {
   console.log("authController.updateTeachingSkills: Entered function.");
