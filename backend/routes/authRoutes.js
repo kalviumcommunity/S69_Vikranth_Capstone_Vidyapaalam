@@ -88,11 +88,9 @@ const {
   logoutUser,
   googleCalendarAuthUrl,
   googleCalendarAuthCallback,
-  refreshToken,
   saveRole,
   updateInterestedSkills,
   updateUserProfile,
-  updateInterestedSkills, 
   updateTeachingSkills,
   updateAvailability,
 } = require('../controller/authController');
@@ -101,22 +99,20 @@ const { protect } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
+// Auth routes
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logoutUser);
 
+// Google Calendar OAuth routes
 router.get('/google', googleCalendarAuthUrl);
 router.get('/google/callback', googleCalendarAuthCallback);
 
-router.post('/refreshtoken', refreshToken);
-
+// Profile routes
 router.patch('/profile/role', protect, saveRole);
-
 router.patch('/profile/interested-skills', protect, updateInterestedSkills);
-
 router.patch('/profile', protect, updateUserProfile);
-
 router.patch('/profile/teaching-skills', protect, updateTeachingSkills);
 router.patch('/profile/availability', protect, updateAvailability);
 
