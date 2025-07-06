@@ -1662,20 +1662,53 @@ const { google } = require('googleapis');
 const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
-
 const bcrypt = require('bcrypt');
 
-const generateTokens = (id) => {
-  const accessToken = jwt.sign({ id }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
-  });
-  const refreshToken = jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, {
-    expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
-  });
-  return { accessToken, refreshToken };
+// --- Google OAuth2 Client Configuration ---
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI // This will now correctly pick up the updated URI from .env
+);
+
+const GOOGLE_SCOPES = [
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+];
+// --- End Google OAuth2 Client Configuration ---
+
+// --- Token & Cookie Constants ---
+const ACCESS_TOKEN_AGE = 15 * 60 * 1000; // 15 minutes
+const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Lax', // 'None' if cross-site, 'Strict' or 'Lax' for same-site
+};
+// --- End Token & Cookie Constants ---
+
+
+// --- Helper Functions for JWT Token Generation ---
+const generateAccessToken = (user) => {
+    return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
+    });
 };
 
+const generateRefreshToken = (user) => {
+    return jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
+        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
+    });
+};
+// --- End Helper Functions ---
 
+
+// --- User Authentication & Management Controllers ---
+
+// @desc    Register a new user
+// @route   POST /register (will be /auth/register after routing change)
+// @access  Public
 exports.registerUser = async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -1688,15 +1721,15 @@ exports.registerUser = async (req, res) => {
     return res.status(400).json({ message: 'User already exists' });
   }
 
-  const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-
+  // Password hashing is handled by the pre-save hook in your User model
   const user = await User.create({
     name,
     email,
-    password: hashedPassword, 
-    role: null,
-    googleCalendar: {
+    password: password, // The pre-save hook will hash this
+    role: null, // Default role, to be set during onboarding
+    isGoogleUser: false, // Explicitly false for traditional registration
+    googleId: null, // Explicitly null for traditional registration
+    googleCalendar: { // Initialize googleCalendar subdocument
       connected: false,
       accessToken: null,
       refreshToken: null,
@@ -1706,20 +1739,11 @@ exports.registerUser = async (req, res) => {
   });
 
   if (user) {
-    const { accessToken, refreshToken } = generateTokens(user._id);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 15 * 60 * 1000
-    });
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+    res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -1728,6 +1752,7 @@ exports.registerUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        isGoogleUser: user.isGoogleUser,
         googleCalendar: user.googleCalendar
       }
     });
@@ -1736,48 +1761,51 @@ exports.registerUser = async (req, res) => {
   }
 };
 
+// @desc    Authenticate user & get token
+// @route   POST /login (will be /auth/login after routing change)
+// @access  Public
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
+  // Select password to compare, even if select: false in schema
   const user = await User.findOne({ email }).select('+password');
 
   if (!user) {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
-  const isMatch = await user.matchPassword(password);
-
-  if (user && isMatch) {
-    const { accessToken, refreshToken } = generateTokens(user._id);
-
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 15 * 60 * 1000
-    });
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.status(200).json({
-      message: 'Logged in successfully',
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        googleCalendar: user.googleCalendar
-      }
-    });
-  } else {
-    res.status(400).json({ message: 'Invalid credentials' });
+  // Handle case where account exists but was created via Google (no password)
+  if (user.isGoogleUser && !user.password) {
+    return res.status(400).json({ message: 'This account was created with Google. Please use the "Continue with Google" button.' });
   }
+
+  // If user is not a Google user or has a password set, proceed with password match
+  if (!user.password || !(await user.matchPassword(password))) {
+    return res.status(400).json({ message: 'Invalid credentials' });
+  }
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+  res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
+
+  res.status(200).json({
+    message: 'Logged in successfully',
+    user: {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isGoogleUser: user.isGoogleUser,
+      googleCalendar: user.googleCalendar
+    }
+  });
 };
 
+// @desc    Get current authenticated user data
+// @route   GET /me (will be /auth/me after routing change)
+// @access  Private
 exports.getMe = async (req, res) => {
   const user = await User.findById(req.user.id);
 
@@ -1791,14 +1819,19 @@ exports.getMe = async (req, res) => {
       bio: user.bio,
       interestedSkills: user.interestedSkills,
       teachingSkills: user.teachingSkills,
+      isGoogleUser: user.isGoogleUser,
       googleCalendar: user.googleCalendar,
-      teacherOnboardingComplete: user.teacherOnboardingComplete
+      teacherOnboardingComplete: user.teacherOnboardingComplete,
+      isVerified: user.isVerified // Assuming you added this to your User model
     });
   } else {
     res.status(404).json({ message: 'User not found' });
   }
 };
 
+// @desc    Refresh access token using refresh token
+// @route   POST /refresh-token (will be /auth/refresh-token after routing change)
+// @access  Public (but requires refreshToken cookie)
 exports.refreshToken = async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
@@ -1820,20 +1853,11 @@ exports.refreshToken = async (req, res) => {
       return res.status(401).json({ message: 'Invalid refresh token' });
     }
 
-    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id);
+    const accessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user); // Generate new refresh token
 
-    res.cookie('accessToken', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 15 * 60 * 1000
-    });
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'Lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
+    res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+    res.cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
 
     res.status(200).json({ message: 'Access token refreshed' });
   } catch (error) {
@@ -1842,11 +1866,15 @@ exports.refreshToken = async (req, res) => {
   }
 };
 
+// @desc    Logout user & clear cookies
+// @route   POST /logout (will be /auth/logout after routing change)
+// @access  Public (clears cookies for everyone)
 exports.logoutUser = async (req, res) => {
   const refreshTokenCookie = req.cookies.refreshToken;
 
   if (refreshTokenCookie) {
     try {
+      // Blacklist the refresh token to invalidate it
       await BlacklistedToken.create({ token: refreshTokenCookie });
       console.log('Refresh token blacklisted:', refreshTokenCookie);
     } catch (error) {
@@ -1859,6 +1887,10 @@ exports.logoutUser = async (req, res) => {
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
+
+// @desc    Save initial role (student/teacher) for a user
+// @route   PATCH /profile/role (will be /auth/profile/role after routing change)
+// @access  Private
 exports.saveRole = async (req, res) => {
   console.log("authController.saveRole: Entered function.");
   console.log("authController.saveRole: req.user:", req.user);
@@ -1901,6 +1933,9 @@ exports.saveRole = async (req, res) => {
   }
 };
 
+// @desc    Update user profile details
+// @route   PATCH /profile (will be /auth/profile after routing change)
+// @access  Private
 exports.updateUserProfile = async (req, res) => {
   console.log("authController.updateUserProfile: Entered function.");
   console.log("authController.updateUserProfile: req.user:", req.user);
@@ -1923,6 +1958,7 @@ exports.updateUserProfile = async (req, res) => {
     if (req.body.phoneNumber !== undefined) user.phoneNumber = req.body.phoneNumber;
     if (req.body.bio !== undefined) user.bio = req.body.bio;
     if (req.body.teacherOnboardingComplete !== undefined) user.teacherOnboardingComplete = req.body.teacherOnboardingComplete;
+    if (req.body.isVerified !== undefined) user.isVerified = req.body.isVerified; // Add this line if you allow updating isVerified via this endpoint
 
     await user.save();
     console.log(`authController.updateUserProfile: Profile updated successfully for user ${user.id}.`);
@@ -1938,8 +1974,10 @@ exports.updateUserProfile = async (req, res) => {
         bio: user.bio,
         interestedSkills: user.interestedSkills,
         teachingSkills: user.teachingSkills,
+        isGoogleUser: user.isGoogleUser,
         googleCalendar: user.googleCalendar,
-        teacherOnboardingComplete: user.teacherOnboardingComplete
+        teacherOnboardingComplete: user.teacherOnboardingComplete,
+        isVerified: user.isVerified // Include in response
       }
     });
 
@@ -1949,6 +1987,9 @@ exports.updateUserProfile = async (req, res) => {
   }
 };
 
+// @desc    Update a student's interested skills
+// @route   PATCH /profile/interested-skills (will be /auth/profile/interested-skills after routing change)
+// @access  Private
 exports.updateInterestedSkills = async (req, res) => {
   console.log("authController.updateInterestedSkills: Entered function.");
   console.log("authController.updateInterestedSkills: req.user:", req.user);
@@ -1986,7 +2027,9 @@ exports.updateInterestedSkills = async (req, res) => {
         email: user.email,
         role: user.role,
         interestedSkills: user.interestedSkills,
-        googleCalendar: user.googleCalendar
+        isGoogleUser: user.isGoogleUser,
+        googleCalendar: user.googleCalendar,
+        isVerified: user.isVerified // Include in response
       }
     });
 
@@ -1996,6 +2039,9 @@ exports.updateInterestedSkills = async (req, res) => {
   }
 };
 
+// @desc    Update a teacher's teaching skills
+// @route   PATCH /profile/teaching-skills (will be /auth/profile/teaching-skills after routing change)
+// @access  Private
 exports.updateTeachingSkills = async (req, res) => {
   console.log("authController.updateTeachingSkills: Entered function.");
   console.log("authController.updateTeachingSkills: req.user:", req.user);
@@ -2033,7 +2079,9 @@ exports.updateTeachingSkills = async (req, res) => {
         email: user.email,
         role: user.role,
         teachingSkills: user.teachingSkills,
-        googleCalendar: user.googleCalendar
+        isGoogleUser: user.isGoogleUser,
+        googleCalendar: user.googleCalendar,
+        isVerified: user.isVerified // Include in response
       }
     });
 
@@ -2043,6 +2091,9 @@ exports.updateTeachingSkills = async (req, res) => {
   }
 };
 
+// @desc    Update a teacher's availability
+// @route   PATCH /profile/availability (will be /auth/profile/availability after routing change)
+// @access  Private
 exports.updateAvailability = async (req, res) => {
   console.log("authController.updateAvailability: Entered function.");
   console.log("authController.updateAvailability: req.user:", req.user);
@@ -2070,20 +2121,20 @@ exports.updateAvailability = async (req, res) => {
 
     const inputDate = new Date(date);
     if (isNaN(inputDate.getTime())) {
-        return res.status(400).json({ message: 'Invalid date format provided.' });
+      return res.status(400).json({ message: 'Invalid date format provided.' });
     }
-    inputDate.setUTCHours(0, 0, 0, 0); 
+    inputDate.setUTCHours(0, 0, 0, 0); // Normalize to start of day UTC
 
     let existingAvailability = user.availability.find(a => {
-        const storedDate = new Date(a.date);
-        storedDate.setUTCHours(0, 0, 0, 0); // Normalize stored date to UTC start of day
-        return storedDate.getTime() === inputDate.getTime();
+      const storedDate = new Date(a.date);
+      storedDate.setUTCHours(0, 0, 0, 0); // Normalize stored date to UTC start of day
+      return storedDate.getTime() === inputDate.getTime();
     });
 
     if (existingAvailability) {
-        existingAvailability.slots = slots;
+      existingAvailability.slots = slots;
     } else {
-        user.availability.push({ date: inputDate, slots: slots });
+      user.availability.push({ date: inputDate, slots: slots });
     }
 
     await user.save();
@@ -2097,7 +2148,9 @@ exports.updateAvailability = async (req, res) => {
         email: user.email,
         role: user.role,
         availability: user.availability,
-        googleCalendar: user.googleCalendar
+        isGoogleUser: user.isGoogleUser,
+        googleCalendar: user.googleCalendar,
+        isVerified: user.isVerified // Include in response
       }
     });
 
@@ -2105,4 +2158,113 @@ exports.updateAvailability = async (req, res) => {
     console.error('authController.updateAvailability: Error updating availability:', error);
     res.status(500).json({ message: 'Internal Server Error' });
   }
+};
+
+
+// --- Google OAuth Controller Functions (Directly integrated) ---
+
+// @desc    Initiate Google OAuth login flow
+// @route   GET /google (will be /auth/google after routing change)
+// @access  Public
+exports.googleAuthUrl = async function(req, res) {
+   const scopes = [
+     'https://www.googleapis.com/auth/userinfo.email',
+     'https://www.googleapis.com/auth/userinfo.profile',
+   ];
+
+   const authUrl = oAuth2Client.generateAuthUrl({
+     access_type: 'offline', // Request a refresh token for long-term access
+     scope: scopes.join(' '),
+     prompt: 'consent', // Ensures refresh token is granted on first connect
+   });
+   res.redirect(authUrl);
+};
+
+// @desc    Handle Google OAuth callback
+// @route   GET /google/callback (will be /auth/google/callback after routing change)
+// @access  Public (Google redirects here)
+exports.googleAuthCallback = async function(req, res) {
+   const { code } = req.query;
+   const frontendRedirectBaseUrl = process.env.FRONTEND_URL; // Frontend sign-in page to redirect back to
+
+   if (!code) {
+     console.error('Google Auth Callback Error: Authorization code missing.');
+     const errorRedirectUrl = `${frontendRedirectBaseUrl}/signin?googleAuthSuccess=false&error=${encodeURIComponent('Authorization code missing.')}`;
+     return res.redirect(errorRedirectUrl);
+   }
+
+   try {
+     const { tokens } = await oAuth2Client.getToken(code);
+     oAuth2Client.setCredentials(tokens);
+
+     const oauth2 = google.oauth2({
+       auth: oAuth2Client,
+       version: 'v2',
+     });
+     const { data } = await oauth2.userinfo.get();
+
+     const googleId = data.id;
+     const email = data.email ? data.email.toLowerCase() : null;
+     const name = data.name;
+
+     let user = null;
+     let isNewUser = false;
+
+     if (googleId) {
+        user = await User.findOne({ googleId });
+     }
+
+     if (!user && email) {
+        user = await User.findOne({ email }); // Try to find by email for merging
+     }
+
+     if (!user) {
+        // User does not exist, create new user
+        if (!email) {
+            throw new Error("Cannot create user: Email not provided by Google.");
+        }
+        user = new User({
+            name: name,
+            email: email,
+            googleId: googleId,
+            isGoogleUser: true,
+            isVerified: true, // Set to true for Google users as their email is verified by Google
+            password: undefined, // Explicitly undefined for Google accounts
+            role: null, // Default role for new users
+            googleCalendar: { // Initialize googleCalendar subdocument
+              connected: false, // Not connected yet, user needs to do it explicitly
+              accessToken: null,
+              refreshToken: null,
+              accessTokenExpiryDate: null,
+              lastConnected: null
+            }
+        });
+        isNewUser = true;
+     } else {
+        // User exists, update fields if necessary (for merging or just updating existing Google user)
+        if (!user.googleId) { // Link existing account to Google if not already
+            user.googleId = googleId;
+            user.isGoogleUser = true;
+            user.isVerified = true; // Mark as verified if linking with Google
+        }
+        if (!user.name && name) user.name = name; // Update name if missing
+        if (!user.email && email) user.email = email; // Update email if missing
+     }
+
+     await user.save();
+
+     const accessToken = generateAccessToken(user);
+     const refreshToken = generateRefreshToken(user);
+
+     // Set your application's authentication cookies
+     res
+       .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
+       .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
+       .redirect(`${frontendRedirectBaseUrl}/signin?googleAuthSuccess=true&isNewUser=${isNewUser}`);
+
+   } catch (error) {
+     console.error("Google Auth Callback Error:", error);
+     const errorMessage = encodeURIComponent(error.message || "Google authentication failed.");
+     res.redirect(`${frontendRedirectBaseUrl}/signin?googleAuthSuccess=false&error=${errorMessage}`);
+   }
 };
