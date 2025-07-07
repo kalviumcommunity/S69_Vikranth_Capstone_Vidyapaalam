@@ -1,16 +1,12 @@
 // backend/routes/calendarRoutes.js
 const express = require('express');
 const router = express.Router();
-const { protect } = require('../middleware/authMiddleware'); // Adjust path as needed
+const { protect } = require('../middleware/authMiddleware');
 
 const {
-  googleCalendarAuthUrl,
-  googleCalendarAuthCallback,
   getGoogleCalendarBusyTimes,
-} = require('../controller/calendarController'); // Adjust path as needed
+} = require('../controller/calendarController'); 
 
-router.get('/google', protect, googleCalendarAuthUrl);
-router.get('/google/callback', googleCalendarAuthCallback);
-router.get('/google/busy-times', protect, getGoogleCalendarBusyTimes);
+router.get('/busy-times', protect, getGoogleCalendarBusyTimes);
 
 module.exports = router;
