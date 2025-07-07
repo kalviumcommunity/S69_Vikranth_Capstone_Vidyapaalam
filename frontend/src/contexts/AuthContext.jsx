@@ -128,6 +128,7 @@ import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
 const AuthContext = createContext();
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
@@ -231,6 +232,7 @@ export function AuthProvider({ children }) {
 
   const updateProfileData = useCallback(async (endpointSuffix, dataToUpdate) => {
     try {
+      // CORRECTED: Removed /api prefix
       const { data } = await api.patch(`/auth/profile${endpointSuffix}`, dataToUpdate);
       const updatedUser = data?.user;
 
@@ -253,12 +255,8 @@ export function AuthProvider({ children }) {
   const updateAvailability = (date, slots) => updateProfileData('/availability', { date, slots });
   const updateGeneralProfile = (profileData) => updateProfileData('', profileData);
 
-  // The 'connectGoogleCalendar' function is removed
-  // as Google Calendar consent is now integrated into the initial Google Sign-In flow.
-
   const getGoogleCalendarBusyTimes = async (date) => {
     try {
-      // Corrected API path to match backend routing (server.js mounting /auth/calendar)
       const response = await api.get(`/auth/calendar/busy-times?date=${date}`);
       return response.data.busyTimes;
     } catch (error) {
