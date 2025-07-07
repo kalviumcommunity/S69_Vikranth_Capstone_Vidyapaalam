@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 
-// Ensure this is the correct GoogleSignInButton that calls `onSuccess({ isNewUser })`
-import GoogleSignInButton from "./GoogleSignInButton";
+import GoogleSignInButton from './GoogleSignInButton'; // Ensure this path is correct
+
 
 export default function SignInForm({ onSwitchToSignUp, onClose }) {
   const { login, fetchUser } = useAuth();
@@ -32,55 +32,59 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
   };
 
   const handleLoginSuccess = async ({ isNewUser }) => {
-    try {
-      console.log("Google login success. isNewUser:", isNewUser);
+    // --- START DEBUG LOGS ---
+    console.log("handleLoginSuccess called. isNewUser:", isNewUser);
+    
+    const user = await fetchUser(); // Always fetch the latest user data
+    console.log("User data after fetchUser:", user); // IMPORTANT: Check what 'user' contains here
 
-      const user = await fetchUser();
-      console.log("Fetched user after Google login:", user);
+    let targetPath;
 
-      let targetPath = "/onboarding";
-
-      if (!isNewUser && user && user.role) {
-        if (user.role === "student") {
-          targetPath = "/student/overview";
-        } else if (user.role === "teacher") {
-          targetPath = "/teacher/overview";
-        } else {
-          console.warn("Unrecognized user role:", user.role);
-        }
+    if (isNewUser) {
+      console.log("New Google user detected. Setting target path to /onboarding.");
+      targetPath = "/onboarding";
+    } else if (user && user.role) {
+      // Existing user: navigate based on role
+      if (user.role === "student") {
+        targetPath = "/student/overview";
+        console.log("Existing student. Setting target path to /student/overview.");
+      } else if (user.role === "teacher") {
+        targetPath = "/teacher/overview";
+        console.log("Existing teacher. Setting target path to /teacher/overview.");
+      } else {
+        // Fallback for existing user with unrecognized/unset role
+        console.warn("User logged in with an unrecognized role:", user.role);
+        targetPath = "/onboarding"; // Direct to onboarding to set up role
+        console.log("Existing user with unrecognized role. Setting target path to /onboarding.");
       }
-
-      navigate(targetPath); // First: navigate
-      onClose(); // Then close modal
-    } catch (err) {
-      console.error("Error in handleLoginSuccess:", err);
-      alert("Login succeeded, but user data could not be fetched.");
+    } else {
+      // Fallback for existing user if user data or role is missing (unexpected state or fetchUser failed)
+      console.warn("User data or role missing after Google login (not a new user). Setting target path to /onboarding as fallback.");
+      targetPath = "/onboarding";
     }
+
+    console.log("Final targetPath determined:", targetPath);
+    // --- END DEBUG LOGS ---
+
+    // 1. Perform the navigation first
+    navigate(targetPath);
+    console.log("Navigation command issued for:", targetPath); // Log after navigate call
+
+    // 2. Then, call onClose() to close the modal/form.
+    // This ensures navigation is initiated before any potential component unmounting.
+    onClose();
+    console.log("onClose() called."); // Log after onClose call
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-
     setLoading(true);
     try {
-      await login(formData.email, formData.password);
-      const user = await fetchUser();
-
-      let targetPath = "/onboarding";
-
-      if (user && user.role) {
-        if (user.role === "student") {
-          targetPath = "/student/overview";
-        } else if (user.role === "teacher") {
-          targetPath = "/teacher/overview";
-        }
-      }
-
-      navigate(targetPath);
-      onClose();
+      await login(formData.email, formData.password); 
+      // If regular login successful, fetch user and handle navigation
+      handleLoginSuccess({ isNewUser: false }); // Assume not new for manual login
     } catch (err) {
-      console.error("Email/password login error:", err);
       alert(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -88,7 +92,6 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
   };
 
   const handleGoogleLoginError = (errorMessage) => {
-    console.error("Google Sign-In Error:", errorMessage);
     alert(errorMessage || "Google login failed.");
   };
 
@@ -144,10 +147,7 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
         <hr className="flex-grow border-t border-gray-300" />
       </div>
 
-      <GoogleSignInButton
-        onSuccess={handleLoginSuccess}
-        onError={handleGoogleLoginError}
-      />
+      <GoogleSignInButton onSuccess={handleLoginSuccess} onError={handleGoogleLoginError} />
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Don't have an account?{" "}
