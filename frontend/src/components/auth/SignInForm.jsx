@@ -32,38 +32,46 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
     return ok;
   };
 
+  // CORRECTED: Reordered logic to ensure navigation happens BEFORE onClose()
   const handleLoginSuccess = async ({ isNewUser }) => {
-  const user = await fetchUser();
-  onClose();
+    const user = await fetchUser(); // Always fetch the latest user data
 
-  if (isNewUser) {
-    console.log("New Google user detected. Navigating to /onboarding.");
-    navigate("/onboarding");
-    return;
-  }
+    let targetPath;
 
-  if (user && user.role) {
-    if (user.role === "student") {
-      navigate("/student/overview");
-    } else if (user.role === "teacher") {
-      navigate("/teacher/overview");
+    if (isNewUser) {
+      console.log("New Google user detected. Setting target path to /onboarding.");
+      targetPath = "/onboarding";
+    } else if (user && user.role) {
+      // Existing user: navigate based on role
+      if (user.role === "student") {
+        targetPath = "/student/overview";
+      } else if (user.role === "teacher") {
+        targetPath = "/teacher/overview";
+      } else {
+        // Fallback for existing user with unrecognized/unset role
+        console.warn("User logged in with an unrecognized role:", user.role);
+        targetPath = "/onboarding";
+      }
     } else {
-      console.warn("User logged in with an unrecognized role:", user.role);
-      navigate("/onboarding");
+      // Fallback for existing user if user data or role is missing (unexpected state)
+      console.warn("User data or role missing after login (not a new user). Setting target path to /onboarding.");
+      targetPath = "/onboarding";
     }
-  } else {
-    console.warn("User data or role missing after login (not a new user). Navigating to /onboarding.");
-    navigate("/onboarding");
-  }
-};
+
+    // 1. Perform the navigation first
+    navigate(targetPath);
+
+    // 2. Then, call onClose() to close the modal/form.
+    // This ensures navigation is initiated before any potential component unmounting.
+    onClose();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
     setLoading(true);
     try {
-      await login(formData.email, formData.password); // This sets the authentication cookies
-      await handleLoginSuccess(); // Use the shared success handler
+      await login(formData.email, formData.password); 
     } catch (err) {
       alert(err.response?.data?.message || "Login failed");
     } finally {
