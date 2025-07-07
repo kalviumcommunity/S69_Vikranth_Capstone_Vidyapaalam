@@ -128,7 +128,6 @@ import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
 const AuthContext = createContext();
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
@@ -254,19 +253,13 @@ export function AuthProvider({ children }) {
   const updateAvailability = (date, slots) => updateProfileData('/availability', { date, slots });
   const updateGeneralProfile = (profileData) => updateProfileData('', profileData);
 
-  const connectGoogleCalendar = async () => {
-    try {
-      const response = await api.get('/calendar/google');
-      return response.data.authUrl;
-    } catch (error) {
-      console.error('Error initiating Google Calendar connection:', error.response?.data || error.message);
-      throw error;
-    }
-  };
+  // The 'connectGoogleCalendar' function is removed
+  // as Google Calendar consent is now integrated into the initial Google Sign-In flow.
 
   const getGoogleCalendarBusyTimes = async (date) => {
     try {
-      const response = await api.get(`/calendar/google/busy-times?date=${date}`);
+      // Corrected API path to match backend routing (server.js mounting /auth/calendar)
+      const response = await api.get(`/auth/calendar/busy-times?date=${date}`);
       return response.data.busyTimes;
     } catch (error) {
       console.error('Error fetching Google Calendar busy times:', error.response?.data || error.message);
@@ -289,7 +282,6 @@ export function AuthProvider({ children }) {
         updateTeachingSkills,
         updateAvailability,
         updateGeneralProfile,
-        connectGoogleCalendar,
         getGoogleCalendarBusyTimes,
       }}
     >
