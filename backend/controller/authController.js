@@ -509,7 +509,7 @@ exports.googleAuthCallback = async function(req, res) {
     res
       .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
       .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
-      .redirect(`${frontendRedirectBaseUrl}/signin?googleAuthSuccess=true&isNewUser=${isNewUser}`);
+      .redirect(`${frontendRedirectBaseUrl}/?googleAuthSuccess=true&isNewUser=${isNewUser}`);
 
   } catch (error) {
     console.error("Google Auth Callback Error:", error);
