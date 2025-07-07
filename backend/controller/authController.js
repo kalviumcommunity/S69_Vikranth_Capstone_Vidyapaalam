@@ -427,49 +427,37 @@ exports.googleAuthUrl = async function(req, res) {
   res.redirect(authUrl);
 };
 
-exports.googleAuthCallback = async function(req, res) {
+
+exports.googleAuthCallback = async function (req, res) {
   const { code } = req.query;
-  const frontendRedirectBaseUrl = process.env.FRONTEND_URL;
+  const frontendBase = process.env.FRONTEND_URL;
 
   if (!code) {
-    console.error('Google Auth Callback Error: Authorization code missing.');
-    const errorRedirectUrl = `${frontendRedirectBaseUrl}/signin?googleAuthSuccess=false&error=${encodeURIComponent('Authorization code missing.')}`;
-    return res.redirect(errorRedirectUrl);
+    const errorUrl = `${frontendBase}/signin?error=Missing authorization code`;
+    return res.redirect(errorUrl);
   }
 
   try {
     const { tokens } = await oAuth2Client.getToken(code);
     oAuth2Client.setCredentials(tokens);
 
-    const oauth2 = google.oauth2({
-      auth: oAuth2Client,
-      version: 'v2',
-    });
+    const oauth2 = google.oauth2({ auth: oAuth2Client, version: 'v2' });
     const { data } = await oauth2.userinfo.get();
 
     const googleId = data.id;
-    const email = data.email ? data.email.toLowerCase() : null;
+    const email = data.email?.toLowerCase();
     const name = data.name;
 
-    let user = null;
+    let user = await User.findOne({ googleId }) || await User.findOne({ email });
     let isNewUser = false;
 
-    if (googleId) {
-      user = await User.findOne({ googleId });
-    }
-
-    if (!user && email) {
-      user = await User.findOne({ email });
-    }
-
     if (!user) {
-      if (!email) {
-        throw new Error("Cannot create user: Email not provided by Google.");
-      }
+      if (!email) throw new Error("Email not provided by Google");
+
       user = new User({
-        name: name,
-        email: email,
-        googleId: googleId,
+        name,
+        email,
+        googleId,
         isGoogleUser: true,
         isVerified: true,
         password: undefined,
@@ -480,15 +468,15 @@ exports.googleAuthCallback = async function(req, res) {
           refreshToken: tokens.refresh_token,
           accessTokenExpiryDate: new Date(tokens.expiry_date),
           lastConnected: new Date(),
-        }
+        },
       });
+
       isNewUser = true;
     } else {
-      if (!user.googleId) {
-        user.googleId = googleId;
-        user.isGoogleUser = true;
-        user.isVerified = true;
-      }
+      // Update existing user
+      user.googleId = googleId;
+      user.isGoogleUser = true;
+      user.isVerified = true;
       if (!user.name && name) user.name = name;
       if (!user.email && email) user.email = email;
 
@@ -506,17 +494,27 @@ exports.googleAuthCallback = async function(req, res) {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
-    res
-      .cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE })
-      .cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE })
-      .redirect(`${frontendRedirectBaseUrl}/?googleAuthSuccess=true&isNewUser=${isNewUser}`);
+    res.cookie("accessToken", accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+    res.cookie("refreshToken", refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
+
+    let redirectPath = "/onboarding";
+    if (!isNewUser && user.role === "student") {
+      redirectPath = "/student/overview";
+    } else if (!isNewUser && user.role === "teacher") {
+      redirectPath = "/teacher/overview";
+    }
+
+    return res.redirect(`${frontendBase}${redirectPath}`);
 
   } catch (error) {
-    console.error("Google Auth Callback Error:", error);
-    const errorMessage = encodeURIComponent(error.message || "Google authentication failed.");
-    res.redirect(`${frontendRedirectBaseUrl}/?googleAuthSuccess=false&error=${errorMessage}`);
+    console.error("Google OAuth Callback Error:", error);
+    const errorMessage = encodeURIComponent(error.message || "Google authentication failed");
+    return res.redirect(`${frontendBase}/signin?error=${errorMessage}`);
   }
 };
+    
+
+  
 
 exports.disconnectCalendar = async (req, res) => {
   if (!req.user || !req.user.id) {
