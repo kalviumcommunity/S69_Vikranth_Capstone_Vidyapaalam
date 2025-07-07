@@ -145,7 +145,7 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async () => {
     try {
       if (isMountedRef.current) setLoading(true);
-      const { data } = await api.get("/api/auth/profile");
+      const { data } = await api.get("/auth/profile");
       const userData = data;
 
       if (isMountedRef.current) {
@@ -184,7 +184,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const { data } = await api.post("/api/auth/login", { email, password });
+      const { data } = await api.post("/auth/login", { email, password });
       const userData = data?.user;
 
       if (validateUserData(userData)) {
@@ -201,7 +201,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (name, email, password) => {
     try {
-      const { data } = await api.post("/api/auth/signup", { name, email, password });
+      const { data } = await api.post("/auth/signup", { name, email, password });
       const userData = data?.user;
 
       if (validateUserData(userData)) {
@@ -218,7 +218,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await api.post("/api/auth/logout");
+      await api.post("/auth/logout");
       if (isMountedRef.current) setUser(null);
       clearAuthCookies();
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
@@ -232,7 +232,7 @@ export function AuthProvider({ children }) {
 
   const updateProfileData = useCallback(async (endpointSuffix, dataToUpdate) => {
     try {
-      const { data } = await api.patch(`/api/auth/profile${endpointSuffix}`, dataToUpdate);
+      const { data } = await api.patch(`/auth/profile${endpointSuffix}`, dataToUpdate);
       const updatedUser = data?.user;
 
       if (isMountedRef.current && validateUserData(updatedUser)) {
@@ -256,7 +256,7 @@ export function AuthProvider({ children }) {
 
   const connectGoogleCalendar = async () => {
     try {
-      const response = await api.get('/api/calendar/google');
+      const response = await api.get('/calendar/google');
       return response.data.authUrl;
     } catch (error) {
       console.error('Error initiating Google Calendar connection:', error.response?.data || error.message);
@@ -266,7 +266,7 @@ export function AuthProvider({ children }) {
 
   const getGoogleCalendarBusyTimes = async (date) => {
     try {
-      const response = await api.get(`/api/calendar/google/busy-times?date=${date}`);
+      const response = await api.get(`/calendar/google/busy-times?date=${date}`);
       return response.data.busyTimes;
     } catch (error) {
       console.error('Error fetching Google Calendar busy times:', error.response?.data || error.message);
