@@ -511,8 +511,10 @@ exports.googleAuthCallback = async function (req, res) {
 
     return res.status(200).json({
     message: "Login successful",
-    redirectTo: `${frontendBase}${redirectPath}`
-      });
+    isNewUser,
+    redirectTo: `${redirectPath}`
+  });
+
 
   } catch (error) {
     console.error("Google OAuth Callback Error:", error);
