@@ -3,9 +3,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 
-// CORRECTED: Import the GoogleSignInButton component
-import GoogleSignInButton from './GoogleSignInButton'; 
-
+// Ensure this is the correct GoogleSignInButton that calls `onSuccess({ isNewUser })`
+import GoogleSignInButton from "./GoogleSignInButton";
 
 export default function SignInForm({ onSwitchToSignUp, onClose }) {
   const { login, fetchUser } = useAuth();
@@ -32,47 +31,56 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
     return ok;
   };
 
-  // CORRECTED: Reordered logic to ensure navigation happens BEFORE onClose()
   const handleLoginSuccess = async ({ isNewUser }) => {
-    const user = await fetchUser(); // Always fetch the latest user data
+    try {
+      console.log("Google login success. isNewUser:", isNewUser);
 
-    let targetPath;
+      const user = await fetchUser();
+      console.log("Fetched user after Google login:", user);
 
-    if (isNewUser) {
-      console.log("New Google user detected. Setting target path to /onboarding.");
-      targetPath = "/onboarding";
-    } else if (user && user.role) {
-      // Existing user: navigate based on role
-      if (user.role === "student") {
-        targetPath = "/student/overview";
-      } else if (user.role === "teacher") {
-        targetPath = "/teacher/overview";
-      } else {
-        // Fallback for existing user with unrecognized/unset role
-        console.warn("User logged in with an unrecognized role:", user.role);
-        targetPath = "/onboarding";
+      let targetPath = "/onboarding";
+
+      if (!isNewUser && user && user.role) {
+        if (user.role === "student") {
+          targetPath = "/student/overview";
+        } else if (user.role === "teacher") {
+          targetPath = "/teacher/overview";
+        } else {
+          console.warn("Unrecognized user role:", user.role);
+        }
       }
-    } else {
-      // Fallback for existing user if user data or role is missing (unexpected state)
-      console.warn("User data or role missing after login (not a new user). Setting target path to /onboarding.");
-      targetPath = "/onboarding";
+
+      navigate(targetPath); // First: navigate
+      onClose(); // Then close modal
+    } catch (err) {
+      console.error("Error in handleLoginSuccess:", err);
+      alert("Login succeeded, but user data could not be fetched.");
     }
-
-    // 1. Perform the navigation first
-    navigate(targetPath);
-
-    // 2. Then, call onClose() to close the modal/form.
-    // This ensures navigation is initiated before any potential component unmounting.
-    onClose();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
     setLoading(true);
     try {
-      await login(formData.email, formData.password); 
+      await login(formData.email, formData.password);
+      const user = await fetchUser();
+
+      let targetPath = "/onboarding";
+
+      if (user && user.role) {
+        if (user.role === "student") {
+          targetPath = "/student/overview";
+        } else if (user.role === "teacher") {
+          targetPath = "/teacher/overview";
+        }
+      }
+
+      navigate(targetPath);
+      onClose();
     } catch (err) {
+      console.error("Email/password login error:", err);
       alert(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
@@ -80,6 +88,7 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
   };
 
   const handleGoogleLoginError = (errorMessage) => {
+    console.error("Google Sign-In Error:", errorMessage);
     alert(errorMessage || "Google login failed.");
   };
 
@@ -135,7 +144,10 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
         <hr className="flex-grow border-t border-gray-300" />
       </div>
 
-      <GoogleSignInButton onSuccess={handleLoginSuccess} onError={handleGoogleLoginError} />
+      <GoogleSignInButton
+        onSuccess={handleLoginSuccess}
+        onError={handleGoogleLoginError}
+      />
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Don't have an account?{" "}
