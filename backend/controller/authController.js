@@ -21,9 +21,10 @@ const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'Lax',
+  secure: true, 
+  sameSite: 'None'
 };
+
 
 const generateAccessToken = (user) => {
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
