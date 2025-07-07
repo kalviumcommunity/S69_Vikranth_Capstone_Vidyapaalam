@@ -514,7 +514,7 @@ exports.googleAuthCallback = async function(req, res) {
   } catch (error) {
     console.error("Google Auth Callback Error:", error);
     const errorMessage = encodeURIComponent(error.message || "Google authentication failed.");
-    res.redirect(`${frontendRedirectBaseUrl}/signin?googleAuthSuccess=false&error=${errorMessage}`);
+    res.redirect(`${frontendRedirectBaseUrl}/?googleAuthSuccess=false&error=${errorMessage}`);
   }
 };
 
