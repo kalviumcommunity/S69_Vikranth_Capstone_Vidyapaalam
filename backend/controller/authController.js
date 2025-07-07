@@ -507,14 +507,8 @@ exports.googleAuthCallback = async function (req, res) {
       redirectPath = "/teacher/overview";
     }
 
-    // return res.redirect(`${frontendBase}${redirectPath}`);
-
-    return res.status(200).json({
-    message: "Login successful",
-    isNewUser,
-    redirectTo: `${redirectPath}`
-  });
-
+    // ✅ Important: Redirect to frontend (not JSON response)
+    return res.redirect(`${frontendBase}${redirectPath}`);
 
   } catch (error) {
     console.error("Google OAuth Callback Error:", error);
@@ -522,6 +516,7 @@ exports.googleAuthCallback = async function (req, res) {
     return res.redirect(`${frontendBase}/signin?error=${errorMessage}`);
   }
 };
+
     
 
   
