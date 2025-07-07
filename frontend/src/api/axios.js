@@ -2,7 +2,6 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { clearAuthCookies } from "../utils/authUtils"; 
 
-// Axios instance
 export const api = axios.create({
   baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
   withCredentials: true,
@@ -16,7 +15,7 @@ api.interceptors.response.use(
     const shouldRefresh =
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/api/auth/refreshtoken");
+      !originalRequest.url.includes("/auth/refreshtoken");
 
     if (!shouldRefresh) return Promise.reject(error);
 
