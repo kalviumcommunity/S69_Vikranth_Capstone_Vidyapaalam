@@ -123,10 +123,17 @@
 
 
 // src/contexts/AuthContext.jsx
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import Cookies from "js-cookie"; 
-import { api } from "../api/axios";
-import { clearAuthCookies, validateUserData } from "../utils/authUtils";
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+import { api } from "../api/axios"; 
+import { clearAuthCookies, validateUserData } from "../utils/authUtils"; 
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -158,15 +165,12 @@ export function AuthProvider({ children }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      setLoading(true);
-      // CORRECTED: Changed endpoint from /auth/me to /auth/profile
-      const { data } = await api.get("/auth/profile");
-      
+      const { data } = await api.get("/auth/profile"); // Browser automatically sends httpOnly accessToken
+
       if (!validateUserData(data)) {
-        console.warn("Invalid user data received from /auth/profile:", data);
+        console.warn("Invalid user data from /auth/profile:", data);
         if (isMountedRef.current) {
           setUser(null);
-          clearAuthCookies();
         }
         return null;
       }
@@ -176,19 +180,55 @@ export function AuthProvider({ children }) {
         return data;
       }
     } catch (err) {
-      console.error("Failed to fetch user from /auth/profile:", err.response?.data || err.message);
+      console.error(
+        "Failed to fetch user from /auth/profile:",
+        err.response?.status, // Log status code for clarity
+        err.response?.data || err.message
+      );
       if (isMountedRef.current) {
         setUser(null);
-        if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       }
+     
       return null;
     } finally {
-      if (isMountedRef.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchUser();
+    const bootstrapAuth = async () => {
+      setLoading(true); // Start loading state
+
+      try {
+        const userData = await fetchUser();
+
+        if (userData) {
+          console.log("Authenticated: User data fetched successfully.");
+          if (isMountedRef.current) {
+            setLoading(false);
+          }
+          return;
+        }
+
+        console.log("No current user data; attempting token refresh...");
+        await api.post("/auth/refresh-token", {}, { withCredentials: true }); // Explicitly ensure withCredentials is sent for refresh
+        console.log("Token refresh successful. Re-fetching user data...");
+        await fetchUser();
+        console.log("User data re-fetched after successful refresh.");
+
+      } catch (err) {
+        console.error("Authentication bootstrapping failed:", err.response?.status, err.message);
+        if (isMountedRef.current) {
+          setUser(null); 
+        }
+        clearAuthCookies(); 
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false); 
+        }
+      }
+    };
+
+    bootstrapAuth();
   }, [fetchUser]);
 
   const login = async (email, password) => {
@@ -204,13 +244,17 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      throw err; 
+      throw err;
     }
   };
 
   const signup = async (name, email, password) => {
     try {
-      const { data } = await api.post("/auth/register", { name, email, password });
+      const { data } = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+      });
       const userData = data?.user;
 
       if (validateUserData(userData)) {
@@ -225,42 +269,48 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateProfileData = useCallback(async (suffix, payload) => {
-    try {
-      const { data } = await api.patch(`/auth/profile${suffix}`, payload);
-      const updatedUser = data?.user;
+  const updateProfileData = useCallback(
+    async (suffix, payload) => {
+      try {
+        const { data } = await api.patch(`/auth/profile${suffix}`, payload);
+        const updatedUser = data?.user;
 
-      if (!updatedUser) {
-        console.error("Updated user data missing from response for", suffix);
-        return await fetchUser();
-      }
+        if (!updatedUser) {
+          console.error("Updated user missing from response for:", suffix);
+          return await fetchUser(); 
+        }
 
-      if (isMountedRef.current && validateUserData(updatedUser)) {
-        setUser(updatedUser);
-        return updatedUser;
-      } else {
-        console.warn("Invalid updated user:", updatedUser);
-        return await fetchUser();
+        if (isMountedRef.current && validateUserData(updatedUser)) {
+          setUser(updatedUser);
+          return updatedUser;
+        } else {
+          console.warn("Invalid updated user data received:", updatedUser);
+          return await fetchUser(); 
+        }
+      } catch (err) {
+        console.error(`Update profile ${suffix} failed:`, err.response?.status, err.response?.data || err.message);
+        throw err;
       }
-    } catch (err) {
-      console.error(`Update profile ${suffix} failed:`, err.response?.data || err.message);
-      throw err; 
-    }
-  }, [fetchUser]);
+    },
+    [fetchUser]
+  );
 
   const updateRole = (role) => updateProfileData("/role", { role });
-  const updateInterestedSkills = (skills) => updateProfileData("/interested-skills", { interestedSkills: skills });
-  const updateTeachingSkills = (skills) => updateProfileData("/teaching-skills", { teachingSkills: skills });
-  const updateAvailability = (date, slots) => updateProfileData("/availability", { date, slots });
-  const updateGeneralProfile = (profileData) => updateProfileData("", profileData);
-
+  const updateInterestedSkills = (skills) =>
+    updateProfileData("/interested-skills", { interestedSkills: skills });
+  const updateTeachingSkills = (skills) =>
+    updateProfileData("/teaching-skills", { teachingSkills: skills });
+  const updateAvailability = (date, slots) =>
+    updateProfileData("/availability", { date, slots });
+  const updateGeneralProfile = (profileData) =>
+    updateProfileData("", profileData);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        isAuthenticated: !!user, 
+        isAuthenticated: !!user,
         login,
         signup,
         logout,
@@ -276,4 +326,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
