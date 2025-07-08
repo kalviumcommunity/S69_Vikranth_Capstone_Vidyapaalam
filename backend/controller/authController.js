@@ -549,16 +549,15 @@
 const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt'); 
+const bcrypt = require('bcrypt');
 
-const ACCESS_TOKEN_AGE = 15 * 60 * 1000;
-const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000;
+const ACCESS_TOKEN_AGE = 15 * 60 * 1000; // 15 minutes
+const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const cookieOptions = {
     httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    maxAge: ACCESS_TOKEN_AGE, 
+    secure: true,  
+    sameSite: "None", 
     path: '/',
 };
 
@@ -590,7 +589,7 @@ exports.registerUser = async (req, res) => {
         name,
         email,
         password: password,
-        role: null, 
+        role: null,
         isVerified: false,
     });
 
@@ -632,6 +631,7 @@ exports.loginUser = async (req, res) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
+    // Setting cookies with specific maxAge
     res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
     res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
 
@@ -648,6 +648,7 @@ exports.loginUser = async (req, res) => {
 };
 
 exports.getMe = async (req, res) => {
+   
     const user = await User.findById(req.user.id);
 
     if (user) {
@@ -660,7 +661,7 @@ exports.getMe = async (req, res) => {
             bio: user.bio,
             interestedSkills: user.interestedSkills,
             teachingSkills: user.teachingSkills,
-            teacherOnboardingComplete: user.teacherOnboardingComplete, 
+            teacherOnboardingComplete: user.teacherOnboardingComplete,
             isVerified: user.isVerified
         });
     } else {
@@ -672,12 +673,16 @@ exports.refreshToken = async (req, res) => {
     const refreshTokenCookie = req.cookies.refreshToken;
 
     if (!refreshTokenCookie) {
+        
+        console.log("No refresh token cookie found in request.");
         return res.status(401).json({ message: 'No refresh token provided' });
     }
 
     const isBlacklisted = await BlacklistedToken.findOne({ token: refreshTokenCookie });
     if (isBlacklisted) {
         console.log('Blacklisted refresh token detected:', refreshTokenCookie);
+        res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
+        res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
         return res.status(401).json({ message: 'Not authorized, token blacklisted' });
     }
 
@@ -686,18 +691,24 @@ exports.refreshToken = async (req, res) => {
         const user = await User.findById(decoded.id);
 
         if (!user) {
-            return res.status(401).json({ message: 'Invalid refresh token' });
+            console.log("User not found for decoded refresh token ID:", decoded.id);
+            // Clear cookies if user doesn't exist for the token
+            res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
+            res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
+            return res.status(401).json({ message: 'Invalid refresh token (user not found)' });
         }
 
         const accessToken = generateAccessToken(user);
-        const newRefreshToken = generateRefreshToken(user);
+        const newRefreshToken = generateRefreshToken(user); // Generate a new refresh token for rolling window strategy
 
         res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
         res.cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
 
         res.status(200).json({ message: 'Access token refreshed' });
     } catch (error) {
-        console.error('Refresh token error:', error);
+        console.error('Refresh token verification error:', error);
+        res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
+        res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
         res.status(401).json({ message: 'Not authorized, token failed' });
     }
 };
@@ -714,8 +725,9 @@ exports.logoutUser = async (req, res) => {
         }
     }
 
-    res.clearCookie('accessToken', { path: '/' });
-    res.clearCookie('refreshToken', { path: '/' });
+
+    res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
+    res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
     res.status(200).json({ message: 'Logged out successfully' });
 };
 
