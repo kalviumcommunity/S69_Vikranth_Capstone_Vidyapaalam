@@ -16,31 +16,6 @@ const UserSchema = new mongoose.Schema({
     type: String,
     select: false,
   },
-  googleCalendar: {
-    connected: {
-      type: Boolean,
-      default: false,
-    },
-    accessToken: {
-      type: String,
-      default: null,
-      select: false,
-    },
-    refreshToken: {
-      type: String,
-      default: null,
-      select: false,
-    },
-    accessTokenExpiryDate: {
-      type: Date,
-      default: null,
-      select: false,
-    },
-    lastConnected: {
-      type: Date,
-      default: null,
-    },
-  },
   bio: {
     type: String,
     default: "",
@@ -53,7 +28,7 @@ const UserSchema = new mongoose.Schema({
   role: {
     type: String,
     enum: ["student", "teacher", "admin"],
-    default: null, // Role can be null initially during onboarding
+    default: null,
   },
   interestedSkills: [{
     type: String,
@@ -68,17 +43,17 @@ const UserSchema = new mongoose.Schema({
       type: Date,
       required: true,
     },
-    slots: [{ 
-      startTime: { type: String, required: true }, // e.g., "09:00"
-      endTime: { type: String, required: true }   // e.g., "10:00"
+    slots: [{
+      startTime: { type: String, required: true },
+      endTime: { type: String, required: true }
     }],
   }],
-  teacherOnboardingComplete: { 
+  teacherOnboardingComplete: {
     type: Boolean,
     default: false,
   },
 }, {
-  timestamps: true 
+  timestamps: true
 });
 
 UserSchema.pre("save", async function (next) {
@@ -90,7 +65,7 @@ UserSchema.pre("save", async function (next) {
 });
 
 UserSchema.methods.matchPassword = async function (enteredPassword) {
-  if (!this.password) { // Handle case where password might not be selected/present
+  if (!this.password) {
     return false;
   }
   return await bcrypt.compare(enteredPassword, this.password);

@@ -122,14 +122,8 @@
 // }
 
 
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-  useRef,
-} from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import Cookies from "js-cookie"; 
 import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
@@ -147,7 +141,7 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const logout = useCallback(async () => {
+  const logout = async () => {
     try {
       await api.post("/auth/logout");
     } catch (err) {
@@ -159,36 +153,38 @@ export function AuthProvider({ children }) {
         window.location.href = "/";
       }
     }
-  }, []);
+  };
 
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/auth/me");
-
+      // CORRECTED: Changed endpoint from /auth/me to /auth/profile
+      const { data } = await api.get("/auth/profile");
+      
       if (!validateUserData(data)) {
-        console.warn("Invalid user data:", data);
+        console.warn("Invalid user data received from /auth/profile:", data);
         if (isMountedRef.current) {
-          await logout(); // Clean exit if invalid
+          setUser(null);
+          clearAuthCookies();
         }
         return null;
       }
 
       if (isMountedRef.current) {
         setUser(data);
+        return data;
       }
-      return data;
     } catch (err) {
+      console.error("Failed to fetch user from /auth/profile:", err.response?.data || err.message);
       if (isMountedRef.current) {
-        console.error("Fetch user error:", err.response?.data || err.message);
         setUser(null);
+        if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       }
-      if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       return null;
     } finally {
       if (isMountedRef.current) setLoading(false);
     }
-  }, [logout]);
+  }, []);
 
   useEffect(() => {
     fetchUser();
@@ -207,17 +203,13 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      throw err;
+      throw err; 
     }
   };
 
   const signup = async (name, email, password) => {
     try {
-      const { data } = await api.post("/auth/register", {
-        name,
-        email,
-        password,
-      });
+      const { data } = await api.post("/auth/register", { name, email, password });
       const userData = data?.user;
 
       if (validateUserData(userData)) {
@@ -232,62 +224,42 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateProfileData = useCallback(
-    async (suffix, payload) => {
-      try {
-        const { data } = await api.patch(`/auth/profile${suffix}`, payload);
-        const updatedUser = data?.user;
-
-        if (!updatedUser) {
-          console.error("Updated user data missing. Refetching...");
-          return await fetchUser();
-        }
-
-        if (isMountedRef.current && validateUserData(updatedUser)) {
-          setUser(updatedUser);
-          return updatedUser;
-        } else {
-          return await fetchUser();
-        }
-      } catch (err) {
-        console.error(`Update profile ${suffix} failed:`, err.response?.data || err.message);
-        throw err;
-      }
-    },
-    [fetchUser]
-  );
-
-  const updateRole = (role) =>
-    updateProfileData("/role", { role });
-
-  const updateInterestedSkills = (skills) =>
-    updateProfileData("/interested-skills", { interestedSkills: skills });
-
-  const updateTeachingSkills = (skills) =>
-    updateProfileData("/teaching-skills", { teachingSkills: skills });
-
-  const updateAvailability = (date, slots) =>
-    updateProfileData("/availability", { date, slots });
-
-  const updateGeneralProfile = (data) =>
-    updateProfileData("", data);
-
-  const getGoogleCalendarBusyTimes = async (date) => {
+  const updateProfileData = useCallback(async (suffix, payload) => {
     try {
-      const response = await api.get(`/auth/calendar/busy-times?date=${date}`);
-      return response.data.busyTimes;
-    } catch (error) {
-      console.error("Google Calendar busy time error:", error.response?.data || error.message);
-      throw error;
+      const { data } = await api.patch(`/auth/profile${suffix}`, payload);
+      const updatedUser = data?.user;
+
+      if (!updatedUser) {
+        console.error("Updated user data missing from response for", suffix);
+        return await fetchUser();
+      }
+
+      if (isMountedRef.current && validateUserData(updatedUser)) {
+        setUser(updatedUser);
+        return updatedUser;
+      } else {
+        console.warn("Invalid updated user:", updatedUser);
+        return await fetchUser();
+      }
+    } catch (err) {
+      console.error(`Update profile ${suffix} failed:`, err.response?.data || err.message);
+      throw err; 
     }
-  };
+  }, [fetchUser]);
+
+  const updateRole = (role) => updateProfileData("/role", { role });
+  const updateInterestedSkills = (skills) => updateProfileData("/interested-skills", { interestedSkills: skills });
+  const updateTeachingSkills = (skills) => updateProfileData("/teaching-skills", { teachingSkills: skills });
+  const updateAvailability = (date, slots) => updateProfileData("/availability", { date, slots });
+  const updateGeneralProfile = (profileData) => updateProfileData("", profileData);
+
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user, 
         login,
         signup,
         logout,
@@ -297,10 +269,10 @@ export function AuthProvider({ children }) {
         updateTeachingSkills,
         updateAvailability,
         updateGeneralProfile,
-        getGoogleCalendarBusyTimes,
       }}
     >
       {children}
     </AuthContext.Provider>
   );
 }
+
