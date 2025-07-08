@@ -116,79 +116,50 @@ const protect = async (req, res, next) => {
     try {
         const token = req.cookies.accessToken;
 
-        // Logs will now always show up in production (Render logs)
-        console.log('Protect middleware triggered.');
-        console.log('Request Cookies:', req.cookies);
-        console.log('AccessToken in cookies:', token ? 'Exists' : 'Missing');
-
         if (!token) {
-            console.log('No token found. Sending 401.');
-            return res.status(401).json({ message: "Not authorized, no token provided" });
+            return res.status(401).json({ message: "Not authorized, no access token provided" });
         }
 
-        // 1. Blacklist check
         const isBlacklisted = await BlacklistedToken.findOne({ token });
         if (isBlacklisted) {
-            console.log('Token is blacklisted. Sending 401.');
-            return res.status(401).json({ message: "Not authorized, token invalidated" });
+            return res.status(401).json({ message: "Not authorized, access token invalidated" });
         }
 
-        // 2. Verify signature & expiry
         let decoded;
         try {
             decoded = jwt.verify(token, process.env.JWT_SECRET);
-            console.log('Token successfully verified. Decoded ID:', decoded.id);
         } catch (err) {
-            console.log('Token verification failed:', err.name, err.message);
             if (err.name === "TokenExpiredError") {
-                return res.status(401).json({ message: "Not authorized, token expired" });
+                return res.status(401).json({ message: "Not authorized, access token expired" });
             }
-            return res.status(401).json({ message: "Not authorized, invalid token" });
+            return res.status(401).json({ message: "Not authorized, invalid access token" });
         }
 
-        // Select activeToken and role, refreshToken is not needed for this middleware's function
-        const user = await User.findById(decoded.id).select("activeToken role");
+        const user = await User.findById(decoded.id).select("role");
 
         if (!user) {
-            console.log('User not found for decoded ID. Sending 401 (user not found).');
             return res.status(401).json({ message: "Not authorized, user not found" });
         }
 
-        // Check if the current accessToken matches the one stored as 'activeToken'
-        if (user.activeToken !== token) {
-            console.log('Token mismatch with user\'s activeToken. Sending 401 (mismatch).');
-            return res.status(401).json({ message: "Not authorized, token mismatch or invalidated" });
-        }
-
-        // Attach user info to the request
         req.user = { id: user._id, role: user.role || null };
-        console.log('User authenticated. Role:', req.user.role, 'User ID:', req.user.id);
         next();
 
     } catch (error) {
-        console.error("Auth middleware unexpected error:", error);
         return res.status(500).json({ message: "Server error during authentication" });
     }
 };
 
 const authorizeRoles = (...roles) => {
     return (req, res, next) => {
-        console.log('AuthorizeRoles middleware triggered.');
-        console.log('Required roles:', roles);
-        console.log('User role:', req.user ? req.user.role : 'N/A');
-
         if (!req.user || !req.user.role) {
-            console.log('No user or role found on request for authorization. Sending 401.');
             return res.status(401).json({ message: "Authentication required for role check." });
         }
 
         if (!roles.includes(req.user.role)) {
-            console.log(`User role '${req.user.role}' not authorized for required roles: ${roles.join(', ')}. Sending 403.`);
             return res.status(403).json({
                 message: `User role '${req.user.role}' is not authorized to access this route.`
             });
         }
-        console.log(`User role '${req.user.role}' authorized.`);
         next();
     };
 };
