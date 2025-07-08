@@ -20,7 +20,7 @@ const ACCESS_TOKEN_AGE = 15 * 60 * 1000;
 const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000;
 
 const cookieOptions = {
-  httpOnly: true,
+  httpOnly: false,
   secure: true,
   sameSite: 'None',
   path: '/', 
