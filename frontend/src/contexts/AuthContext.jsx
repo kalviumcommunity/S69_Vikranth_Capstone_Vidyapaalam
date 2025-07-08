@@ -145,7 +145,7 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async () => {
     try {
       if (isMountedRef.current) setLoading(true);
-      const { data } = await api.get("/auth/me");
+      const { data } = await api.get("/auth/profile");
       const userData = data;
 
       if (isMountedRef.current) {
