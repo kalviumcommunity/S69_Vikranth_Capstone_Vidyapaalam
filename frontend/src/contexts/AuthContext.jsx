@@ -122,7 +122,6 @@
 // }
 
 
-// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import Cookies from "js-cookie"; 
 import { api } from "../api/axios";
@@ -276,3 +275,4 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
+
