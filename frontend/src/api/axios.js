@@ -52,7 +52,10 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (!originalRequest) return Promise.reject(error);
+    if (!originalRequest) {
+      console.warn("originalRequest is null or undefined in axios interceptor", error);
+      return Promise.reject(error);
+    }
 
     const shouldRefresh =
       (error.response?.status === 401 || error.response?.status === 403) &&
@@ -68,15 +71,11 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (refreshError) {
       console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
-
       clearAuthCookies();
-
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
         window.location.href = "/";
       }
-
       return Promise.reject(refreshError);
     }
   }
 );
-
