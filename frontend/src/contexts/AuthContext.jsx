@@ -122,8 +122,18 @@
 // }
 
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import Cookies from "js-cookie"; 
+
+// src/contexts/AuthContext.jsx
+
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+
 import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
@@ -135,6 +145,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const isMountedRef = useRef(true);
 
+  // Effect to manage component mount status for preventing state updates on unmounted component
   useEffect(() => {
     return () => {
       isMountedRef.current = false;
@@ -143,12 +154,16 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
+      // The backend /auth/logout endpoint should receive the httpOnly refreshToken
+      // and handle blacklisting it, then clear both cookies via Set-Cookie headers.
       await api.post("/auth/logout");
     } catch (err) {
       console.error("Logout error:", err.response?.data || err.message);
     } finally {
+      // Always clear user state and client-side cookies on logout, regardless of API success
       if (isMountedRef.current) setUser(null);
-      clearAuthCookies();
+      clearAuthCookies(); // Clears any client-side accessible cookies (if any)
+      // Redirect after logout
       if (typeof window !== "undefined" && window.location.pathname !== "/") {
         window.location.href = "/";
       }
@@ -157,15 +172,13 @@ export function AuthProvider({ children }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      setLoading(true);
-      // CORRECTED: Changed endpoint from /auth/me to /auth/profile
-      const { data } = await api.get("/auth/profile");
-      
+      // Note: setLoading(true) is managed by the calling `bootstrapAuth` for the overall auth process
+      const { data } = await api.get("/auth/profile"); // Browser automatically sends httpOnly accessToken
+
       if (!validateUserData(data)) {
-        console.warn("Invalid user data received from /auth/profile:", data);
+        console.warn("Invalid user data from /auth/profile:", data);
         if (isMountedRef.current) {
-          setUser(null);
-          clearAuthCookies();
+          setUser(null); // Clear user if data is invalid
         }
         return null;
       }
@@ -175,23 +188,84 @@ export function AuthProvider({ children }) {
         return data;
       }
     } catch (err) {
-      console.error("Failed to fetch user from /auth/profile:", err.response?.data || err.message);
+      // console.error is handled in the calling bootstrapAuth for initial load errors
+      // For general fetchUser calls, this catch might also trigger, but for auth bootstrapping,
+      // we centralize decision making.
+      console.error(
+        "Failed to fetch user from /auth/profile:",
+        err.response?.status,
+        err.response?.data || err.message
+      );
       if (isMountedRef.current) {
         setUser(null);
-        if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       }
       return null;
     } finally {
-      if (isMountedRef.current) setLoading(false);
+      // setLoading(false) is handled by the main useEffect after all attempts.
     }
   }, []);
 
+  // 🚀 Corrected and robust bootstrapping logic for httpOnly cookies
   useEffect(() => {
-    fetchUser();
-  }, [fetchUser]);
+    const bootstrapAuth = async () => {
+      if (!isMountedRef.current) return; // Immediate exit if component unmounted
+      setLoading(true); // Start loading state
+
+      try {
+        // 1. Attempt to fetch user with existing access token (if any).
+        // The browser will automatically send any existing httpOnly accessToken cookie
+        // with this request if `api` is configured with `withCredentials: true`.
+        let userData = await fetchUser();
+
+        if (userData) {
+          console.log("Authenticated: User data fetched successfully.");
+          return; // Successfully authenticated, exit early
+        }
+
+        // If fetchUser returned null (e.g., because /auth/profile returned 401
+        // due to an expired access token, or no token), then attempt to refresh.
+        console.log("No current user data; attempting token refresh...");
+
+        // 2. Attempt token refresh.
+        // This call *must* include withCredentials: true on the axios instance.
+        // The server's refresh-token endpoint will handle setting new cookies.
+        await api.post("/auth/refresh-token", {}, { withCredentials: true });
+        console.log("Token refresh successful. Re-fetching user data with new token...");
+
+        // 3. Re-fetch user data after successful refresh
+        userData = await fetchUser();
+        if (!userData) {
+          // Even after refresh, if user data can't be fetched, something is wrong.
+          throw new Error("Failed to fetch user data after successful token refresh.");
+        }
+        console.log("User data re-fetched after successful refresh.");
+
+      } catch (err) {
+        // This catch block handles:
+        // a) Initial fetchUser failure (e.g., no valid token, 401)
+        // b) Refresh token failure
+        // c) fetchUser failure after refresh
+        console.error("Authentication bootstrapping failed:", err.response?.status, err.message);
+
+        if (isMountedRef.current) {
+          setUser(null); // Ensure user state is cleared on failure
+        }
+        clearAuthCookies(); // Clear any remaining client-side accessible cookies
+        // Important: The backend's /auth/refresh-token endpoint should *already*
+        // be clearing httpOnly cookies on verification failure or if the refresh token is blacklisted.
+      } finally {
+        if (isMountedRef.current) {
+          setLoading(false); // Always set loading to false at the end
+        }
+      }
+    };
+
+    bootstrapAuth();
+  }, [fetchUser]); // Depend on fetchUser, which is useCallback
 
   const login = async (email, password) => {
     try {
+      // Browser automatically receives and stores httpOnly cookies from this response
       const { data } = await api.post("/auth/login", { email, password });
       const userData = data?.user;
 
@@ -199,67 +273,82 @@ export function AuthProvider({ children }) {
         if (isMountedRef.current) setUser(userData);
         return userData;
       } else {
+        // If the login response itself doesn't contain valid user data, fetch it.
+        // This is a fallback, ideally login response has complete user data.
         return await fetchUser();
       }
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      throw err; 
+      throw err; // Re-throw the error for the calling component to handle (e.g., display toast)
     }
   };
 
   const signup = async (name, email, password) => {
     try {
-      const { data } = await api.post("/auth/register", { name, email, password });
+      // Browser automatically receives and stores httpOnly cookies from this response
+      const { data } = await api.post("/auth/register", {
+        name,
+        email,
+        password,
+      });
       const userData = data?.user;
 
       if (validateUserData(userData)) {
         if (isMountedRef.current) setUser(userData);
         return userData;
       } else {
+        // Similar fallback for signup response
         return await fetchUser();
       }
     } catch (err) {
       console.error("Signup error:", err.response?.data || err.message);
-      throw err;
+      throw err; // Re-throw for consistency
     }
   };
 
-  const updateProfileData = useCallback(async (suffix, payload) => {
-    try {
-      const { data } = await api.patch(`/auth/profile${suffix}`, payload);
-      const updatedUser = data?.user;
+  const updateProfileData = useCallback(
+    async (suffix, payload) => {
+      try {
+        // Browser automatically sends httpOnly accessToken with these requests
+        const { data } = await api.patch(`/auth/profile${suffix}`, payload);
+        const updatedUser = data?.user;
 
-      if (!updatedUser) {
-        console.error("Updated user data missing from response for", suffix);
-        return await fetchUser();
-      }
+        if (!updatedUser) {
+          console.error("Updated user missing from response for:", suffix);
+          return await fetchUser(); // Re-fetch to ensure current state is accurate
+        }
 
-      if (isMountedRef.current && validateUserData(updatedUser)) {
-        setUser(updatedUser);
-        return updatedUser;
-      } else {
-        console.warn("Invalid updated user:", updatedUser);
-        return await fetchUser();
+        if (isMountedRef.current && validateUserData(updatedUser)) {
+          setUser(updatedUser);
+          return updatedUser;
+        } else {
+          console.warn("Invalid updated user data received:", updatedUser);
+          return await fetchUser(); // Re-fetch if received data is invalid
+        }
+      } catch (err) {
+        console.error(`Update profile ${suffix} failed:`, err.response?.status, err.response?.data || err.message);
+        throw err; // Re-throw for consistent error handling
       }
-    } catch (err) {
-      console.error(`Update profile ${suffix} failed:`, err.response?.data || err.message);
-      throw err; 
-    }
-  }, [fetchUser]);
+    },
+    [fetchUser]
+  );
 
   const updateRole = (role) => updateProfileData("/role", { role });
-  const updateInterestedSkills = (skills) => updateProfileData("/interested-skills", { interestedSkills: skills });
-  const updateTeachingSkills = (skills) => updateProfileData("/teaching-skills", { teachingSkills: skills });
-  const updateAvailability = (date, slots) => updateProfileData("/availability", { date, slots });
-  const updateGeneralProfile = (profileData) => updateProfileData("", profileData);
-
+  const updateInterestedSkills = (skills) =>
+    updateProfileData("/interested-skills", { interestedSkills: skills });
+  const updateTeachingSkills = (skills) =>
+    updateProfileData("/teaching-skills", { teachingSkills: skills });
+  const updateAvailability = (date, slots) =>
+    updateProfileData("/availability", { date, slots });
+  const updateGeneralProfile = (profileData) =>
+    updateProfileData("", profileData);
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        isAuthenticated: !!user, 
+        isAuthenticated: !!user,
         login,
         signup,
         logout,
@@ -275,4 +364,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   );
 }
-
