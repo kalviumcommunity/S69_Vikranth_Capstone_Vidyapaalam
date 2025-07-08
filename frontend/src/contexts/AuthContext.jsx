@@ -145,7 +145,7 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async () => {
     try {
       if (isMountedRef.current) setLoading(true);
-      const { data } = await api.get("/auth/profile");
+      const { data } = await api.get("/auth/me");
       const userData = data;
 
       if (isMountedRef.current) {
@@ -201,7 +201,7 @@ export function AuthProvider({ children }) {
 
   const signup = async (name, email, password) => {
     try {
-      const { data } = await api.post("/auth/signup", { name, email, password });
+      const { data } = await api.post("/auth/register", { name, email, password });
       const userData = data?.user;
 
       if (validateUserData(userData)) {
@@ -249,10 +249,10 @@ export function AuthProvider({ children }) {
     }
   }, [fetchUser]);
 
-  const updateRole = (role) => updateProfileData('/role', { role });
-  const updateInterestedSkills = (skills) => updateProfileData('/interested-skills', { interestedSkills: skills });
-  const updateTeachingSkills = (skills) => updateProfileData('/teaching-skills', { teachingSkills: skills });
-  const updateAvailability = (date, slots) => updateProfileData('/availability', { date, slots });
+  const updateRole = (role) => updateProfileData('/profile/role', { role });
+  const updateInterestedSkills = (skills) => updateProfileData('/profile/interested-skills', { interestedSkills: skills });
+  const updateTeachingSkills = (skills) => updateProfileData('/profile/teaching-skills', { teachingSkills: skills });
+  const updateAvailability = (date, slots) => updateProfileData('/profile/availability', { date, slots });
   const updateGeneralProfile = (profileData) => updateProfileData('', profileData);
 
   const getGoogleCalendarBusyTimes = async (date) => {

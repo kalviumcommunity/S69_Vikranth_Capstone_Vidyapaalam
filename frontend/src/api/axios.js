@@ -15,14 +15,14 @@ api.interceptors.response.use(
     const shouldRefresh =
       (error.response?.status === 401 || error.response?.status === 403) &&
       !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/refreshtoken");
+      !originalRequest.url.includes("/auth/refresh-token");
 
     if (!shouldRefresh) return Promise.reject(error);
 
     originalRequest._retry = true;
 
     try {
-      await axios.post(`${api.defaults.baseURL}/auth/refreshtoken`, {}, { withCredentials: true });
+      await axios.post(`${api.defaults.baseURL}/auth/refresh-token`, {}, { withCredentials: true });
       return api(originalRequest); 
     } catch (refreshError) {
       console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
