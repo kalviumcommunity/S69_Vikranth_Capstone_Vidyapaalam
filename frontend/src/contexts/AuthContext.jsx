@@ -1,7 +1,132 @@
+
+// // src/contexts/AuthContext.jsx
+// import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+// import axios from "axios";
+// import Cookies from "js-cookie";
+
+// const AuthContext = createContext();
+// export const useAuth = () => useContext(AuthContext);
+
+// export const api = axios.create({
+//   baseURL: "https://s69-vikranth-capstone-vidyapaalam.onrender.com",
+//   withCredentials: true,
+// });
+
+// api.interceptors.response.use(
+//   (response) => response,
+//   async (error) => {
+//     const originalRequest = error.config;
+
+//     if (
+//       (error.response?.status === 401 || error.response?.status === 403) &&
+//       !originalRequest._retry &&
+//       originalRequest.url !== "/auth/refreshtoken" // Changed this line to match backend route
+//     ) {
+//       originalRequest._retry = true;
+//       console.log("Interceptor: Access token expired or invalid. Attempting to refresh token...");
+
+//       try {
+//         await axios.post(
+//           "https://s69-vikranth-capstone-vidyapaalam.onrender.com/auth/refreshtoken", // Changed this line to match backend route
+//           {},
+//           { withCredentials: true }
+//         );
+//         console.log("Interceptor: Token refresh successful!");
+
+//         return api(originalRequest);
+
+//       } catch (refreshError) {
+//         console.error("Interceptor: Token refresh failed:", refreshError.response?.data || refreshError.message);
+//         Cookies.remove("accessToken", { path: '/' });
+//         Cookies.remove("refreshToken", { path: '/' });
+//         window.location.href = "/login";
+//         return Promise.reject(refreshError);
+//       }
+//     }
+//     return Promise.reject(error);
+//   }
+// );
+
+
+// export function AuthProvider({ children }) {
+//   const [user, setUser] = useState(null);
+//   const [loading, setLoading] = useState(true);
+
+//   const fetchUser = useCallback(async () => {
+//     try {
+//       setLoading(true);
+//       const { data } = await api.get("/auth/profile");
+//       setUser(data);
+//       return data;
+//     } catch (err) {
+//       console.error("Error fetching user profile:", err.response?.data || err.message);
+//       setUser(null);
+//       if (err.response?.status === 401 || err.response?.status === 403) {
+//         Cookies.remove("accessToken", { path: '/' });
+//         Cookies.remove("refreshToken", { path: '/' });
+//       }
+//       return null;
+//     } finally {
+//       setLoading(false);
+//     }
+//   }, []);
+
+//   useEffect(() => {
+//     const tokenExists = Cookies.get("accessToken");
+//     if (tokenExists) {
+//       fetchUser();
+//     } else {
+//       setLoading(false);
+//     }
+//   }, [fetchUser]);
+
+//   const login = async (email, password) => {
+//     const response = await api.post("/auth/login", { email, password });
+//     const userData = await fetchUser();
+//     return userData;
+//   };
+
+//   const signup = async (name, email, password) => {
+//     await api.post("/auth/signup", { name, email, password });
+//     const userData = await fetchUser();
+//     return userData;
+//   };
+
+//   const logout = async () => {
+//     try {
+//       await api.post("/auth/logout");
+//       setUser(null);
+//       Cookies.remove("accessToken", { path: '/' });
+//       Cookies.remove("refreshToken", { path: '/' });
+//     } catch (error) {
+//       console.error("Error logging out:", error.response?.data || error.message);
+//       throw error;
+//     }
+//   };
+
+//   return (
+//     <AuthContext.Provider
+//       value={{
+//         user,
+//         loading,
+//         login,
+//         signup,
+//         logout,
+//         fetchUser,
+//         api,
+//       }}
+//     >
+//       {children}
+//     </AuthContext.Provider>
+//   );
+// }
+
+
+// src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import Cookies from "js-cookie";
 import { api } from "../api/axios";
-import { clearAuthCookies, setAuthCookies, getAuthStatus, validateUserData } from "../utils/authUtils";
-import { useToast } from "../hooks/use-toast";
+import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -9,9 +134,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [initialized, setInitialized] = useState(false);
   const isMountedRef = useRef(true);
-  const { toast } = useToast();
 
   useEffect(() => {
     return () => {
@@ -19,46 +142,31 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const handleAuthError = useCallback((error, action = "") => {
-    const message = error.response?.data?.message || error.message;
-    console.error(`Auth error during ${action}:`, message);
-    toast({
-      title: "Authentication Error",
-      description: message,
-      variant: "destructive",
-    });
-    return null;
-  }, [toast]);
-
-  const logout = useCallback(async (redirectUrl = "/") => {
+  const logout = async () => {
     try {
       await api.post("/auth/logout");
     } catch (err) {
-      console.warn("Logout error:", err.response?.data || err.message);
+      console.error("Logout error:", err.response?.data || err.message);
     } finally {
-      if (isMountedRef.current) {
-        setUser(null);
-        clearAuthCookies();
-        if (typeof window !== "undefined" && window.location.pathname !== redirectUrl) {
-          window.location.href = redirectUrl;
-        }
+      if (isMountedRef.current) setUser(null);
+      clearAuthCookies();
+      if (typeof window !== "undefined" && window.location.pathname !== "/") {
+        window.location.href = "/";
       }
     }
-  }, []);
+  };
 
   const fetchUser = useCallback(async () => {
     try {
-      const { isAuthenticated } = getAuthStatus();
-      if (!isAuthenticated) {
-        if (isMountedRef.current) setUser(null);
-        return null;
-      }
-
+      setLoading(true);
       const { data } = await api.get("/auth/me");
-      
       if (!validateUserData(data)) {
-        console.warn("Invalid user data received:", data);
-        await logout();
+        console.warn("Invalid user data:", data);
+        if (isMountedRef.current) {
+          setUser(null);
+          clearAuthCookies();
+          await logout(); // 👈 now explicitly logging out
+        }
         return null;
       }
 
@@ -67,86 +175,77 @@ export function AuthProvider({ children }) {
         return data;
       }
     } catch (err) {
-      if ([401, 403].includes(err.response?.status)) {
-        await logout();
-      }
-      return handleAuthError(err, "fetching user");
-    } finally {
+      console.error("Failed to fetch user:", err.response?.data || err.message);
       if (isMountedRef.current) {
-        setLoading(false);
-        setInitialized(true);
+        setUser(null);
+        if ([401, 403].includes(err.response?.status)) clearAuthCookies();
       }
+      return null;
+    } finally {
+      if (isMountedRef.current) setLoading(false);
     }
-  }, [logout, handleAuthError]);
+  }, []);
 
   useEffect(() => {
-    const { isAuthenticated } = getAuthStatus();
-    if (isAuthenticated) {
-      fetchUser();
-    } else {
-      setLoading(false);
-      setInitialized(true);
-    }
+    fetchUser(); // ✅ Only fetch if cookie exists already
   }, [fetchUser]);
 
   const login = async (email, password) => {
     try {
       const { data } = await api.post("/auth/login", { email, password });
-      
-      if (!data.user || !validateUserData(data.user)) {
-        throw new Error("Invalid response from server");
-      }
+      const userData = data?.user;
 
-      if (isMountedRef.current) {
-        setUser(data.user);
+      if (validateUserData(userData)) {
+        if (isMountedRef.current) setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
       }
-      
-      return data.user;
     } catch (err) {
-      return handleAuthError(err, "login");
+      console.error("Login error:", err.response?.data || err.message);
+      throw err;
     }
   };
 
   const signup = async (name, email, password) => {
     try {
       const { data } = await api.post("/auth/register", { name, email, password });
-      
-      if (!data.user || !validateUserData(data.user)) {
-        throw new Error("Invalid response from server");
-      }
+      const userData = data?.user;
 
-      if (isMountedRef.current) {
-        setUser(data.user);
+      if (validateUserData(userData)) {
+        if (isMountedRef.current) setUser(userData);
+        return userData;
+      } else {
+        return await fetchUser();
       }
-      
-      return data.user;
     } catch (err) {
-      return handleAuthError(err, "signup");
+      console.error("Signup error:", err.response?.data || err.message);
+      throw err;
     }
   };
 
-  const updateProfileData = async (endpoint, updateData) => {
+  const updateProfileData = useCallback(async (suffix, payload) => {
     try {
-      const { data } = await api.patch(`/auth/profile${endpoint}`, updateData);
-      
-      if (!validateUserData(data.user)) {
-        throw new Error("Invalid response from server");
+      const { data } = await api.patch(`/auth/profile${suffix}`, payload);
+      const updatedUser = data?.user;
+
+      if (!updatedUser) {
+        console.error("Updated user data missing from response for", suffix);
+        return await fetchUser();
       }
 
-      if (isMountedRef.current) {
-        setUser(data.user);
+      if (isMountedRef.current && validateUserData(updatedUser)) {
+        setUser(updatedUser);
+        return updatedUser;
+      } else {
+        console.warn("Invalid updated user:", updatedUser);
+        return await fetchUser();
       }
-      
-      toast({
-        title: "Success",
-        description: data.message || "Profile updated successfully",
-      });
-      
-      return data.user;
     } catch (err) {
-      return handleAuthError(err, "updating profile");
+      console.error(`Update profile ${suffix} failed:`, err.response?.data || err.message);
+      throw err;
     }
-  };
+  }, [fetchUser]);
 
   const updateRole = (role) => updateProfileData("/role", { role });
   const updateInterestedSkills = (skills) => updateProfileData("/interested-skills", { interestedSkills: skills });
@@ -169,7 +268,7 @@ export function AuthProvider({ children }) {
       value={{
         user,
         loading,
-        initialized,
+        isAuthenticated: !!user,
         login,
         signup,
         logout,
