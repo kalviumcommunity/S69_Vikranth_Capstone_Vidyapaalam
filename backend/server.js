@@ -12,9 +12,7 @@ app.use(express.json());
 
 app.use(cors({
   origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', 
-  credentials: true,
-  methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+
 }));
 
 app.use(cookieParser());
