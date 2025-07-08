@@ -3,6 +3,7 @@ import Cookies from "js-cookie";
 export const clearAuthCookies = () => {
   Cookies.remove("accessToken", { path: '/' });
   Cookies.remove("refreshToken", { path: '/' });
+  
 };
 
 export const validateUserData = (userData) => {

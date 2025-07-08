@@ -122,13 +122,18 @@
 // }
 
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import Cookies from "js-cookie";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
 const AuthContext = createContext();
-// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext);
 
 export function AuthProvider({ children }) {
@@ -145,24 +150,22 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async () => {
     try {
       if (isMountedRef.current) setLoading(true);
-      const { data } = await api.get("/auth/me");
-      const userData = data;
+      const { data } = await api.get("/auth/profile");
 
       if (isMountedRef.current) {
-        if (validateUserData(userData)) {
-          setUser(userData);
-          return userData;
+        if (validateUserData(data)) {
+          setUser(data);
+          return data;
         } else {
-          console.warn("Fetched user data is invalid or incomplete:", userData);
+          console.warn("Invalid user data:", data);
           setUser(null);
           clearAuthCookies();
           return null;
         }
       }
-      return null;
     } catch (err) {
       if (isMountedRef.current) {
-        console.error("Failed to fetch user:", err.response?.data || err.message);
+        console.error("Fetch user failed:", err.response?.data || err.message);
         setUser(null);
       }
       if ([401, 403].includes(err.response?.status)) clearAuthCookies();
@@ -172,14 +175,9 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // ✅ Always run fetchUser (no js-cookie check)
   useEffect(() => {
-    const tokenExists = Cookies.get("accessToken");
-
-    if (tokenExists) {
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
+    fetchUser();
   }, [fetchUser]);
 
   const login = async (email, password) => {
@@ -230,37 +228,42 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const updateProfileData = useCallback(async (endpointSuffix, dataToUpdate) => {
-    try {
-      // CORRECTED: Removed /api prefix
-      const { data } = await api.patch(`/auth/profile${endpointSuffix}`, dataToUpdate);
-      const updatedUser = data?.user;
+  const updateProfileData = useCallback(
+    async (endpointSuffix, dataToUpdate) => {
+      try {
+        const { data } = await api.patch(`/auth/profile${endpointSuffix}`, dataToUpdate);
+        const updatedUser = data?.user;
 
-      if (isMountedRef.current && validateUserData(updatedUser)) {
-        setUser(updatedUser);
-        return updatedUser;
-      } else {
-        console.warn("Updated user data is invalid or incomplete after patch:", updatedUser);
-        return await fetchUser();
+        if (isMountedRef.current && validateUserData(updatedUser)) {
+          setUser(updatedUser);
+          return updatedUser;
+        } else {
+          return await fetchUser();
+        }
+      } catch (err) {
+        console.error(`Profile update error: ${endpointSuffix}`, err.response?.data || err.message);
+        throw err;
       }
-    } catch (err) {
-      console.error(`Error updating profile data for ${endpointSuffix}:`, err.response?.data || err.message);
-      throw err;
-    }
-  }, [fetchUser]);
+    },
+    [fetchUser]
+  );
 
-  const updateRole = (role) => updateProfileData('/profile/role', { role });
-  const updateInterestedSkills = (skills) => updateProfileData('/profile/interested-skills', { interestedSkills: skills });
-  const updateTeachingSkills = (skills) => updateProfileData('/profile/teaching-skills', { teachingSkills: skills });
-  const updateAvailability = (date, slots) => updateProfileData('/profile/availability', { date, slots });
-  const updateGeneralProfile = (profileData) => updateProfileData('', profileData);
+  const updateRole = (role) => updateProfileData("/profile/role", { role });
+  const updateInterestedSkills = (skills) =>
+    updateProfileData("/profile/interested-skills", { interestedSkills: skills });
+  const updateTeachingSkills = (skills) =>
+    updateProfileData("/profile/teaching-skills", { teachingSkills: skills });
+  const updateAvailability = (date, slots) =>
+    updateProfileData("/profile/availability", { date, slots });
+  const updateGeneralProfile = (profileData) =>
+    updateProfileData("", profileData);
 
   const getGoogleCalendarBusyTimes = async (date) => {
     try {
       const response = await api.get(`/auth/calendar/busy-times?date=${date}`);
       return response.data.busyTimes;
     } catch (error) {
-      console.error('Error fetching Google Calendar busy times:', error.response?.data || error.message);
+      console.error("Google Calendar busy times error:", error.response?.data || error.message);
       throw error;
     }
   };
