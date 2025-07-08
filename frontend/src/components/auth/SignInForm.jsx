@@ -160,13 +160,10 @@
 // }
 
 
-
-
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import GoogleSignInButton from "./GoogleSignInButton";
 
 export default function SignInForm({ onSwitchToSignUp, onClose }) {
   const { login, fetchUser } = useAuth();
@@ -175,16 +172,6 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    // ✅ Check for error in query string from Google callback
-    const params = new URLSearchParams(location.search);
-    const error = params.get("error");
-    if (error) {
-      alert(decodeURIComponent(error));
-      navigate("/signin", { replace: true }); // Remove query from URL
-    }
-  }, [location, navigate]);
 
   const validate = () => {
     const e = {};
@@ -202,15 +189,6 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
     }
     setErrors(e);
     return ok;
-  };
-
-  const handleLoginSuccess = async () => {
-    try {
-      await fetchUser(); // update context
-    } catch (e) {
-      console.error("Failed to fetch user after Google login");
-    }
-    onClose(); // just close modal — redirection already happened server-side
   };
 
   const handleSubmit = async (e) => {
@@ -234,10 +212,6 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogleLoginError = (errorMessage) => {
-    alert(errorMessage || "Google login failed.");
   };
 
   return (
@@ -285,14 +259,6 @@ export default function SignInForm({ onSwitchToSignUp, onClose }) {
           {loading ? "Signing in…" : "Sign In"}
         </button>
       </form>
-
-      <div className="flex items-center justify-between my-4">
-        <hr className="flex-grow border-t border-gray-300" />
-        <span className="px-3 text-gray-500 text-sm">OR</span>
-        <hr className="flex-grow border-t border-gray-300" />
-      </div>
-
-      <GoogleSignInButton onSuccess={handleLoginSuccess} onError={handleGoogleLoginError} />
 
       <p className="mt-6 text-center text-sm text-gray-600">
         Don't have an account?{" "}

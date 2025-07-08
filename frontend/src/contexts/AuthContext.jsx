@@ -124,7 +124,7 @@
 
 // src/contexts/AuthContext.jsx
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import Cookies from "js-cookie";
+import Cookies from "js-cookie"; 
 import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
@@ -159,13 +159,14 @@ export function AuthProvider({ children }) {
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/auth/me");
+      // CORRECTED: Changed endpoint from /auth/me to /auth/profile
+      const { data } = await api.get("/auth/profile");
+      
       if (!validateUserData(data)) {
-        console.warn("Invalid user data:", data);
+        console.warn("Invalid user data received from /auth/profile:", data);
         if (isMountedRef.current) {
           setUser(null);
           clearAuthCookies();
-          await logout(); // 👈 now explicitly logging out
         }
         return null;
       }
@@ -175,7 +176,7 @@ export function AuthProvider({ children }) {
         return data;
       }
     } catch (err) {
-      console.error("Failed to fetch user:", err.response?.data || err.message);
+      console.error("Failed to fetch user from /auth/profile:", err.response?.data || err.message);
       if (isMountedRef.current) {
         setUser(null);
         if ([401, 403].includes(err.response?.status)) clearAuthCookies();
@@ -187,7 +188,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    fetchUser(); // ✅ Only fetch if cookie exists already
+    fetchUser();
   }, [fetchUser]);
 
   const login = async (email, password) => {
@@ -203,7 +204,7 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error("Login error:", err.response?.data || err.message);
-      throw err;
+      throw err; 
     }
   };
 
@@ -243,7 +244,7 @@ export function AuthProvider({ children }) {
       }
     } catch (err) {
       console.error(`Update profile ${suffix} failed:`, err.response?.data || err.message);
-      throw err;
+      throw err; 
     }
   }, [fetchUser]);
 
@@ -253,22 +254,13 @@ export function AuthProvider({ children }) {
   const updateAvailability = (date, slots) => updateProfileData("/availability", { date, slots });
   const updateGeneralProfile = (profileData) => updateProfileData("", profileData);
 
-  const getGoogleCalendarBusyTimes = async (date) => {
-    try {
-      const response = await api.get(`/auth/calendar/busy-times?date=${date}`);
-      return response.data.busyTimes;
-    } catch (error) {
-      console.error("Error fetching busy times:", error.response?.data || error.message);
-      throw error;
-    }
-  };
 
   return (
     <AuthContext.Provider
       value={{
         user,
         loading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!user, 
         login,
         signup,
         logout,
@@ -278,7 +270,6 @@ export function AuthProvider({ children }) {
         updateTeachingSkills,
         updateAvailability,
         updateGeneralProfile,
-        getGoogleCalendarBusyTimes,
       }}
     >
       {children}

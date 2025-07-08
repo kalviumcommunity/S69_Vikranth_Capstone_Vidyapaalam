@@ -81,26 +81,24 @@
 
 const express = require('express');
 const {
-  registerUser,
-  loginUser,
-  getMe,
-  refreshToken,
-  logoutUser,
-  saveRole,
-  updateInterestedSkills,
-  updateUserProfile,
-  updateTeachingSkills,
-  updateAvailability,
-  googleAuthUrl,
-  googleAuthCallback,
+    registerUser,
+    loginUser,
+    getMe,
+    refreshToken,
+    logoutUser,
+    saveRole,
+    updateInterestedSkills,
+    updateUserProfile,
+    updateTeachingSkills,
+    updateAvailability,
 } = require('../controller/authController');
 
 const { protect } = require('../middleware/authMiddleware');
 
 const {
-  signupValidationRules,
-  loginValidationRules,
-  validate
+    signupValidationRules,
+    loginValidationRules,
+    validate
 } = require('../middleware/validation');
 
 const router = express.Router();
@@ -111,10 +109,8 @@ router.post('/login', loginValidationRules, validate, loginUser);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logoutUser);
 
-router.get('/google', googleAuthUrl);
-router.get('/google/callback', googleAuthCallback);
 
-router.get('/me', protect, getMe);
+router.get('/profile', protect, getMe);
 
 router.patch('/profile/role', protect, saveRole);
 router.patch('/profile', protect, updateUserProfile);

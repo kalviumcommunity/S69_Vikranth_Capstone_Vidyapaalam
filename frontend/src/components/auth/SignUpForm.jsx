@@ -2,10 +2,9 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext.jsx";
-import { FcGoogle } from "react-icons/fc";
 
 export default function SignUpForm({ onSwitchToSignIn, onClose }) {
-  const { signup } = useAuth();  // signup(name, email, password)
+  const { signup } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "", email: "", password: "", confirm: ""
@@ -16,8 +15,8 @@ export default function SignUpForm({ onSwitchToSignIn, onClose }) {
   const validate = () => {
     const e = {};
     let ok = true;
-    if (!formData.name)           { e.name = "Name is required"; ok = false; }
-    if (!formData.email)          { e.email = "Email is required"; ok = false; }
+    if (!formData.name) { e.name = "Name is required"; ok = false; }
+    if (!formData.email) { e.email = "Email is required"; ok = false; }
     else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       e.email = "Enter a valid email"; ok = false;
     }
@@ -44,12 +43,6 @@ export default function SignUpForm({ onSwitchToSignIn, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogle = () => {
-    // TODO: integrate Google Identity Services and then:
-    // api.post('/auth/google-login', { credential })
-    console.log("Google sign-up initiated");
   };
 
   return (
@@ -116,14 +109,6 @@ export default function SignUpForm({ onSwitchToSignIn, onClose }) {
         </button>
       </form>
 
-      <button
-        onClick={handleGoogle}
-        className="w-full mt-4 flex items-center justify-center border py-2 rounded hover:bg-gray-100 transition"
-      >
-        <FcGoogle className="text-2xl" />
-        <span>Sign Up with Google</span>
-      </button>
-
       <p className="mt-6 text-center text-sm text-gray-600">
         Already have an account?{" "}
         <button onClick={onSwitchToSignIn} className="text-blue-600 hover:underline">
@@ -133,5 +118,3 @@ export default function SignUpForm({ onSwitchToSignIn, onClose }) {
     </motion.div>
   );
 }
-
-

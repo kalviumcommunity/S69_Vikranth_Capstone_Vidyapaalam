@@ -40,7 +40,7 @@
 
 
 import axios from "axios";
-import Cookies from "js-cookie";
+import Cookies from "js-cookie"; 
 import { clearAuthCookies } from "../utils/authUtils";
 
 export const api = axios.create({
@@ -49,33 +49,43 @@ export const api = axios.create({
 });
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => response, 
   async (error) => {
     const originalRequest = error.config;
-    if (!originalRequest) {
-      console.warn("originalRequest is null or undefined in axios interceptor", error);
+
+    if (
+      !originalRequest ||
+      originalRequest._retry ||
+      originalRequest.url.includes("/auth/refresh-token")
+    ) {
       return Promise.reject(error);
     }
 
-    const shouldRefresh =
-      (error.response?.status === 401 || error.response?.status === 403) &&
-      !originalRequest._retry &&
-      !originalRequest.url.includes("/auth/refresh-token");
+    const isAuthError =
+      error.response?.status === 401 || error.response?.status === 403;
 
-    if (!shouldRefresh) return Promise.reject(error);
+    if (isAuthError) {
 
-    originalRequest._retry = true;
-
-    try {
-      await axios.post(`${api.defaults.baseURL}/auth/refresh-token`, {}, { withCredentials: true });
-      return api(originalRequest);
-    } catch (refreshError) {
-      console.error("Token refresh failed:", refreshError.response?.data || refreshError.message);
-      clearAuthCookies();
-      if (typeof window !== "undefined" && window.location.pathname !== "/") {
-        window.location.href = "/";
+      try {
+        await axios.post(
+          `${api.defaults.baseURL}/auth/refresh-token`,
+          {},
+          { withCredentials: true }
+        );
+        return api(originalRequest);
+      } catch (refreshError) {
+        console.error(
+          "Token refresh failed:",
+          refreshError.response?.data || refreshError.message
+        );
+        clearAuthCookies();
+        if (typeof window !== "undefined" && window.location.pathname !== "/") {
+          window.location.href = "/";
+        }
+        return Promise.reject(refreshError); 
       }
-      return Promise.reject(refreshError);
     }
+
+    return Promise.reject(error);
   }
 );
