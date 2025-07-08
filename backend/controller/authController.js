@@ -3,6 +3,8 @@ const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
+
 
 const oAuth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -22,7 +24,7 @@ const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000;
 const cookieOptions = {
   httpOnly: true,
   secure: true,
-  sameSite: 'strict',
+  sameSite: 'None',
   path: '/', 
 };
 
@@ -421,24 +423,40 @@ exports.updateAvailability = async (req, res) => {
   }
 };
 
-exports.googleAuthUrl = async function(req, res) {
+exports.googleAuthUrl = async function (req, res) {
+  const state = crypto.randomUUID(); 
+
+  res.cookie("oauth_state", state, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'None',
+    path: '/',
+    maxAge: 5 * 60 * 1000, 
+  });
+
   const authUrl = oAuth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: GOOGLE_SCOPES.join(' '),
     prompt: 'consent',
+    state, 
   });
-  res.redirect(authUrl);
+
+  return res.redirect(authUrl);
 };
 
 
 exports.googleAuthCallback = async function (req, res) {
-  const { code } = req.query;
+  const { code, state } = req.query;
+  const savedState = req.cookies.oauth_state;
   const frontendBase = process.env.FRONTEND_URL;
 
-  if (!code) {
-    const errorUrl = `${frontendBase}/signin?error=Missing authorization code`;
+  if (!code || !state || state !== savedState) {
+    res.clearCookie("oauth_state");
+    const errorUrl = `${frontendBase}/signin?error=Invalid or missing state parameter`;
     return res.redirect(errorUrl);
   }
+
+  res.clearCookie("oauth_state");
 
   try {
     const { tokens } = await oAuth2Client.getToken(code);
@@ -476,7 +494,6 @@ exports.googleAuthCallback = async function (req, res) {
 
       isNewUser = true;
     } else {
-      // Update existing user
       user.googleId = googleId;
       user.isGoogleUser = true;
       user.isVerified = true;
@@ -507,18 +524,13 @@ exports.googleAuthCallback = async function (req, res) {
       redirectPath = "/teacher/overview";
     }
 
-    // ✅ Important: Redirect to frontend (not JSON response)
     return res.redirect(`${frontendBase}${redirectPath}`);
-
   } catch (error) {
     console.error("Google OAuth Callback Error:", error);
     const errorMessage = encodeURIComponent(error.message || "Google authentication failed");
     return res.redirect(`${frontendBase}/signin?error=${errorMessage}`);
   }
 };
-
-    
-
   
 
 exports.disconnectCalendar = async (req, res) => {
