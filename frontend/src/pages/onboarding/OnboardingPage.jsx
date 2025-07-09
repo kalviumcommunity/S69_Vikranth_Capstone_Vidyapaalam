@@ -399,7 +399,7 @@
 // src/pages/onboarding/OnboardingPage.jsx
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // Removed useLocation as it's no longer needed for calendar params
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 import RoleSelection from "./RoleSelection.jsx";
@@ -418,98 +418,81 @@ const OnboardingPage = () => {
         teacher: "teacher",
     };
 
-    const handleSetStep = useCallback((newStep) => {
-        console.log("OnboardingPage: Setting step to:", newStep);
-        setStep(newStep);
-    }, []);
-
-    // Effect to determine and set the current onboarding step based on authUser progress
     useEffect(() => {
-        // If authentication is still loading, or authUser is not yet available, wait.
         if (authLoading) {
-            console.log("OnboardingPage useEffect: Auth is loading, waiting for user data...");
             return;
         }
 
         if (authUser) {
-            console.log("OnboardingPage useEffect: authUser present. Current role (AuthContext):", authUser.role, "Local role state:", role, "Current step state:", step);
-
-            // 1. Check if onboarding is already fully complete (via backend flag)
             if (authUser.teacherOnboardingComplete || authUser.studentOnboardingComplete) {
-                console.log("OnboardingPage: Onboarding already complete in backend. Redirecting.");
                 if (authUser.role === "student") {
                     navigate("/student/overview", { replace: true });
                 } else if (authUser.role === "teacher") {
                     navigate("/teacher/overview", { replace: true });
                 }
-                return; 
+                return;
             }
 
             if (authUser.role && role === null) {
-                console.log("OnboardingPage useEffect: Synchronizing local role state from authUser.role:", authUser.role);
                 setRole(authUser.role);
-                
+                return;
             }
 
-            let targetStep = "role"; 
+            let targetStepBasedOnAuth = "role";
 
-            if (authUser.role) { 
+            if (authUser.role) {
                 if (authUser.role === 'student') {
                     if (!authUser.bio || !authUser.phoneNumber) {
-                        targetStep = 'info';
+                        targetStepBasedOnAuth = 'info';
                     } else if (!authUser.interestedSkills || authUser.interestedSkills.length === 0) {
-                        targetStep = 'interests';
+                        targetStepBasedOnAuth = 'interests';
                     } else {
-                        targetStep = 'complete'; 
+                        targetStepBasedOnAuth = 'complete';
                     }
                 } else if (authUser.role === 'teacher') {
                     if (!authUser.bio || !authUser.phoneNumber) {
-                        targetStep = 'info';
+                        targetStepBasedOnAuth = 'info';
                     } else if (!authUser.teachingSkills || authUser.teachingSkills.length === 0) {
-                        targetStep = 'expertise';
+                        targetStepBasedOnAuth = 'expertise';
                     } else if (!authUser.availability || authUser.availability.length === 0) {
-                        targetStep = 'availability';
+                        targetStepBasedOnAuth = 'availability';
                     } else {
-                        targetStep = 'complete'; // Teacher: all form steps done
+                        targetStepBasedOnAuth = 'complete';
                     }
                 }
             }
 
-   
-            if (step !== targetStep) {
-                console.log(`OnboardingPage useEffect: Updating step from '${step}' to '${targetStep}'`);
-                setStep(targetStep);
+            const orderedSteps = ['role', 'info', 'interests', 'expertise', 'availability', 'complete'];
+            const currentIndex = orderedSteps.indexOf(step);
+            const targetIndex = orderedSteps.indexOf(targetStepBasedOnAuth);
+
+            if (targetIndex > currentIndex || (step === 'role' && targetStepBasedOnAuth !== 'role')) {
+                setStep(targetStepBasedOnAuth);
             }
+
         } else {
-            console.log("OnboardingPage useEffect: authUser is null, remaining on 'role' step.");
             if (step !== "role") {
                 setStep("role");
             }
         }
-    }, [authUser, authLoading, navigate, role, fetchUser, step]); // Removed initialLoadHandled from dependencies
+    }, [authUser, authLoading, navigate, role, fetchUser, step]);
 
-    // Effect to log internal step changes (for debugging)
     useEffect(() => {
-        console.log("OnboardingPage: 'step' state changed to:", step);
     }, [step]);
 
 
     const handleRoleSelect = async (selectedRole) => {
         const backendRole = roleMap[selectedRole];
         try {
-            console.log("handleRoleSelect: Attempting to update role to", backendRole);
             await updateRole(backendRole);
-            await fetchUser(); 
+            await fetchUser();
             toast.success("Role saved successfully!");
-            console.log("handleRoleSelect: Role update successful, fetchUser triggered.");
         } catch (err) {
-            console.error("Failed to save role:", err);
             toast.error("Could not save role. Please try again.");
         }
     };
 
     const handleNext = () => {
-        console.log("OnboardingPage: handleNext called. Current step:", step);
         if (role === "student") {
             if (step === "info") setStep("interests");
             else if (step === "interests") setStep("complete");
@@ -518,22 +501,27 @@ const OnboardingPage = () => {
             else if (step === "expertise") setStep("availability");
             else if (step === "availability") setStep("complete");
         }
-        console.log("OnboardingPage: handleNext finished. New step (attempted):", step);
     };
 
     const handleBack = () => {
-        console.log("OnboardingPage: handleBack called. Current step:", step);
-        if (step === "info") setStep("role");
-        else if (role === "student" && step === "interests") setStep("info");
-        else if (role === "teacher") {
-            if (step === "expertise") setStep("info");
-            else if (step === "availability") setStep("expertise");
+        if (step === "info") {
+            setStep("role");
         }
-        console.log("OnboardingPage: handleBack finished. New step (attempted):", step);
+        else if (role === "student" && step === "interests") {
+            setStep("info");
+        }
+        else if (role === "teacher") {
+            if (step === "expertise") {
+                setStep("info");
+            }
+            else if (step === "availability") {
+                setStep("expertise");
+            }
+        }
     };
 
+
     const handleComplete = () => {
-        console.log("OnboardingPage: handleComplete called.");
         if (role === "student") navigate("/student/overview");
         else navigate("/teacher/overview");
     };

@@ -638,15 +638,23 @@ const convertTo24Hour = (time12h) => {
     let [hours, minutes] = time.split(':');
 
     if (hours === '12') {
-        hours = '00';
+        hours = '00'; // 12 AM is 00, 12 PM is 12
     }
 
-    if (modifier === 'PM') {
+    if (modifier === 'PM' && hours !== '12') { // Don't add 12 to 12 PM
         hours = parseInt(hours, 10) + 12;
     }
     return `${String(hours).padStart(2, '0')}:${minutes}`;
 };
 
+const convertTo12Hour = (time24h) => {
+    const [hours, minutes] = time24h.split(':');
+    let h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    h = h === 0 ? 12 : h; // The hour '0' should be '12 AM'
+    return `${h}:${minutes} ${ampm}`;
+};
 
 const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const { api, user: authUser, loading: authLoading, fetchUser, updateGeneralProfile, updateTeachingSkills, updateAvailability } = useAuth();
@@ -668,6 +676,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Effect to synchronize local state with authUser props
   useEffect(() => {
     if (authLoading) {
       return;
@@ -687,14 +696,14 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
           const initialAvailability = {};
           if (authUser.availability && Array.isArray(authUser.availability)) {
               authUser.availability.forEach(item => {
-                  const dateKey = new Date(item.date).toISOString().split('T')[0];
+                  const dateKey = new Date(item.date).toISOString().split('T')[0]; // Ensure YYYY-MM-DD
                   if (!initialAvailability[dateKey]) {
                       initialAvailability[dateKey] = [];
                   }
                   item.slots.forEach(slot => {
-                      const start = convertTo12Hour(slot.startTime);
-                      const end = convertTo12Hour(slot.endTime);
-                      const matchedSlot = timeSlots.find(ts => ts.includes(start) && ts.includes(end));
+                      const start12h = convertTo12Hour(slot.startTime);
+                      const end12h = convertTo12Hour(slot.endTime);
+                      const matchedSlot = timeSlots.find(ts => ts === `${start12h} - ${end12h}`);
                       if (matchedSlot) {
                           initialAvailability[dateKey].push(matchedSlot);
                       }
@@ -705,16 +714,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       }
     }
   }, [authUser, authLoading, step]);
-
-  const convertTo12Hour = (time24h) => {
-    const [hours, minutes] = time24h.split(':');
-    let h = parseInt(hours, 10);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12;
-    h = h ? h : 12;
-    return `${h}:${minutes} ${ampm}`;
-  };
-
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -764,7 +763,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   }, [customSkillInput, teachingSkills]);
 
   const handleSlotToggle = useCallback((slotString) => {
-    const dateString = date.toISOString().split('T')[0];
+    const dateString = date.toISOString().split('T')[0]; // Ensure YYYY-MM-DD
     setSelectedSlotsByDate((prev) => {
       const currentSlotsForDate = prev[dateString] ? [...prev[dateString]] : [];
       let updatedSlotsForDate;
@@ -777,7 +776,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
 
       const newState = { ...prev };
       if (updatedSlotsForDate.length === 0) {
-        delete newState[dateString];
+        delete newState[dateString]; // Remove date if no slots selected for it
       } else {
         newState[dateString] = updatedSlotsForDate;
       }
@@ -790,18 +789,21 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     const currentDate = new Date(date);
     const weekDates = [];
 
+    // Get the start of the current week (Sunday)
     const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay()); // Sunday is 0
 
     for (let i = 0; i < 7; i++) {
       const weekDate = new Date(startOfWeek);
       weekDate.setDate(startOfWeek.getDate() + i);
-      weekDates.push(weekDate.toISOString().split('T')[0]);
+      weekDates.push(weekDate.toISOString().split('T')[0]); // YYYY-MM-DD
     }
 
     setSelectedSlotsByDate((prev) => {
       const newState = { ...prev };
       let allWeekSelectedForThisSlot = true;
+
+      // Check if this slot is selected for all days in the current week
       for (const dateStr of weekDates) {
         if (!newState[dateStr] || !newState[dateStr].includes(slot)) {
           allWeekSelectedForThisSlot = false;
@@ -810,6 +812,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       }
 
       if (allWeekSelectedForThisSlot) {
+        // If all selected, deselect for the whole week
         weekDates.forEach(dateStr => {
           if (newState[dateStr]) {
             newState[dateStr] = newState[dateStr].filter(s => s !== slot);
@@ -819,6 +822,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
           }
         });
       } else {
+        // If not all selected, select for the whole week
         weekDates.forEach(dateStr => {
           if (!newState[dateStr]) {
             newState[dateStr] = [];
@@ -852,7 +856,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       if (!formData.phone.trim()) {
         newErrors.phone = "Phone Number is required";
         isValid = false;
-      } else if (!/^\+?\d{10,15}$/.test(formData.phone)) {
+      } else if (!/^\+?\d{10,15}$/.test(formData.phone)) { // Basic phone number regex
         newErrors.phone = "Invalid phone number format. Use +CountryCode and 10-15 digits.";
         isValid = false;
       }
@@ -866,7 +870,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         isValid = false;
       }
     } else if (currentStep === "availability") {
-        if (Object.keys(selectedSlotsByDate).length === 0) {
+        if (Object.keys(selectedSlotsByDate).length === 0 ||
+            Object.values(selectedSlotsByDate).every(slots => slots.length === 0)) {
             newErrors.selectedSlots = "Please select at least one time slot for any date.";
             isValid = false;
         }
@@ -901,31 +906,31 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         for (const [dateKey, slots] of Object.entries(selectedSlotsByDate)) {
           const formattedSlots = slots.map(slotString => {
             const parts = slotString.split(' - ');
+            // Handle cases where 12 AM - 12 AM indicates a full day, or adjust as per backend needs
+            const startTime24h = convertTo24Hour(parts[0]);
+            const endTime24h = convertTo24Hour(parts[1]);
+
             return {
-              startTime: convertTo24Hour(parts[0]),
-              endTime: convertTo24Hour(parts[1])
+              startTime: startTime24h,
+              endTime: endTime24h
             };
           });
           availabilityData.push({
-            date: dateKey,
+            date: dateKey, // YYYY-MM-DD format
             slots: formattedSlots,
           });
         }
-        
         await updateAvailability(availabilityData);
       }
 
-      await fetchUser();
+      await fetchUser(); // Re-fetch user data to update AuthContext and trigger parent re-render
       toast.success("Information saved successfully!");
-      onNext();
+      onNext(); // Proceed to the next step in the parent component
 
     } catch (error) {
       console.error("Onboarding step failed:", error.response?.data || error.message, error);
-      if (currentStep === "availability" && error.response?.data?.message) {
-        toast.error(`Availability save failed: ${error.response.data.message}`);
-      } else {
-        toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
-      }
+      const errorMessage = error.response?.data?.message || "An unexpected error occurred. Please try again.";
+      toast.error(`Error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -935,13 +940,14 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     setIsLoading(true);
     try {
       await api.patch("/auth/profile", { teacherOnboardingComplete: true });
-      await fetchUser();
+      await fetchUser(); // Re-fetch user to get the latest completion status
 
       toast.success("Onboarding complete! Welcome to the teacher community.");
-      onComplete();
+      onComplete(); // Navigate to dashboard
     } catch (error) {
       console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
-      toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
+      const errorMessage = error.response?.data?.message || "Failed to finalize onboarding. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -951,7 +957,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
   }
 
-  const currentDateString = date ? date.toISOString().split('T')[0] : '';
+  const currentDateString = date ? date.toISOString().split('T')[0] : ''; // For displaying slots for the selected date
 
   if (step === "info") {
     return (
@@ -1118,19 +1124,24 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
           <div>
             <h3 className="text-base font-medium text-gray-800 mb-2">Select Date</h3>
             <div className="rounded-md border border-gray-300 overflow-hidden">
-              <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
+              <Calendar
+                mode="single"
+                selected={date}
+                onSelect={handleDateSelect}
+                fromDate={new Date()} // Prevent selecting past dates
+              />
             </div>
             {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
           </div>
           <div>
             <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
-            <div className="grid grid-cols-1 gap-2">
+            <div className="grid grid-cols-1 gap-2 max-h-96 overflow-y-auto pr-2"> {/* Added max-height for scrolling */}
               {timeSlots.map((slot) => {
                 const isSelected = selectedSlotsByDate[dateString]?.includes(slot) || false;
                 return (
                   <div key={slot} className="flex items-center gap-2">
                     <div
-                      onClick={() => handleSlotToggle(slot)}
+                      onClick={() => !isLoading && handleSlotToggle(slot)} // Disable click if loading
                       className={`flex-1 p-2 border rounded-md transition-colors duration-200 ease-in-out cursor-pointer
                         ${isSelected ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
                         ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -1143,8 +1154,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleWholeWeekToggle(slot)}
-                      className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
+                      type="button"
+                      onClick={() => !isLoading && handleWholeWeekToggle(slot)} // Disable click if loading
+                      disabled={isLoading}
+                      className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Whole Week
                     </button>
