@@ -122,7 +122,6 @@
 // }
 
 
-// src/contexts/AuthContext.jsx
 
 // src/contexts/AuthContext.jsx
 
@@ -134,8 +133,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-// No longer importing Cookies from 'js-cookie' as httpOnly cookies are not readable client-side
-// import Cookies from "js-cookie";
+
 import { api } from "../api/axios";
 import { clearAuthCookies, validateUserData } from "../utils/authUtils";
 
