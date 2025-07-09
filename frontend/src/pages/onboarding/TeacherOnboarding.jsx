@@ -239,9 +239,29 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         for (const [dateKey, slots] of Object.entries(slotsByDate)) {
           const formattedSlots = slots.map(slotString => {
             const parts = slotString.split(' - ');
+            let startTime = parts[0];
+            let endTime = parts[1];
+
+            // Convert to 24-hour format if needed by your backend
+            // Example: "09:00 AM" -> "09:00", "01:00 PM" -> "13:00"
+            // This is a basic conversion, adjust if your time format is more complex (e.g., includes seconds)
+            const convertTo24Hour = (time) => {
+                const [timePart, ampm] = time.split(' ');
+                let [hours, minutes] = timePart.split(':');
+                if (ampm === 'PM' && hours !== '12') {
+                    hours = parseInt(hours, 10) + 12;
+                } else if (ampm === 'AM' && hours === '12') {
+                    hours = '00';
+                }
+                return `${hours.toString().padStart(2, '0')}:${minutes}`;
+            };
+            
+            startTime = convertTo24Hour(startTime);
+            endTime = convertTo24Hour(endTime);
+
             return {
-              startTime: parts[0].replace(' AM', '').replace(' PM', '').replace('12:00 AM', '00:00').replace('12:00 PM', '12:00'), // Adjust for AM/PM to 24hr format if necessary, assuming backend expects HH:MM
-              endTime: parts[1].replace(' AM', '').replace(' PM', '').replace('12:00 AM', '00:00').replace('12:00 PM', '12:00') // More robust parsing might be needed based on actual time slot format
+              startTime: startTime,
+              endTime: endTime
             };
           });
 
