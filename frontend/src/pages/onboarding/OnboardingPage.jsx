@@ -399,7 +399,7 @@
 // src/pages/onboarding/OnboardingPage.jsx
 
 import React, { useState, useEffect, useCallback } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext.jsx";
 import RoleSelection from "./RoleSelection.jsx";
@@ -411,84 +411,73 @@ const OnboardingPage = () => {
     const { fetchUser, user: authUser, loading: authLoading, updateRole } = useAuth();
     const [role, setRole] = useState(null);
     const [step, setStep] = useState("role");
-    const [initialLoadHandled, setInitialLoadHandled] = useState(false);
     const navigate = useNavigate();
-    const location = useLocation();
 
     const roleMap = {
         student: "student",
         teacher: "teacher",
     };
 
-    const handleSetStep = useCallback((newStep) => {
-        console.log("OnboardingPage: Setting step to:", newStep);
-        setStep(newStep);
-    }, []);
-
     useEffect(() => {
-        if (authLoading || initialLoadHandled) {
+        if (authLoading) {
             return;
         }
 
         if (authUser) {
-            console.log("OnboardingPage: authUser loaded in useEffect. Current step:", step);
-
-            // If onboarding is complete based on the backend flag, redirect immediately
             if (authUser.teacherOnboardingComplete || authUser.studentOnboardingComplete) {
-                console.log("OnboardingPage: Onboarding already complete. Redirecting.");
                 if (authUser.role === "student") {
                     navigate("/student/overview", { replace: true });
                 } else if (authUser.role === "teacher") {
                     navigate("/teacher/overview", { replace: true });
                 }
-                setInitialLoadHandled(true);
                 return;
             }
 
-            // Set role in state if not already set
-            if (authUser.role && !role) {
+            if (authUser.role && role === null) {
                 setRole(authUser.role);
+                return;
             }
 
-            let targetStep = "role";
+            let targetStepBasedOnAuth = "role";
+
             if (authUser.role) {
                 if (authUser.role === 'student') {
                     if (!authUser.bio || !authUser.phoneNumber) {
-                        targetStep = 'info';
+                        targetStepBasedOnAuth = 'info';
                     } else if (!authUser.interestedSkills || authUser.interestedSkills.length === 0) {
-                        targetStep = 'interests';
+                        targetStepBasedOnAuth = 'interests';
                     } else {
-                        targetStep = 'complete'; // Student onboarding conceptually complete here
+                        targetStepBasedOnAuth = 'complete';
                     }
                 } else if (authUser.role === 'teacher') {
                     if (!authUser.bio || !authUser.phoneNumber) {
-                        targetStep = 'info';
+                        targetStepBasedOnAuth = 'info';
                     } else if (!authUser.teachingSkills || authUser.teachingSkills.length === 0) {
-                        targetStep = 'expertise';
+                        targetStepBasedOnAuth = 'expertise';
                     } else if (!authUser.availability || authUser.availability.length === 0) {
-                        // If bio and skills are present, but availability data is missing or empty,
-                        // then the next step is 'availability'.
-                        targetStep = 'availability';
+                        targetStepBasedOnAuth = 'availability';
                     } else {
-                        // If bio, skills, AND availability data are all present,
-                        // it means the teacher has completed all form steps, so the next screen is 'complete'.
-                        targetStep = 'complete';
+                        targetStepBasedOnAuth = 'complete';
                     }
                 }
             }
 
-            // Only update the step if it's different from the current one
-            if (step !== targetStep) {
-                console.log(`OnboardingPage: Initial/authUser driven step change from ${step} to ${targetStep}`);
-                setStep(targetStep);
-            }
-            setInitialLoadHandled(true);
-        }
-    }, [authUser, authLoading, navigate, role, fetchUser, initialLoadHandled, step]);
+            const orderedSteps = ['role', 'info', 'interests', 'expertise', 'availability', 'complete'];
+            const currentIndex = orderedSteps.indexOf(step);
+            const targetIndex = orderedSteps.indexOf(targetStepBasedOnAuth);
 
-    // Effect to log step changes *within this component*
+            if (targetIndex > currentIndex || (step === 'role' && targetStepBasedOnAuth !== 'role')) {
+                setStep(targetStepBasedOnAuth);
+            }
+
+        } else {
+            if (step !== "role") {
+                setStep("role");
+            }
+        }
+    }, [authUser, authLoading, navigate, role, fetchUser, step]);
+
     useEffect(() => {
-        console.log("OnboardingPage: 'step' state changed to:", step);
     }, [step]);
 
 
@@ -497,40 +486,42 @@ const OnboardingPage = () => {
         try {
             await updateRole(backendRole);
             await fetchUser();
-            setRole(selectedRole);
             toast.success("Role saved successfully!");
         } catch (err) {
-            console.error("Failed to save role:", err);
             toast.error("Could not save role. Please try again.");
         }
     };
 
     const handleNext = () => {
-        console.log("OnboardingPage: handleNext called. Current step:", step);
         if (role === "student") {
             if (step === "info") setStep("interests");
             else if (step === "interests") setStep("complete");
         } else if (role === "teacher") {
             if (step === "info") setStep("expertise");
             else if (step === "expertise") setStep("availability");
-            else if (step === "availability") setStep("complete"); // This correctly moves to the 'complete' step
+            else if (step === "availability") setStep("complete");
         }
-        console.log("OnboardingPage: handleNext finished. New step (attempted):", step);
     };
 
     const handleBack = () => {
-        console.log("OnboardingPage: handleBack called. Current step:", step);
-        if (step === "info") setStep("role");
-        else if (role === "student" && step === "interests") setStep("info");
-        else if (role === "teacher") {
-            if (step === "expertise") setStep("info");
-            else if (step === "availability") setStep("expertise");
+        if (step === "info") {
+            setStep("role");
         }
-        console.log("OnboardingPage: handleBack finished. New step (attempted):", step);
+        else if (role === "student" && step === "interests") {
+            setStep("info");
+        }
+        else if (role === "teacher") {
+            if (step === "expertise") {
+                setStep("info");
+            }
+            else if (step === "availability") {
+                setStep("expertise");
+            }
+        }
     };
 
+
     const handleComplete = () => {
-        console.log("OnboardingPage: handleComplete called.");
         if (role === "student") navigate("/student/overview");
         else navigate("/teacher/overview");
     };
@@ -541,7 +532,7 @@ const OnboardingPage = () => {
         interests: "Interests",
         expertise: "Expertise",
         availability: "Availability",
-        complete: "Complete", // Explicitly define 'complete' as a step label
+        complete: "Complete",
     };
     const progressMap = {
         role: "20%",
@@ -549,7 +540,7 @@ const OnboardingPage = () => {
         interests: "60%",
         expertise: "60%",
         availability: "80%",
-        complete: "100%", // Explicitly define 'complete' in progress map
+        complete: "100%",
     };
 
     if (authLoading) {
@@ -592,7 +583,7 @@ const OnboardingPage = () => {
                             {step === "complete"
                                 ? ""
                                 : `Step ${Object.keys(progressMap).indexOf(step) + 1} of ${
-                                    role === "teacher" ? 5 : 4 // Teacher has 5 distinct steps including 'complete'
+                                    role === "teacher" ? 5 : 4
                                 }`}
                         </span>
                     </div>
@@ -634,7 +625,6 @@ const OnboardingPage = () => {
                                 onNext={handleNext}
                                 onBack={handleBack}
                                 onComplete={handleComplete}
-                                onSetStep={handleSetStep}
                                 authUser={authUser}
                             />
                         )}
