@@ -408,233 +408,241 @@ import TeacherOnboarding from "./TeacherOnboarding.jsx";
 import { toast } from "sonner";
 
 const OnboardingPage = () => {
-  const { fetchUser, user: authUser, loading: authLoading, updateRole } = useAuth();
-  const [role, setRole] = useState(null);
-  const [step, setStep] = useState("role");
-  const navigate = useNavigate();
-  const location = useLocation();
+    const { fetchUser, user: authUser, loading: authLoading, updateRole } = useAuth();
+    const [role, setRole] = useState(null);
+    const [step, setStep] = useState("role");
+    const [initialLoadHandled, setInitialLoadHandled] = useState(false);
+    const navigate = useNavigate();
+    const location = useLocation();
 
-  const roleMap = {
-    student: "student",
-    teacher: "teacher",
-  };
+    const roleMap = {
+        student: "student",
+        teacher: "teacher",
+    };
 
-  const handleSetStep = useCallback((newStep) => {
-    setStep(newStep);
-  }, []);
+    const handleSetStep = useCallback((newStep) => {
+        console.log("OnboardingPage: Setting step to:", newStep);
+        setStep(newStep);
+    }, []);
 
-  useEffect(() => {
+    useEffect(() => {
+        if (authLoading || initialLoadHandled) {
+            return;
+        }
+
+        if (authUser) {
+            console.log("OnboardingPage: authUser loaded in useEffect. Current step:", step);
+
+            // If onboarding is complete based on the backend flag, redirect immediately
+            if (authUser.teacherOnboardingComplete || authUser.studentOnboardingComplete) {
+                console.log("OnboardingPage: Onboarding already complete. Redirecting.");
+                if (authUser.role === "student") {
+                    navigate("/student/overview", { replace: true });
+                } else if (authUser.role === "teacher") {
+                    navigate("/teacher/overview", { replace: true });
+                }
+                setInitialLoadHandled(true);
+                return;
+            }
+
+            // Set role in state if not already set
+            if (authUser.role && !role) {
+                setRole(authUser.role);
+            }
+
+            let targetStep = "role";
+            if (authUser.role) {
+                if (authUser.role === 'student') {
+                    if (!authUser.bio || !authUser.phoneNumber) {
+                        targetStep = 'info';
+                    } else if (!authUser.interestedSkills || authUser.interestedSkills.length === 0) {
+                        targetStep = 'interests';
+                    } else {
+                        targetStep = 'complete'; // Student onboarding conceptually complete here
+                    }
+                } else if (authUser.role === 'teacher') {
+                    if (!authUser.bio || !authUser.phoneNumber) {
+                        targetStep = 'info';
+                    } else if (!authUser.teachingSkills || authUser.teachingSkills.length === 0) {
+                        targetStep = 'expertise';
+                    } else if (!authUser.availability || authUser.availability.length === 0) {
+                        // If bio and skills are present, but availability data is missing or empty,
+                        // then the next step is 'availability'.
+                        targetStep = 'availability';
+                    } else {
+                        // If bio, skills, AND availability data are all present,
+                        // it means the teacher has completed all form steps, so the next screen is 'complete'.
+                        targetStep = 'complete';
+                    }
+                }
+            }
+
+            // Only update the step if it's different from the current one
+            if (step !== targetStep) {
+                console.log(`OnboardingPage: Initial/authUser driven step change from ${step} to ${targetStep}`);
+                setStep(targetStep);
+            }
+            setInitialLoadHandled(true);
+        }
+    }, [authUser, authLoading, navigate, role, fetchUser, initialLoadHandled, step]);
+
+    // Effect to log step changes *within this component*
+    useEffect(() => {
+        console.log("OnboardingPage: 'step' state changed to:", step);
+    }, [step]);
+
+
+    const handleRoleSelect = async (selectedRole) => {
+        const backendRole = roleMap[selectedRole];
+        try {
+            await updateRole(backendRole);
+            await fetchUser();
+            setRole(selectedRole);
+            toast.success("Role saved successfully!");
+        } catch (err) {
+            console.error("Failed to save role:", err);
+            toast.error("Could not save role. Please try again.");
+        }
+    };
+
+    const handleNext = () => {
+        console.log("OnboardingPage: handleNext called. Current step:", step);
+        if (role === "student") {
+            if (step === "info") setStep("interests");
+            else if (step === "interests") setStep("complete");
+        } else if (role === "teacher") {
+            if (step === "info") setStep("expertise");
+            else if (step === "expertise") setStep("availability");
+            else if (step === "availability") setStep("complete"); // This correctly moves to the 'complete' step
+        }
+        console.log("OnboardingPage: handleNext finished. New step (attempted):", step);
+    };
+
+    const handleBack = () => {
+        console.log("OnboardingPage: handleBack called. Current step:", step);
+        if (step === "info") setStep("role");
+        else if (role === "student" && step === "interests") setStep("info");
+        else if (role === "teacher") {
+            if (step === "expertise") setStep("info");
+            else if (step === "availability") setStep("expertise");
+        }
+        console.log("OnboardingPage: handleBack finished. New step (attempted):", step);
+    };
+
+    const handleComplete = () => {
+        console.log("OnboardingPage: handleComplete called.");
+        if (role === "student") navigate("/student/overview");
+        else navigate("/teacher/overview");
+    };
+
+    const stepLabels = {
+        role: "Choose Role",
+        info: "Basic Information",
+        interests: "Interests",
+        expertise: "Expertise",
+        availability: "Availability",
+        complete: "Complete", // Explicitly define 'complete' as a step label
+    };
+    const progressMap = {
+        role: "20%",
+        info: "40%",
+        interests: "60%",
+        expertise: "60%",
+        availability: "80%",
+        complete: "100%", // Explicitly define 'complete' in progress map
+    };
+
     if (authLoading) {
-      return;
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                <p className="text-xl text-gray-700">Loading your profile...</p>
+            </div>
+        );
     }
 
-    const params = new URLSearchParams(location.search);
-    const calendarAuthStatus = params.get('calendarAuthStatus');
-    const errorMessage = params.get('error');
-
-    if (calendarAuthStatus) {
-      const newSearchParams = new URLSearchParams(location.search);
-      newSearchParams.delete('calendarAuthStatus');
-      newSearchParams.delete('error');
-      newSearchParams.delete('nextStep');
-      navigate({ search: newSearchParams.toString() }, { replace: true });
-
-      if (calendarAuthStatus === 'success') {
-        toast.success("Google Calendar connected successfully!");
-        fetchUser();
-      } else if (calendarAuthStatus === 'failed') {
-        toast.error(`Failed to connect Google Calendar: ${decodeURIComponent(errorMessage || 'Unknown error')}`);
-      }
-      return;
-    }
-
-    if (authUser) {
-      if (authUser.teacherOnboardingComplete || authUser.studentOnboardingComplete) {
-        if (authUser.role === "student") {
-          navigate("/student/overview", { replace: true });
-        } else if (authUser.role === "teacher") {
-          navigate("/teacher/overview", { replace: true });
-        }
-        return;
-      }
-
-      if (authUser.role && !role) {
-        setRole(authUser.role);
-      }
-
-      if (!authUser.role) {
-        handleSetStep('role');
-        return;
-      }
-
-      if (authUser.role === 'student') {
-        if (!authUser.bio || !authUser.phoneNumber) {
-          handleSetStep('info');
-        } else if (!authUser.interestedSkills || authUser.interestedSkills.length === 0) {
-          handleSetStep('interests');
-        } else {
-          handleSetStep('complete');
-        }
-      } else if (authUser.role === 'teacher') {
-        if (!authUser.bio || !authUser.phoneNumber) {
-          handleSetStep('info');
-        } else if (!authUser.teachingSkills || authUser.teachingSkills.length === 0) {
-          handleSetStep('expertise');
-        } else if (!authUser.googleCalendar?.connected) {
-          handleSetStep('availability');
-        } else {
-          handleSetStep('complete');
-        }
-      }
-    }
-  }, [authUser, authLoading, location.search, navigate, role, handleSetStep, fetchUser]);
-
-  const handleRoleSelect = async (selectedRole) => {
-    const backendRole = roleMap[selectedRole];
-    try {
-      await updateRole(backendRole);
-      await fetchUser();
-      setRole(selectedRole);
-      setStep("info");
-    } catch (err) {
-      console.error("Failed to save role:", err);
-      toast.error("Could not save role. Please try again.");
-    }
-  };
-
-  const handleNext = () => {
-    if (role === "student") {
-      if (step === "info") setStep("interests");
-      else if (step === "interests") setStep("complete");
-    } else if (role === "teacher") {
-      if (step === "info") setStep("expertise");
-      else if (step === "expertise") setStep("availability");
-      else if (step === "availability") setStep("complete");
-    }
-  };
-
-  const handleBack = () => {
-    if (step === "info") setStep("role");
-    else if (role === "student" && step === "interests") setStep("info");
-    else if (role === "teacher") {
-      if (step === "expertise") setStep("info");
-      else if (step === "availability") setStep("expertise");
-    }
-  };
-
-  const handleComplete = () => {
-    if (role === "student") navigate("/student/overview");
-    else navigate("/teacher/overview");
-  };
-
-  const stepLabels = {
-    role: "Choose Role",
-    info: "Basic Information",
-    interests: "Interests",
-    expertise: "Expertise",
-    availability: "Availability",
-    complete: "Complete",
-  };
-  const progressMap = {
-    role: "20%",
-    info: "40%",
-    interests: "60%",
-    expertise: "60%",
-    availability: "80%",
-    complete: "100%",
-  };
-
-  if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-        <p className="text-xl text-gray-700">Loading your profile...</p>
-      </div>
-    );
-  }
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-16 px-4">
+            <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 py-16 px-4">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-2xl p-8">
+                <header className="mb-12 text-center">
+                    <motion.h1
+                        className="text-4xl font-extrabold text-gray-900 mb-4"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        Welcome to VidyaPaalam
+                    </motion.h1>
+                    <motion.p
+                        className="text-lg text-gray-600 leading-relaxed"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                        Let's set up your profile to get started.
+                    </motion.p>
+                </header>
 
-        <header className="mb-12 text-center">
-          <motion.h1
-            className="text-4xl font-extrabold text-gray-900 mb-4"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            Welcome to VidyaPaalam
-          </motion.h1>
-          <motion.p
-            className="text-lg text-gray-600 leading-relaxed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            Let's set up your profile to get started.
-          </motion.p>
-        </header>
+                <div className="mb-10">
+                    <div className="flex justify-between mb-3">
+                        <span className="text-lg font-semibold text-gray-800">
+                            {stepLabels[step]}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                            {step === "complete"
+                                ? ""
+                                : `Step ${Object.keys(progressMap).indexOf(step) + 1} of ${
+                                    role === "teacher" ? 5 : 4 // Teacher has 5 distinct steps including 'complete'
+                                }`}
+                        </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                        <motion.div
+                            className="bg-blue-600 h-3 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: progressMap[step] }}
+                            transition={{ duration: 0.5 }}
+                        />
+                    </div>
+                </div>
 
-        <div className="mb-10">
-          <div className="flex justify-between mb-3">
-            <span className="text-lg font-semibold text-gray-800">
-              {stepLabels[step]}
-            </span>
-            <span className="text-sm text-gray-500">
-              {step === "complete"
-                ? ""
-                : `Step ${Object.keys(progressMap).indexOf(step) + 1} of ${
-                    role === "teacher" ? 5 : 4
-                  }`}
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <motion.div
-              className="bg-blue-600 h-3 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: progressMap[step] }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
+                <AnimatePresence mode="wait">
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        {step === "role" && (
+                            <RoleSelection onSelectRole={handleRoleSelect} />
+                        )}
+
+                        {step !== "role" && role === "student" && (
+                            <StudentOnboarding
+                                step={step}
+                                onNext={handleNext}
+                                onBack={handleBack}
+                                onComplete={handleComplete}
+                                authUser={authUser}
+                            />
+                        )}
+
+                        {step !== "role" && role === "teacher" && (
+                            <TeacherOnboarding
+                                step={step}
+                                onNext={handleNext}
+                                onBack={handleBack}
+                                onComplete={handleComplete}
+                                onSetStep={handleSetStep}
+                                authUser={authUser}
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
+            </div>
         </div>
-
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            {step === "role" && (
-              <RoleSelection onSelectRole={handleRoleSelect} />
-            )}
-
-            {step !== "role" && role === "student" && (
-              <StudentOnboarding
-                step={step}
-                onNext={handleNext}
-                onBack={handleBack}
-                onComplete={handleComplete}
-                authUser={authUser}
-              />
-            )}
-
-            {step !== "role" && role === "teacher" && (
-              <TeacherOnboarding
-                step={step}
-                onNext={handleNext}
-                onBack={handleBack}
-                onComplete={handleComplete}
-                onSetStep={handleSetStep}
-                authUser={authUser}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default OnboardingPage;

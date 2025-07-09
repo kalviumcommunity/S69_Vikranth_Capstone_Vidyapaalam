@@ -1,601 +1,1085 @@
-import React, { useState, useCallback, useEffect } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { CheckIcon } from "lucide-react";
-import { toast } from "sonner";
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from "../../contexts/AuthContext";
+// import React, { useState, useCallback, useEffect } from "react";
+// import { Calendar } from "@/components/ui/calendar";
+// import { CheckIcon } from "lucide-react";
+// import { toast } from "sonner";
+// import { useLocation, useNavigate } from 'react-router-dom';
+// import { useAuth } from "../../contexts/AuthContext";
 
-const timeSlots = [
-  "12:00 AM - 01:00 AM", "01:00 AM - 02:00 AM", "02:00 AM - 03:00 AM",
-  "03:00 AM - 04:00 AM", "04:00 AM - 05:00 AM", "05:00 AM - 06:00 AM",
-  "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
-  "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
-  "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM",
-  "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM",
-  "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM",
-  "10:00 PM - 11:00 PM", "11:00 PM - 12:00 AM",
-];
+// const timeSlots = [
+//   "12:00 AM - 01:00 AM", "01:00 AM - 02:00 AM", "02:00 AM - 03:00 AM",
+//   "03:00 AM - 04:00 AM", "04:00 AM - 05:00 AM", "05:00 AM - 06:00 AM",
+//   "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
+//   "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
+//   "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM",
+//   "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM",
+//   "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM",
+//   "10:00 PM - 11:00 PM", "11:00 PM - 12:00 AM",
+// ];
 
-const skills = [
-  { id: "painting", label: "Painting" },
-  { id: "music", label: "Music" },
-  { id: "cooking", label: "Cooking" },
-  { id: "programming", label: "Programming" },
-  { id: "yoga", label: "Yoga" },
-  { id: "dancing", label: "Dancing" },
-  { id: "photography", label: "Photography" },
-  { id: "writing", label: "Creative Writing" },
-  { id: "languages", label: "Languages" },
-  { id: "crafts", label: "Arts & Crafts" },
-  { id: "gardening", label: "Gardening" },
-  { id: "fitness", label: "Fitness & Exercise" },
-];
+// const skills = [
+//   { id: "painting", label: "Painting" },
+//   { id: "music", label: "Music" },
+//   { id: "cooking", label: "Cooking" },
+//   { id: "programming", label: "Programming" },
+//   { id: "yoga", label: "Yoga" },
+//   { id: "dancing", label: "Dancing" },
+//   { id: "photography", label: "Photography" },
+//   { id: "writing", label: "Creative Writing" },
+//   { id: "languages", label: "Languages" },
+//   { id: "crafts", label: "Arts & Crafts" },
+//   { id: "gardening", label: "Gardening" },
+//   { id: "fitness", label: "Fitness & Exercise" },
+// ];
 
+// const convertTo24Hour = (time12h) => {
+//     const [time, modifier] = time12h.split(' ');
+//     let [hours, minutes] = time.split(':');
+
+//     if (hours === '12') {
+//         hours = '00';
+//     }
+
+//     if (modifier === 'PM') {
+//         hours = parseInt(hours, 10) + 12;
+//     }
+//     return `${String(hours).padStart(2, '0')}:${minutes}`;
+// };
+
+
+// const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
+//   const { api, user: authUser, loading: authLoading, fetchUser, updateGeneralProfile, updateTeachingSkills, updateAvailability } = useAuth();
+
+//   const [formData, setFormData] = useState({
+//     fullName: "",
+//     phone: "",
+//     bio: "",
+//   });
+//   const [teachingSkills, setTeachingSkills] = useState([]);
+//   const [customSkillInput, setCustomSkillInput] = useState("");
+//   const [date, setDate] = useState(new Date());
+
+//   const [selectedSlotsByDate, setSelectedSlotsByDate] = useState({});
+
+//   const [errors, setErrors] = useState({});
+//   const [isLoading, setIsLoading] = useState(false);
+
+//   const location = useLocation();
+//   const navigate = useNavigate();
+
+//   useEffect(() => {
+//     if (authLoading) {
+//       return;
+//     }
+
+//     if (authUser) {
+//       if (step === "info") {
+//         setFormData((prev) => ({
+//           ...prev,
+//           fullName: authUser.name || "",
+//           phone: authUser.phoneNumber || "",
+//           bio: authUser.bio || "",
+//         }));
+//       } else if (step === "expertise") {
+//         setTeachingSkills(authUser.teachingSkills ? [...authUser.teachingSkills] : []);
+//       } else if (step === "availability") {
+//           const initialAvailability = {};
+//           if (authUser.availability && Array.isArray(authUser.availability)) {
+//               authUser.availability.forEach(item => {
+//                   const dateKey = new Date(item.date).toISOString().split('T')[0];
+//                   if (!initialAvailability[dateKey]) {
+//                       initialAvailability[dateKey] = [];
+//                   }
+//                   item.slots.forEach(slot => {
+//                       const start = convertTo12Hour(slot.startTime);
+//                       const end = convertTo12Hour(slot.endTime);
+//                       const matchedSlot = timeSlots.find(ts => ts.includes(start) && ts.includes(end));
+//                       if (matchedSlot) {
+//                           initialAvailability[dateKey].push(matchedSlot);
+//                       }
+//                   });
+//               });
+//           }
+//           setSelectedSlotsByDate(initialAvailability);
+//       }
+//     }
+//   }, [authUser, authLoading, step]);
+
+//   const convertTo12Hour = (time24h) => {
+//     const [hours, minutes] = time24h.split(':');
+//     let h = parseInt(hours, 10);
+//     const ampm = h >= 12 ? 'PM' : 'AM';
+//     h = h % 12;
+//     h = h ? h : 12;
+//     return `${h}:${minutes} ${ampm}`;
+//   };
+
+
+//   const handleInputChange = (e) => {
+//     const { name, value } = e.target;
+//     setFormData((prev) => ({ ...prev, [name]: value }));
+//     setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
+//   };
+
+//   const handleCustomSkillInputChange = (e) => {
+//     setCustomSkillInput(e.target.value);
+//   };
+
+//   const handleSkillToggle = useCallback((skillId) => {
+//     setTeachingSkills((prev) => {
+//       const newState = prev.includes(skillId)
+//         ? prev.filter((id) => id !== skillId)
+//         : [...prev, skillId];
+//       return newState;
+//     });
+//     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
+//   }, []);
+
+//   const handleRemoveSkill = useCallback((skillToRemove) => {
+//     setTeachingSkills((prev) => {
+//       const newState = prev.filter((skill) => skill !== skillToRemove);
+//       return newState;
+//     });
+//     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
+//   }, []);
+
+//   const handleAddCustomSkill = useCallback(() => {
+//     const trimmedSkill = customSkillInput.trim();
+//     if (!trimmedSkill) {
+//       toast.error("Custom skill cannot be empty.");
+//       return;
+//     }
+//     if (teachingSkills.includes(trimmedSkill.toLowerCase())) {
+//       toast.error("This skill has already been added.");
+//       return;
+//     }
+
+//     setTeachingSkills((prev) => {
+//       const newState = [...prev, trimmedSkill.toLowerCase()];
+//       return newState;
+//     });
+//     setCustomSkillInput("");
+//     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
+//   }, [customSkillInput, teachingSkills]);
+
+//   const handleSlotToggle = useCallback((slotString) => {
+//     const dateString = date.toISOString().split('T')[0];
+//     setSelectedSlotsByDate((prev) => {
+//       const currentSlotsForDate = prev[dateString] ? [...prev[dateString]] : [];
+//       let updatedSlotsForDate;
+
+//       if (currentSlotsForDate.includes(slotString)) {
+//         updatedSlotsForDate = currentSlotsForDate.filter((s) => s !== slotString);
+//       } else {
+//         updatedSlotsForDate = [...currentSlotsForDate, slotString];
+//       }
+
+//       const newState = { ...prev };
+//       if (updatedSlotsForDate.length === 0) {
+//         delete newState[dateString];
+//       } else {
+//         newState[dateString] = updatedSlotsForDate;
+//       }
+//       return newState;
+//     });
+//     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
+//   }, [date]);
+
+//   const handleWholeWeekToggle = useCallback((slot) => {
+//     const currentDate = new Date(date);
+//     const weekDates = [];
+
+//     const startOfWeek = new Date(currentDate);
+//     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
+
+//     for (let i = 0; i < 7; i++) {
+//       const weekDate = new Date(startOfWeek);
+//       weekDate.setDate(startOfWeek.getDate() + i);
+//       weekDates.push(weekDate.toISOString().split('T')[0]);
+//     }
+
+//     setSelectedSlotsByDate((prev) => {
+//       const newState = { ...prev };
+//       let allWeekSelectedForThisSlot = true;
+//       for (const dateStr of weekDates) {
+//         if (!newState[dateStr] || !newState[dateStr].includes(slot)) {
+//           allWeekSelectedForThisSlot = false;
+//           break;
+//         }
+//       }
+
+//       if (allWeekSelectedForThisSlot) {
+//         weekDates.forEach(dateStr => {
+//           if (newState[dateStr]) {
+//             newState[dateStr] = newState[dateStr].filter(s => s !== slot);
+//             if (newState[dateStr].length === 0) {
+//               delete newState[dateStr];
+//             }
+//           }
+//         });
+//       } else {
+//         weekDates.forEach(dateStr => {
+//           if (!newState[dateStr]) {
+//             newState[dateStr] = [];
+//           }
+//           if (!newState[dateStr].includes(slot)) {
+//             newState[dateStr].push(slot);
+//           }
+//         });
+//       }
+//       return newState;
+//     });
+//     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
+//   }, [date]);
+
+//   const handleDateSelect = useCallback((selectedDate) => {
+//     if (selectedDate instanceof Date) {
+//       setDate(selectedDate);
+//       setErrors((prevErrors) => ({ ...prevErrors, date: "" }));
+//     }
+//   }, []);
+
+//   const validateForm = (currentStep) => {
+//     let isValid = true;
+//     const newErrors = {};
+
+//     if (currentStep === "info") {
+//       if (!formData.fullName.trim()) {
+//         newErrors.fullName = "Full Name is required";
+//         isValid = false;
+//       }
+//       if (!formData.phone.trim()) {
+//         newErrors.phone = "Phone Number is required";
+//         isValid = false;
+//       } else if (!/^\+?\d{10,15}$/.test(formData.phone)) {
+//         newErrors.phone = "Invalid phone number format. Use +CountryCode and 10-15 digits.";
+//         isValid = false;
+//       }
+//       if (!formData.bio.trim()) {
+//         newErrors.bio = "A short bio is required";
+//         isValid = false;
+//       }
+//     } else if (currentStep === "expertise") {
+//       if (teachingSkills.length === 0) {
+//         newErrors.teachingSkills = "Please select or add at least one skill.";
+//         isValid = false;
+//       }
+//     } else if (currentStep === "availability") {
+//         if (Object.keys(selectedSlotsByDate).length === 0) {
+//             newErrors.selectedSlots = "Please select at least one time slot for any date.";
+//             isValid = false;
+//         }
+//     }
+
+//     setErrors(newErrors);
+//     return isValid;
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     const currentStep = step;
+
+//     if (!validateForm(currentStep)) {
+//       toast.error("Please correct the errors in the form before continuing.");
+//       return;
+//     }
+
+//     setIsLoading(true);
+
+//     try {
+//       if (currentStep === "info") {
+//         await updateGeneralProfile({
+//           name: formData.fullName,
+//           phoneNumber: formData.phone,
+//           bio: formData.bio,
+//         });
+//       } else if (currentStep === "expertise") {
+//         await updateTeachingSkills(teachingSkills);
+//       } else if (currentStep === "availability") {
+//         const availabilityData = [];
+//         for (const [dateKey, slots] of Object.entries(selectedSlotsByDate)) {
+//           const formattedSlots = slots.map(slotString => {
+//             const parts = slotString.split(' - ');
+//             return {
+//               startTime: convertTo24Hour(parts[0]),
+//               endTime: convertTo24Hour(parts[1])
+//             };
+//           });
+//           availabilityData.push({
+//             date: dateKey,
+//             slots: formattedSlots,
+//           });
+//         }
+        
+//         await updateAvailability(availabilityData);
+//       }
+
+//       await fetchUser();
+//       toast.success("Information saved successfully!");
+//       onNext();
+
+//     } catch (error) {
+//       console.error("Onboarding step failed:", error.response?.data || error.message, error);
+//       if (currentStep === "availability" && error.response?.data?.message) {
+//         toast.error(`Availability save failed: ${error.response.data.message}`);
+//       } else {
+//         toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
+//       }
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handleCompleteOnboarding = async () => {
+//     setIsLoading(true);
+//     try {
+//       await api.patch("/auth/profile", { teacherOnboardingComplete: true });
+//       await fetchUser();
+
+//       toast.success("Onboarding complete! Welcome to the teacher community.");
+//       onComplete();
+//     } catch (error) {
+//       console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
+//       toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   if (authLoading) {
+//     return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
+//   }
+
+//   const currentDateString = date ? date.toISOString().split('T')[0] : '';
+
+//   if (step === "info") {
+//     return (
+//       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
+//         <h2 className="text-2xl font-semibold text-gray-900 mb-6">Basic Information</h2>
+//         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+//           <div className="mb-2">
+//             <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+//             <input
+//               type="text"
+//               id="fullName"
+//               name="fullName"
+//               value={formData.fullName}
+//               onChange={handleInputChange}
+//               placeholder="John Doe"
+//               className={`block w-full p-2.5 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
+//                 ${errors.fullName ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
+//             />
+//             {errors.fullName && (
+//               <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
+//             )}
+//           </div>
+//           <div className="mb-2">
+//             <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+//             <input
+//               type="text"
+//               id="phone"
+//               name="phone"
+//               value={formData.phone}
+//               onChange={handleInputChange}
+//               placeholder="+1 (555) 123-4567"
+//               className={`block w-full p-2.5 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
+//                 ${errors.phone ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
+//             />
+//             {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+//           </div>
+//           <div className="mb-2">
+//             <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">About You</label>
+//             <textarea
+//               id="bio"
+//               name="bio"
+//               value={formData.bio}
+//               onChange={handleInputChange}
+//               placeholder="Share information about your background and teaching style"
+//               className={`block w-full p-2.5 rounded-md border shadow-sm text-base min-h-[80px] outline-none resize-y transition-all duration-200 ease-in-out
+//                 ${errors.bio ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
+//             />
+//             {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio}</p>}
+//           </div>
+
+//           <div className="flex justify-between pt-4 gap-4">
+//             <button type="button" onClick={onBack} disabled={isLoading || authLoading}
+//               className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+//               Back
+//             </button>
+//             <button type="submit" disabled={isLoading || authLoading}
+//               className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+//               {isLoading ? "Saving..." : "Continue"}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     );
+//   }
+
+//   if (step === "expertise") {
+//     return (
+//       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
+//         <h2 className="text-2xl font-semibold text-gray-900 mb-6">Your Expertise</h2>
+//         <div className="mb-6">
+//           <h3 className="text-lg font-medium text-gray-800 mb-2">Skills You Can Teach</h3>
+//           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
+//             {skills.map((skill) => (
+//               <div key={skill.id} className="flex items-center space-x-2">
+//                 <input
+//                   type="checkbox"
+//                   id={skill.id}
+//                   checked={teachingSkills.includes(skill.id)}
+//                   onChange={() => handleSkillToggle(skill.id)}
+//                   className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+//                 />
+//                 <label htmlFor={skill.id} className="text-sm font-medium text-gray-700 cursor-pointer">
+//                   {skill.label}
+//                 </label>
+//               </div>
+//             ))}
+//           </div>
+//           {errors.teachingSkills && (
+//             <p className="text-red-500 text-sm mt-1">{errors.teachingSkills}</p>
+//           )}
+
+//           <div className="mt-5 mb-2">
+//             <label htmlFor="customSkill" className="block text-sm font-medium text-gray-700 mb-1">Add Custom Skill</label>
+//             <div className="flex gap-2">
+//               <input
+//                 type="text"
+//                 id="customSkill"
+//                 value={customSkillInput}
+//                 onChange={handleCustomSkillInputChange}
+//                 placeholder="e.g., Chess Coaching"
+//                 className="block w-full p-2 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
+//                   border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+//               />
+//               <button
+//                 type="button"
+//                 onClick={handleAddCustomSkill}
+//                 disabled={isLoading}
+//                 className="bg-blue-500 text-white py-2 px-3 rounded-md border-none cursor-pointer text-sm font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+//               >
+//                 Add
+//               </button>
+//             </div>
+//           </div>
+
+//           {teachingSkills.length > 0 && (
+//             <div className="mt-5 pt-4 border-t border-gray-200">
+//               <h4 className="text-base font-medium text-gray-800 mb-2">Selected Skills:</h4>
+//               <div className="flex flex-wrap gap-2 mt-2">
+//                 {teachingSkills.map((skill, index) => (
+//                   <div key={index} className="inline-flex items-center bg-blue-50 text-blue-800 py-1.5 px-3 rounded-full text-sm font-medium shadow-sm">
+//                     <span>{skill}</span>
+//                     <button
+//                       type="button"
+//                       onClick={() => handleRemoveSkill(skill)}
+//                       disabled={isLoading}
+//                       className="ml-1.5 text-blue-800 hover:text-red-600 focus:outline-none text-xl leading-none bg-transparent border-none cursor-pointer"
+//                     >
+//                       &times;
+//                     </button>
+//                   </div>
+//                 ))}
+//               </div>
+//             </div>
+//           )}
+//         </div>
+//         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+//           <div className="flex justify-between pt-4 gap-4">
+//             <button type="button" onClick={onBack} disabled={isLoading || authLoading}
+//               className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+//               Back
+//             </button>
+//             <button type="submit" disabled={isLoading || authLoading}
+//               className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+//               {isLoading ? "Saving..." : "Continue"}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     );
+//   }
+
+//   if (step === "availability") {
+//     const currentDate = date || new Date();
+//     const dateString = currentDate.toISOString().split('T')[0];
+
+//     return (
+//       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
+//         <h2 className="text-2xl font-semibold text-gray-900 mb-6">Set Your Availability</h2>
+//         <p className="text-sm text-gray-600 mb-6">
+//           Select dates and time slots when you're available to teach.
+//         </p>
+
+//         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+//           <div>
+//             <h3 className="text-base font-medium text-gray-800 mb-2">Select Date</h3>
+//             <div className="rounded-md border border-gray-300 overflow-hidden">
+//               <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
+//             </div>
+//             {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
+//           </div>
+//           <div>
+//             <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
+//             <div className="grid grid-cols-1 gap-2">
+//               {timeSlots.map((slot) => {
+//                 const isSelected = selectedSlotsByDate[dateString]?.includes(slot) || false;
+//                 return (
+//                   <div key={slot} className="flex items-center gap-2">
+//                     <div
+//                       onClick={() => handleSlotToggle(slot)}
+//                       className={`flex-1 p-2 border rounded-md transition-colors duration-200 ease-in-out cursor-pointer
+//                         ${isSelected ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
+//                         ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+//                     >
+//                       <div className="flex items-center justify-between">
+//                         <span>{slot}</span>
+//                         {isSelected && (
+//                           <CheckIcon className="h-4 w-4 text-blue-600" />
+//                         )}
+//                       </div>
+//                     </div>
+//                     <button
+//                       onClick={() => handleWholeWeekToggle(slot)}
+//                       className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
+//                     >
+//                       Whole Week
+//                     </button>
+//                   </div>
+//                 );
+//               })}
+//             </div>
+//             {errors.selectedSlots && <p className="text-red-500 text-sm mt-1">{errors.selectedSlots}</p>}
+//           </div>
+//         </div>
+
+//         <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-6">
+//           <div className="flex justify-between pt-4 gap-4">
+//             <button type="button" onClick={onBack} disabled={isLoading || authLoading}
+//               className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
+//               Back
+//             </button>
+//             <button type="submit" disabled={isLoading || authLoading}
+//               className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+//               {isLoading ? "Saving..." : "Continue"}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     );
+//   }
+
+//   if (step === "complete") {
+//     return (
+//       <div className="max-w-md mx-auto text-center p-6 space-y-8 font-inter">
+//         <div className="flex justify-center">
+//           <div className="h-24 w-24 rounded-full bg-green-100 flex items-center justify-center shadow-lg">
+//             <CheckIcon className="h-12 w-12 text-green-600" />
+//           </div>
+//         </div>
+//         <div>
+//           <h2 className="text-2xl font-semibold text-gray-900 mb-2">You're All Set!</h2>
+//           <p className="text-sm text-gray-600">
+//             Your teacher profile has been created. Start sharing your knowledge with eager students!
+//           </p>
+//         </div>
+//         <button
+//           onClick={handleCompleteOnboarding}
+//           disabled={isLoading || authLoading}
+//           className="w-full bg-blue-500 text-white py-3 px-6 rounded-md border-none cursor-pointer text-lg font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+//         >
+//           {isLoading ? "Loading..." : "Go to Dashboard"}
+//         </button>
+//       </div>
+//     );
+//   }
+
+//   return null;
+// };
+
+// export default TeacherOnboarding;
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { useAuth } from '../../contexts/AuthContext.jsx'; // Adjust path as necessary
+
+// --- Helper Functions (You might have these globally or in a utilities file) ---
 const convertTo24Hour = (time12h) => {
     const [time, modifier] = time12h.split(' ');
     let [hours, minutes] = time.split(':');
-
     if (hours === '12') {
         hours = '00';
     }
-
     if (modifier === 'PM') {
         hours = parseInt(hours, 10) + 12;
     }
-    return `${String(hours).padStart(2, '0')}:${minutes}`;
+    return `${hours}:${minutes}`;
 };
 
+const generateTimeSlots = (intervalMinutes = 60) => {
+    const slots = [];
+    for (let hour = 0; hour < 24; hour++) {
+        for (let minute = 0; minute < 60; minute += intervalMinutes) {
+            const start = new Date();
+            start.setHours(hour, minute, 0, 0);
 
-const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
-  const { api, user: authUser, loading: authLoading, fetchUser, updateGeneralProfile, updateTeachingSkills, updateAvailability } = useAuth();
+            const end = new Date(start.getTime() + intervalMinutes * 60 * 1000); // Add interval
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    phone: "",
-    bio: "",
-  });
-  const [teachingSkills, setTeachingSkills] = useState([]);
-  const [customSkillInput, setCustomSkillInput] = useState("");
-  const [date, setDate] = useState(new Date());
-
-  const [selectedSlotsByDate, setSelectedSlotsByDate] = useState({});
-
-  const [errors, setErrors] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
-
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (authLoading) {
-      return;
-    }
-
-    if (authUser) {
-      if (step === "info") {
-        setFormData((prev) => ({
-          ...prev,
-          fullName: authUser.name || "",
-          phone: authUser.phoneNumber || "",
-          bio: authUser.bio || "",
-        }));
-      } else if (step === "expertise") {
-        setTeachingSkills(authUser.teachingSkills ? [...authUser.teachingSkills] : []);
-      } else if (step === "availability") {
-          const initialAvailability = {};
-          if (authUser.availability && Array.isArray(authUser.availability)) {
-              authUser.availability.forEach(item => {
-                  const dateKey = new Date(item.date).toISOString().split('T')[0];
-                  if (!initialAvailability[dateKey]) {
-                      initialAvailability[dateKey] = [];
-                  }
-                  item.slots.forEach(slot => {
-                      const start = convertTo12Hour(slot.startTime);
-                      const end = convertTo12Hour(slot.endTime);
-                      const matchedSlot = timeSlots.find(ts => ts.includes(start) && ts.includes(end));
-                      if (matchedSlot) {
-                          initialAvailability[dateKey].push(matchedSlot);
-                      }
-                  });
-              });
-          }
-          setSelectedSlotsByDate(initialAvailability);
-      }
-    }
-  }, [authUser, authLoading, step]);
-
-  const convertTo12Hour = (time24h) => {
-    const [hours, minutes] = time24h.split(':');
-    let h = parseInt(hours, 10);
-    const ampm = h >= 12 ? 'PM' : 'AM';
-    h = h % 12;
-    h = h ? h : 12;
-    return `${h}:${minutes} ${ampm}`;
-  };
-
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
-  };
-
-  const handleCustomSkillInputChange = (e) => {
-    setCustomSkillInput(e.target.value);
-  };
-
-  const handleSkillToggle = useCallback((skillId) => {
-    setTeachingSkills((prev) => {
-      const newState = prev.includes(skillId)
-        ? prev.filter((id) => id !== skillId)
-        : [...prev, skillId];
-      return newState;
-    });
-    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
-  }, []);
-
-  const handleRemoveSkill = useCallback((skillToRemove) => {
-    setTeachingSkills((prev) => {
-      const newState = prev.filter((skill) => skill !== skillToRemove);
-      return newState;
-    });
-    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
-  }, []);
-
-  const handleAddCustomSkill = useCallback(() => {
-    const trimmedSkill = customSkillInput.trim();
-    if (!trimmedSkill) {
-      toast.error("Custom skill cannot be empty.");
-      return;
-    }
-    if (teachingSkills.includes(trimmedSkill.toLowerCase())) {
-      toast.error("This skill has already been added.");
-      return;
-    }
-
-    setTeachingSkills((prev) => {
-      const newState = [...prev, trimmedSkill.toLowerCase()];
-      return newState;
-    });
-    setCustomSkillInput("");
-    setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
-  }, [customSkillInput, teachingSkills]);
-
-  const handleSlotToggle = useCallback((slotString) => {
-    const dateString = date.toISOString().split('T')[0];
-    setSelectedSlotsByDate((prev) => {
-      const currentSlotsForDate = prev[dateString] ? [...prev[dateString]] : [];
-      let updatedSlotsForDate;
-
-      if (currentSlotsForDate.includes(slotString)) {
-        updatedSlotsForDate = currentSlotsForDate.filter((s) => s !== slotString);
-      } else {
-        updatedSlotsForDate = [...currentSlotsForDate, slotString];
-      }
-
-      const newState = { ...prev };
-      if (updatedSlotsForDate.length === 0) {
-        delete newState[dateString];
-      } else {
-        newState[dateString] = updatedSlotsForDate;
-      }
-      return newState;
-    });
-    setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
-  }, [date]);
-
-  const handleWholeWeekToggle = useCallback((slot) => {
-    const currentDate = new Date(date);
-    const weekDates = [];
-
-    const startOfWeek = new Date(currentDate);
-    startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-
-    for (let i = 0; i < 7; i++) {
-      const weekDate = new Date(startOfWeek);
-      weekDate.setDate(startOfWeek.getDate() + i);
-      weekDates.push(weekDate.toISOString().split('T')[0]);
-    }
-
-    setSelectedSlotsByDate((prev) => {
-      const newState = { ...prev };
-      let allWeekSelectedForThisSlot = true;
-      for (const dateStr of weekDates) {
-        if (!newState[dateStr] || !newState[dateStr].includes(slot)) {
-          allWeekSelectedForThisSlot = false;
-          break;
-        }
-      }
-
-      if (allWeekSelectedForThisSlot) {
-        weekDates.forEach(dateStr => {
-          if (newState[dateStr]) {
-            newState[dateStr] = newState[dateStr].filter(s => s !== slot);
-            if (newState[dateStr].length === 0) {
-              delete newState[dateStr];
-            }
-          }
-        });
-      } else {
-        weekDates.forEach(dateStr => {
-          if (!newState[dateStr]) {
-            newState[dateStr] = [];
-          }
-          if (!newState[dateStr].includes(slot)) {
-            newState[dateStr].push(slot);
-          }
-        });
-      }
-      return newState;
-    });
-    setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
-  }, [date]);
-
-  const handleDateSelect = useCallback((selectedDate) => {
-    if (selectedDate instanceof Date) {
-      setDate(selectedDate);
-      setErrors((prevErrors) => ({ ...prevErrors, date: "" }));
-    }
-  }, []);
-
-  const validateForm = (currentStep) => {
-    let isValid = true;
-    const newErrors = {};
-
-    if (currentStep === "info") {
-      if (!formData.fullName.trim()) {
-        newErrors.fullName = "Full Name is required";
-        isValid = false;
-      }
-      if (!formData.phone.trim()) {
-        newErrors.phone = "Phone Number is required";
-        isValid = false;
-      } else if (!/^\+?\d{10,15}$/.test(formData.phone)) {
-        newErrors.phone = "Invalid phone number format. Use +CountryCode and 10-15 digits.";
-        isValid = false;
-      }
-      if (!formData.bio.trim()) {
-        newErrors.bio = "A short bio is required";
-        isValid = false;
-      }
-    } else if (currentStep === "expertise") {
-      if (teachingSkills.length === 0) {
-        newErrors.teachingSkills = "Please select or add at least one skill.";
-        isValid = false;
-      }
-    } else if (currentStep === "availability") {
-        if (Object.keys(selectedSlotsByDate).length === 0) {
-            newErrors.selectedSlots = "Please select at least one time slot for any date.";
-            isValid = false;
-        }
-    }
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const currentStep = step;
-
-    if (!validateForm(currentStep)) {
-      toast.error("Please correct the errors in the form before continuing.");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      if (currentStep === "info") {
-        await updateGeneralProfile({
-          name: formData.fullName,
-          phoneNumber: formData.phone,
-          bio: formData.bio,
-        });
-      } else if (currentStep === "expertise") {
-        await updateTeachingSkills(teachingSkills);
-      } else if (currentStep === "availability") {
-        const availabilityData = [];
-        for (const [dateKey, slots] of Object.entries(selectedSlotsByDate)) {
-          const formattedSlots = slots.map(slotString => {
-            const parts = slotString.split(' - ');
-            return {
-              startTime: convertTo24Hour(parts[0]),
-              endTime: convertTo24Hour(parts[1])
+            const formatTime = (dateObj) => {
+                let h = dateObj.getHours();
+                const m = dateObj.getMinutes();
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h ? h : 12; // the hour '0' should be '12'
+                const minutes = m < 10 ? '0' + m : m;
+                return `${h}:${minutes} ${ampm}`;
             };
-          });
-          availabilityData.push({
-            date: dateKey,
-            slots: formattedSlots,
-          });
+            slots.push(`${formatTime(start)} - ${formatTime(end)}`);
         }
-        
-        await updateAvailability(availabilityData);
-      }
-
-      await fetchUser();
-      toast.success("Information saved successfully!");
-      onNext();
-
-    } catch (error) {
-      console.error("Onboarding step failed:", error.response?.data || error.message, error);
-      if (currentStep === "availability" && error.response?.data?.message) {
-        toast.error(`Availability save failed: ${error.response.data.message}`);
-      } else {
-        toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
-      }
-    } finally {
-      setIsLoading(false);
     }
-  };
+    return slots;
+};
 
-  const handleCompleteOnboarding = async () => {
-    setIsLoading(true);
-    try {
-      await api.patch("/auth/profile", { teacherOnboardingComplete: true });
-      await fetchUser();
+// Example skill options (replace with your actual data from backend or static list)
+const skillOptions = [
+    { value: 'math', label: 'Mathematics' },
+    { value: 'science', label: 'Science' },
+    { value: 'english', label: 'English' },
+    { value: 'history', label: 'History' },
+    { value: 'computer_science', label: 'Computer Science' },
+    { value: 'music', label: 'Music' },
+    { value: 'art', label: 'Art' },
+    { value: 'physics', label: 'Physics' },
+    { value: 'chemistry', label: 'Chemistry' },
+    { value: 'biology', label: 'Biology' },
+    { value: 'programming_python', label: 'Python Programming' },
+    { value: 'programming_java', label: 'Java Programming' },
+    { value: 'web_development', label: 'Web Development' },
+    // Add more skills
+];
 
-      toast.success("Onboarding complete! Welcome to the teacher community.");
-      onComplete();
-    } catch (error) {
-      console.error("Finalizing onboarding failed:", error.response?.data || error.message, error);
-      toast.error(error.response?.data?.message || "Failed to finalize onboarding. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+const timeSlots = generateTimeSlots(60); // Generate 1-hour slots
 
-  if (authLoading) {
-    return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
-  }
 
-  const currentDateString = date ? date.toISOString().split('T')[0] : '';
+const TeacherOnboarding = ({ step, onNext, onBack, onComplete, authUser }) => {
+    const {
+        updateGeneralProfile,
+        updateTeachingSkills,
+        updateAvailability,
+        fetchUser,
+        loading: authLoading
+    } = useAuth();
 
-  if (step === "info") {
-    return (
-      <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Basic Information</h2>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="mb-2">
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input
-              type="text"
-              id="fullName"
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleInputChange}
-              placeholder="John Doe"
-              className={`block w-full p-2.5 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
-                ${errors.fullName ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
-            />
-            {errors.fullName && (
-              <p className="text-red-500 text-sm mt-1">{errors.fullName}</p>
-            )}
-          </div>
-          <div className="mb-2">
-            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-            <input
-              type="text"
-              id="phone"
-              name="phone"
-              value={formData.phone}
-              onChange={handleInputChange}
-              placeholder="+1 (555) 123-4567"
-              className={`block w-full p-2.5 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
-                ${errors.phone ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
-            />
-            {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-          </div>
-          <div className="mb-2">
-            <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-1">About You</label>
-            <textarea
-              id="bio"
-              name="bio"
-              value={formData.bio}
-              onChange={handleInputChange}
-              placeholder="Share information about your background and teaching style"
-              className={`block w-full p-2.5 rounded-md border shadow-sm text-base min-h-[80px] outline-none resize-y transition-all duration-200 ease-in-out
-                ${errors.bio ? "border-red-500" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}`}
-            />
-            {errors.bio && <p className="text-red-500 text-sm mt-1">{errors.bio}</p>}
-          </div>
+    const [isLoading, setIsLoading] = useState(false);
+    const [formData, setFormData] = useState({
+        fullName: '',
+        phoneNumber: '',
+        bio: ''
+    });
+    // teachingSkills will now be an array of string values for native select
+    const [teachingSkills, setTeachingSkills] = useState([]);
+    // date will be stored as a Date object for ease of manipulation
+    const [date, setDate] = useState(new Date());
+    const [selectedSlotsByDate, setSelectedSlotsByDate] = useState({}); // { 'YYYY-MM-DD': ['slot1', 'slot2'] }
+    const [errors, setErrors] = useState({});
 
-          <div className="flex justify-between pt-4 gap-4">
-            <button type="button" onClick={onBack} disabled={isLoading || authLoading}
-              className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-              Back
-            </button>
-            <button type="submit" disabled={isLoading || authLoading}
-              className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isLoading ? "Saving..." : "Continue"}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
+    // Utility to format Date object to YYYY-MM-DD string for input[type="date"]
+    const formatDateToISO = (dateObj) => {
+        if (!dateObj) return '';
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
 
-  if (step === "expertise") {
-    return (
-      <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Your Expertise</h2>
-        <div className="mb-6">
-          <h3 className="text-lg font-medium text-gray-800 mb-2">Skills You Can Teach</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">
-            {skills.map((skill) => (
-              <div key={skill.id} className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id={skill.id}
-                  checked={teachingSkills.includes(skill.id)}
-                  onChange={() => handleSkillToggle(skill.id)}
-                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
-                />
-                <label htmlFor={skill.id} className="text-sm font-medium text-gray-700 cursor-pointer">
-                  {skill.label}
-                </label>
-              </div>
-            ))}
-          </div>
-          {errors.teachingSkills && (
-            <p className="text-red-500 text-sm mt-1">{errors.teachingSkills}</p>
-          )}
+    // Pre-fill form data from authUser
+    useEffect(() => {
+        if (authUser) {
+            setFormData({
+                fullName: authUser.name || '',
+                phoneNumber: authUser.phoneNumber || '',
+                bio: authUser.bio || ''
+            });
+            // Set teachingSkills directly from authUser (assuming it's an array of strings)
+            if (authUser.teachingSkills && authUser.teachingSkills.length > 0) {
+                setTeachingSkills(authUser.teachingSkills);
+            }
+            // Populate availability slots if available
+            if (authUser.availability && authUser.availability.length > 0) {
+                const slotsGroupedByDate = {};
+                authUser.availability.forEach(item => {
+                    const dateStr = item.date.split('T')[0]; // Assuming date is ISO string 'YYYY-MM-DDTHH:mm:ss.sssZ'
+                    if (!slotsGroupedByDate[dateStr]) {
+                        slotsGroupedByDate[dateStr] = [];
+                    }
+                    // Reconstruct the display format "HH:MM AM/PM - HH:MM AM/PM"
+                    const formatTime12H = (time24h) => {
+                        const [hours, minutes] = time24h.split(':');
+                        const h = parseInt(hours, 10);
+                        const ampm = h >= 12 ? 'PM' : 'AM';
+                        const displayHour = h % 12 === 0 ? 12 : h % 12;
+                        return `${displayHour}:${minutes} ${ampm}`;
+                    };
+                    slotsGroupedByDate[dateStr].push(`${formatTime12H(item.startTime)} - ${formatTime12H(item.endTime)}`);
+                });
+                setSelectedSlotsByDate(slotsGroupedByDate);
+                // Set the date picker to the first available date or today
+                if (Object.keys(slotsGroupedByDate).length > 0) {
+                    setDate(new Date(Object.keys(slotsGroupedByDate)[0]));
+                }
+            }
+        }
+    }, [authUser]);
 
-          <div className="mt-5 mb-2">
-            <label htmlFor="customSkill" className="block text-sm font-medium text-gray-700 mb-1">Add Custom Skill</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                id="customSkill"
-                value={customSkillInput}
-                onChange={handleCustomSkillInputChange}
-                placeholder="e.g., Chess Coaching"
-                className="block w-full p-2 rounded-md border shadow-sm text-base outline-none transition-all duration-200 ease-in-out
-                  border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddCustomSkill}
-                disabled={isLoading}
-                className="bg-blue-500 text-white py-2 px-3 rounded-md border-none cursor-pointer text-sm font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add
-              </button>
-            </div>
-          </div>
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
 
-          {teachingSkills.length > 0 && (
-            <div className="mt-5 pt-4 border-t border-gray-200">
-              <h4 className="text-base font-medium text-gray-800 mb-2">Selected Skills:</h4>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {teachingSkills.map((skill, index) => (
-                  <div key={index} className="inline-flex items-center bg-blue-50 text-blue-800 py-1.5 px-3 rounded-full text-sm font-medium shadow-sm">
-                    <span>{skill}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveSkill(skill)}
-                      disabled={isLoading}
-                      className="ml-1.5 text-blue-800 hover:text-red-600 focus:outline-none text-xl leading-none bg-transparent border-none cursor-pointer"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex justify-between pt-4 gap-4">
-            <button type="button" onClick={onBack} disabled={isLoading || authLoading}
-              className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-              Back
-            </button>
-            <button type="submit" disabled={isLoading || authLoading}
-              className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isLoading ? "Saving..." : "Continue"}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
+    const handleSkillsChange = (e) => {
+        // For a native multi-select, get all selected options
+        const selectedOptions = Array.from(e.target.options)
+                                    .filter(option => option.selected)
+                                    .map(option => option.value);
+        setTeachingSkills(selectedOptions);
+    };
 
-  if (step === "availability") {
-    const currentDate = date || new Date();
-    const dateString = currentDate.toISOString().split('T')[0];
+    const handleDateChange = (e) => {
+        // e.target.value for input type="date" is "YYYY-MM-DD" string
+        const selectedDateString = e.target.value;
+        if (selectedDateString) {
+            setDate(new Date(selectedDateString));
+        } else {
+            setDate(null); // Or handle as per your requirement for empty date
+        }
+    };
 
-    return (
-      <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
-        <h2 className="text-2xl font-semibold text-gray-900 mb-6">Set Your Availability</h2>
-        <p className="text-sm text-gray-600 mb-6">
-          Select dates and time slots when you're available to teach.
-        </p>
+    const handleSlotToggle = (slot) => {
+        const dateString = date.toISOString().split('T')[0];
+        setSelectedSlotsByDate(prev => {
+            const currentSlots = prev[dateString] || [];
+            if (currentSlots.includes(slot)) {
+                return {
+                    ...prev,
+                    [dateString]: currentSlots.filter(s => s !== slot)
+                };
+            } else {
+                return {
+                    ...prev,
+                    [dateString]: [...currentSlots, slot]
+                };
+            }
+        });
+    };
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-base font-medium text-gray-800 mb-2">Select Date</h3>
-            <div className="rounded-md border border-gray-300 overflow-hidden">
-              <Calendar mode="single" selected={date} onSelect={handleDateSelect} />
-            </div>
-            {errors.date && <p className="text-red-500 text-sm mt-1">{errors.date}</p>}
-          </div>
-          <div>
-            <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
-            <div className="grid grid-cols-1 gap-2">
-              {timeSlots.map((slot) => {
-                const isSelected = selectedSlotsByDate[dateString]?.includes(slot) || false;
+    const validateForm = useCallback((currentStep) => {
+        let newErrors = {};
+        let isValid = true;
+
+        if (currentStep === "info") {
+            if (!formData.fullName.trim()) {
+                newErrors.fullName = "Full Name is required.";
+                isValid = false;
+            }
+            if (!formData.phoneNumber.trim()) {
+                newErrors.phoneNumber = "Phone Number is required.";
+                isValid = false;
+            } else if (!/^\d{10}$/.test(formData.phoneNumber)) {
+                newErrors.phoneNumber = "Phone Number must be 10 digits.";
+                isValid = false;
+            }
+            if (!formData.bio.trim()) {
+                newErrors.bio = "Bio is required.";
+                isValid = false;
+            }
+        } else if (currentStep === "expertise") {
+            if (teachingSkills.length === 0) {
+                newErrors.teachingSkills = "Please select at least one teaching skill.";
+                isValid = false;
+            }
+        } else if (currentStep === "availability") {
+            const dateString = date ? date.toISOString().split('T')[0] : null;
+            if (!dateString || !selectedSlotsByDate[dateString] || selectedSlotsByDate[dateString].length === 0) {
+                newErrors.availability = "Please select a date and at least one time slot for it.";
+                isValid = false;
+            }
+        }
+
+        setErrors(newErrors);
+        return isValid;
+    }, [formData, teachingSkills, date, selectedSlotsByDate]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const currentStep = step;
+
+        if (!validateForm(currentStep)) {
+            toast.error("Please correct the errors in the form before continuing.");
+            return;
+        }
+
+        setIsLoading(true);
+
+        try {
+            if (currentStep === "info") {
+                await updateGeneralProfile({
+                    name: formData.fullName,
+                    phoneNumber: formData.phoneNumber,
+                    bio: formData.bio,
+                });
+            } else if (currentStep === "expertise") {
+                // teachingSkills is already an array of string values
+                await updateTeachingSkills(teachingSkills);
+            } else if (currentStep === "availability") {
+                const dateString = date.toISOString().split('T')[0];
+                const selectedSlotsForCurrentDate = selectedSlotsByDate[dateString] || [];
+
+                const formattedSlots = selectedSlotsForCurrentDate.map(slotString => {
+                    const parts = slotString.split(' - ');
+                    return {
+                        startTime: convertTo24Hour(parts[0]),
+                        endTime: convertTo24Hour(parts[1])
+                    };
+                });
+
+                await updateAvailability({
+                    date: dateString,
+                    slots: formattedSlots
+                });
+            }
+
+            await fetchUser(); // Fetch updated user data after each save
+            toast.success("Information saved successfully!");
+            onNext(); // Advance to the next step
+        } catch (error) {
+            console.error("Onboarding step failed:", error.response?.data || error.message, error);
+            if (error.response?.data?.message) {
+                toast.error(`Error: ${error.response.data.message}`);
+            } else {
+                toast.error("An unexpected error occurred. Please try again.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const renderStepContent = () => {
+        const minDateString = formatDateToISO(new Date()); // Today's date for min attribute
+
+        switch (step) {
+            case "info":
                 return (
-                  <div key={slot} className="flex items-center gap-2">
-                    <div
-                      onClick={() => handleSlotToggle(slot)}
-                      className={`flex-1 p-2 border rounded-md transition-colors duration-200 ease-in-out cursor-pointer
-                        ${isSelected ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
-                        ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span>{slot}</span>
-                        {isSelected && (
-                          <CheckIcon className="h-4 w-4 text-blue-600" />
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleWholeWeekToggle(slot)}
-                      className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
-                    >
-                      Whole Week
-                    </button>
-                  </div>
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">Full Name</label>
+                            <input
+                                type="text"
+                                name="fullName"
+                                id="fullName"
+                                value={formData.fullName}
+                                onChange={handleChange}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                disabled={isLoading || authLoading}
+                            />
+                            {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>}
+                        </div>
+                        <div>
+                            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">Phone Number</label>
+                            <input
+                                type="tel"
+                                name="phoneNumber"
+                                id="phoneNumber"
+                                value={formData.phoneNumber}
+                                onChange={handleChange}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                disabled={isLoading || authLoading}
+                            />
+                            {errors.phoneNumber && <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>}
+                        </div>
+                        <div>
+                            <label htmlFor="bio" className="block text-sm font-medium text-gray-700">Bio</label>
+                            <textarea
+                                name="bio"
+                                id="bio"
+                                rows="4"
+                                value={formData.bio}
+                                onChange={handleChange}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                disabled={isLoading || authLoading}
+                            ></textarea>
+                            {errors.bio && <p className="mt-1 text-sm text-red-600">{errors.bio}</p>}
+                        </div>
+                        <div className="flex justify-between mt-8">
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                disabled={isLoading || authLoading}
+                                className="py-2 px-6 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                Back
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isLoading || authLoading}
+                                className="py-2 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                {isLoading ? 'Saving...' : 'Continue'}
+                            </button>
+                        </div>
+                    </form>
                 );
-              })}
-            </div>
-            {errors.selectedSlots && <p className="text-red-500 text-sm mt-1">{errors.selectedSlots}</p>}
-          </div>
-        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-6">
-          <div className="flex justify-between pt-4 gap-4">
-            <button type="button" onClick={onBack} disabled={isLoading || authLoading}
-              className="flex-1 bg-transparent text-gray-700 py-2.5 px-5 rounded-md border border-gray-300 cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed">
-              Back
-            </button>
-            <button type="submit" disabled={isLoading || authLoading}
-              className="flex-1 bg-blue-500 text-white py-2.5 px-5 rounded-md border-none cursor-pointer text-base font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
-              {isLoading ? "Saving..." : "Continue"}
-            </button>
-          </div>
-        </form>
-      </div>
-    );
-  }
+            case "expertise":
+                return (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <label htmlFor="teachingSkills" className="block text-sm font-medium text-gray-700">Your Teaching Expertise</label>
+                            <p className="mt-1 text-sm text-gray-500">Select all subjects you are proficient in teaching.</p>
+                            <select
+                                multiple // This enables multi-selection
+                                name="teachingSkills"
+                                id="teachingSkills"
+                                value={teachingSkills} // This needs to be an array of values
+                                onChange={handleSkillsChange}
+                                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 h-48 overflow-y-auto"
+                                disabled={isLoading || authLoading}
+                            >
+                                {skillOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.teachingSkills && <p className="mt-1 text-sm text-red-600">{errors.teachingSkills}</p>}
+                        </div>
+                        <div className="flex justify-between mt-8">
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                disabled={isLoading || authLoading}
+                                className="py-2 px-6 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                Back
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isLoading || authLoading}
+                                className="py-2 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                {isLoading ? 'Saving...' : 'Continue'}
+                            </button>
+                        </div>
+                    </form>
+                );
 
-  if (step === "complete") {
+            case "availability":
+                const dateString = date ? formatDateToISO(date) : ''; // Format for input type="date" value
+                const currentDaySlots = selectedSlotsByDate[dateString] || [];
+
+                return (
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-medium text-gray-900">Set Your Availability</h3>
+                            <p className="mt-1 text-sm text-gray-500">Select the dates and time slots when you are available to teach.</p>
+
+                            <div className="mt-4">
+                                <label htmlFor="availabilityDate" className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                                <input
+                                    type="date"
+                                    id="availabilityDate"
+                                    value={dateString}
+                                    onChange={handleDateChange}
+                                    className="border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 w-full"
+                                    min={minDateString} // Set minimum date to today
+                                    disabled={isLoading || authLoading}
+                                />
+                            </div>
+
+                            <div className="mt-6">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Available Time Slots for {date?.toDateString() || 'selected date'}</label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-80 overflow-y-auto pr-2">
+                                    {timeSlots.map(slot => (
+                                        <button
+                                            key={slot}
+                                            type="button"
+                                            onClick={() => handleSlotToggle(slot)}
+                                            disabled={isLoading || authLoading}
+                                            className={`py-2 px-3 rounded-md text-sm font-medium transition-colors duration-200 ${
+                                                currentDaySlots.includes(slot)
+                                                    ? 'bg-blue-600 text-white shadow-md'
+                                                    : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+                                            }`}
+                                        >
+                                            {slot}
+                                        </button>
+                                    ))}
+                                </div>
+                                {errors.availability && <p className="mt-2 text-sm text-red-600">{errors.availability}</p>}
+                            </div>
+                        </div>
+                        <div className="flex justify-between mt-8">
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                disabled={isLoading || authLoading}
+                                className="py-2 px-6 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            >
+                                Back
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isLoading || authLoading}
+                                className="py-2 px-6 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
+                                {isLoading ? 'Saving...' : 'Continue'}
+                            </button>
+                        </div>
+                    </form>
+                );
+
+            case "complete":
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="text-center space-y-6"
+                    >
+                        <h2 className="text-3xl font-bold text-gray-900">Setup Complete!</h2>
+                        <p className="text-lg text-gray-700">
+                            Your teacher profile is now fully set up. You can start exploring students and scheduling lessons.
+                        </p>
+                        <div className="mt-8">
+                            <button
+                                type="button"
+                                onClick={onComplete} // This should trigger the final redirect to dashboard
+                                className="py-3 px-8 border border-transparent rounded-md shadow-lg text-lg font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                disabled={authLoading}
+                            >
+                                Go to Dashboard
+                            </button>
+                        </div>
+                    </motion.div>
+                );
+
+            default:
+                return null;
+        }
+    };
+
     return (
-      <div className="max-w-md mx-auto text-center p-6 space-y-8 font-inter">
-        <div className="flex justify-center">
-          <div className="h-24 w-24 rounded-full bg-green-100 flex items-center justify-center shadow-lg">
-            <CheckIcon className="h-12 w-12 text-green-600" />
-          </div>
-        </div>
-        <div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">You're All Set!</h2>
-          <p className="text-sm text-gray-600">
-            Your teacher profile has been created. Start sharing your knowledge with eager students!
-          </p>
-        </div>
-        <button
-          onClick={handleCompleteOnboarding}
-          disabled={isLoading || authLoading}
-          className="w-full bg-blue-500 text-white py-3 px-6 rounded-md border-none cursor-pointer text-lg font-medium transition-all duration-200 ease-in-out hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className="w-full"
         >
-          {isLoading ? "Loading..." : "Go to Dashboard"}
-        </button>
-      </div>
+            {renderStepContent()}
+        </motion.div>
     );
-  }
-
-  return null;
 };
 
 export default TeacherOnboarding;
