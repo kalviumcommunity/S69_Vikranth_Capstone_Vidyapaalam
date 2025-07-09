@@ -553,8 +553,8 @@ const bcrypt = require('bcrypt');
 
 const cookieOptions = {
     httpOnly: true,
-    secure: true,  
-    sameSite: "None", 
+    secure: true,
+    sameSite: "None",
     path: '/',
 };
 
@@ -626,7 +626,7 @@ exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        const user = await User.findOne({ email }).select('+password'); 
+        const user = await User.findOne({ email }).select('+password');
 
         if (!user || !user.password) {
             return res.status(400).json({ message: 'Invalid credentials' });
@@ -639,8 +639,8 @@ exports.loginUser = async (req, res) => {
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
 
-        user.activeToken = refreshToken; 
-        await user.save(); 
+        user.activeToken = refreshToken;
+        await user.save();
 
         res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
         res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
@@ -657,14 +657,13 @@ exports.loginUser = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error during login:', error); // Log the actual error
+        console.error('Error during login:', error);
         res.status(500).json({ message: 'Internal Server Error' });
     }
 };
 
 exports.getMe = async (req, res) => {
-  
-    const user = await User.findById(req.user.id).select('-password -activeToken'); 
+    const user = await User.findById(req.user.id).select('-password -activeToken');
 
     if (user) {
         res.status(200).json({
@@ -677,7 +676,8 @@ exports.getMe = async (req, res) => {
             interestedSkills: user.interestedSkills,
             teachingSkills: user.teachingSkills,
             teacherOnboardingComplete: user.teacherOnboardingComplete,
-            isVerified: user.isVerified
+            isVerified: user.isVerified,
+            availability: user.availability, // Make sure to include availability if needed on frontend
         });
     } else {
         res.status(404).json({ message: 'User not found' });
@@ -689,7 +689,6 @@ exports.refreshToken = async (req, res) => {
 
     if (!refreshTokenCookie) {
         console.log("[Refresh Token] No refresh token cookie found in request.");
-        // If no refresh token, clear existing cookies to ensure clean state
         res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
         res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
         return res.status(401).json({ message: 'No refresh token provided. Please log in.' });
@@ -711,7 +710,7 @@ exports.refreshToken = async (req, res) => {
     try {
         const decoded = jwt.verify(refreshTokenCookie, process.env.JWT_REFRESH_SECRET);
 
-        const user = await User.findById(decoded.id).select('activeToken'); 
+        const user = await User.findById(decoded.id).select('+activeToken');
 
         if (!user) {
             console.warn(`[Refresh Token] User not found for decoded refresh token ID: ${decoded.id}. Clearing cookies.`);
@@ -720,11 +719,12 @@ exports.refreshToken = async (req, res) => {
             return res.status(401).json({ message: 'Invalid refresh token (user not found). Please log in again.' });
         }
 
-
+        // Compare incoming refresh token with the one stored in the user's document
         if (user.activeToken !== refreshTokenCookie) {
             console.warn(`[Refresh Token] Refresh token mismatch for user ${user._id}. Stored activeToken: ${user.activeToken}, Incoming: ${refreshTokenCookie}. Invalidating session.`);
 
-            user.activeToken = null; 
+            // Invalidate the stored token to prevent further use of the compromised session
+            user.activeToken = null;
             await user.save();
 
             res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
@@ -735,8 +735,9 @@ exports.refreshToken = async (req, res) => {
         const newAccessToken = generateAccessToken(user);
         const newRefreshToken = generateRefreshToken(user);
 
+        // Store the new refresh token as the active one
         user.activeToken = newRefreshToken;
-        await user.save(); 
+        await user.save();
 
         res.cookie('accessToken', newAccessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
         res.cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
@@ -746,10 +747,10 @@ exports.refreshToken = async (req, res) => {
 
     } catch (error) {
         console.error(`[Refresh Token] JWT verification failed: ${error.name} - ${error.message}. Clearing cookies.`);
-        
+
         res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
         res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
-        
+
         if (error.name === 'TokenExpiredError') {
             return res.status(401).json({ message: 'Refresh token expired. Please log in again.' });
         } else if (error.name === 'JsonWebTokenError') {
@@ -770,7 +771,6 @@ exports.logoutUser = async (req, res) => {
             console.error('Error blacklisting token:', error);
         }
     }
-
 
     res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
     res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
@@ -842,7 +842,8 @@ exports.updateUserProfile = async (req, res) => {
                 interestedSkills: user.interestedSkills,
                 teachingSkills: user.teachingSkills,
                 teacherOnboardingComplete: user.teacherOnboardingComplete,
-                isVerified: user.isVerified
+                isVerified: user.isVerified,
+                availability: user.availability,
             }
         });
 
