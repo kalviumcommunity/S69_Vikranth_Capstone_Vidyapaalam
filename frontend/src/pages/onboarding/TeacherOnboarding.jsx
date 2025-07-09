@@ -6,6 +6,15 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "../../contexts/AuthContext";
 
 const timeSlots = [
+  "12:00 AM - 01:00 AM",
+  "01:00 AM - 02:00 AM",
+  "02:00 AM - 03:00 AM",
+  "03:00 AM - 04:00 AM",
+  "04:00 AM - 05:00 AM",
+  "05:00 AM - 06:00 AM",
+  "06:00 AM - 07:00 AM",
+  "07:00 AM - 08:00 AM",
+  "08:00 AM - 09:00 AM",
   "09:00 AM - 10:00 AM",
   "10:00 AM - 11:00 AM",
   "11:00 AM - 12:00 PM",
@@ -15,6 +24,12 @@ const timeSlots = [
   "04:00 PM - 05:00 PM",
   "05:00 PM - 06:00 PM",
   "06:00 PM - 07:00 PM",
+  "07:00 PM - 08:00 PM",
+  "08:00 PM - 09:00 PM",
+  "09:00 PM - 10:00 PM",
+  "10:00 PM - 11:00 PM",
+  "11:00 PM - 12:00 AM",
+  
 ];
 
 const skills = [
@@ -43,6 +58,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const [teachingSkills, setTeachingSkills] = useState([]);
   const [customSkillInput, setCustomSkillInput] = useState("");
   const [date, setDate] = useState(new Date());
+
   const [selectedSlots, setSelectedSlots] = useState([]);
 
   const [errors, setErrors] = useState({});
@@ -56,17 +72,18 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       return;
     }
 
-    if (authUser && step === "info") {
-      setFormData((prev) => ({
-        ...prev,
-        fullName: authUser.name || "",
-        phone: authUser.phoneNumber || "",
-        bio: authUser.bio || "",
-      }));
-    }
+    if (authUser) {
+      if (step === "info") {
+        setFormData((prev) => ({
+          ...prev,
+          fullName: authUser.name || "",
+          phone: authUser.phoneNumber || "",
+          bio: authUser.bio || "",
+        }));
+      } else if (step === "expertise") {
+        setTeachingSkills(authUser.teachingSkills ? [...authUser.teachingSkills] : []);
+      }
 
-    if (authUser && step === "expertise") {
-      setTeachingSkills(authUser.teachingSkills || []);
     }
   }, [authUser, authLoading, step]);
 
@@ -117,11 +134,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
   }, [customSkillInput, teachingSkills]);
 
-  const handleSlotToggle = useCallback((slot) => {
+  const handleSlotToggle = useCallback((slotKey) => {
     setSelectedSlots((prev) => {
-      const newState = prev.includes(slot)
-        ? prev.filter((s) => s !== slot)
-        : [...prev, slot];
+      const newState = prev.includes(slotKey)
+        ? prev.filter((s) => s !== slotKey)
+        : [...prev, slotKey];
       return newState;
     });
     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
@@ -130,12 +147,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const handleWholeWeekToggle = useCallback((slot) => {
     const currentDate = new Date(date);
     const weekDates = [];
-    
-    // Get the start of the week (Sunday)
+
     const startOfWeek = new Date(currentDate);
     startOfWeek.setDate(currentDate.getDate() - currentDate.getDay());
-    
-    // Generate dates for the whole week
+
     for (let i = 0; i < 7; i++) {
       const weekDate = new Date(startOfWeek);
       weekDate.setDate(startOfWeek.getDate() + i);
@@ -143,31 +158,26 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     }
 
     setSelectedSlots((prev) => {
-      const slotKey = `${slot}`;
-      const existingSlots = new Set(prev);
-      const updatedSlots = new Set(prev);
+      const updatedSlotsSet = new Set(prev); 
 
-      // Check if all week slots are already selected
-      const allWeekSelected = weekDates.every(date => 
-        existingSlots.has(`${date}|${slotKey}`)
+      const allWeekSelectedForThisSlot = weekDates.every(dateStr =>
+        updatedSlotsSet.has(`${dateStr}|${slot}`)
       );
 
-      if (allWeekSelected) {
-        // Remove all week slots
-        weekDates.forEach(date => {
-          updatedSlots.delete(`${date}|${slotKey}`);
+      if (allWeekSelectedForThisSlot) {
+        weekDates.forEach(dateStr => {
+          updatedSlotsSet.delete(`${dateStr}|${slot}`);
         });
       } else {
-        // Add all week slots
-        weekDates.forEach(date => {
-          updatedSlots.add(`${date}|${slotKey}`);
+        weekDates.forEach(dateStr => {
+          updatedSlotsSet.add(`${dateStr}|${slot}`);
         });
       }
 
-      return Array.from(updatedSlots);
+      return Array.from(updatedSlotsSet); 
     });
     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
-  }, [date]);
+  }, [date]); 
 
   const handleDateSelect = useCallback((selectedDate) => {
     if (selectedDate instanceof Date) {
@@ -238,7 +248,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         await updateTeachingSkills(teachingSkills);
       } else if (currentStep === "availability") {
         await updateAvailability({
-          date: date.toISOString(),
+          date: date.toISOString(), 
           slots: selectedSlots,
         });
       }
@@ -259,7 +269,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     setIsLoading(true);
     try {
       await api.patch("/auth/profile", { teacherOnboardingComplete: true });
-      await fetchUser();
+      await fetchUser(); 
 
       toast.success("Onboarding complete! Welcome to the teacher community.");
       onComplete();
@@ -426,8 +436,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   }
 
   if (step === "availability") {
-    const currentDate = new Date(date);
-    const dateString = currentDate.toISOString().split('T')[0];
+    const currentDate = date || new Date();
+    const dateString = currentDate.toISOString().split('T')[0]; 
 
     return (
       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
@@ -448,11 +458,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
             <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
             <div className="grid grid-cols-1 gap-2">
               {timeSlots.map((slot) => {
-                const isSelected = selectedSlots.includes(`${dateString}|${slot}`);
+                const isSelected = selectedSlots.includes(`${dateString}|${slot}`); // Check against the current date string
                 return (
                   <div key={slot} className="flex items-center gap-2">
                     <div
-                      onClick={() => handleSlotToggle(`${dateString}|${slot}`)}
+                      onClick={() => handleSlotToggle(`${dateString}|${slot}`)} // Toggle for current date's slot
                       className={`flex-1 p-2 border rounded-md transition-colors duration-200 ease-in-out cursor-pointer
                         ${isSelected ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
                         ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -465,7 +475,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleWholeWeekToggle(slot)}
+                      onClick={() => handleWholeWeekToggle(slot)} // Toggle for this slot across the week
                       className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
                     >
                       Whole Week
