@@ -625,38 +625,46 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    try {
+        const user = await User.findOne({ email }).select('+password'); 
 
-    if (!user) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    if (!user.password || !(await user.matchPassword(password))) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    // Setting cookies with specific maxAge
-    res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
-    res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
-
-    res.status(200).json({
-        message: 'Logged in successfully',
-        user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            isVerified: user.isVerified
+        if (!user || !user.password) {
+            return res.status(400).json({ message: 'Invalid credentials' });
         }
-    });
+
+        if (!(await user.matchPassword(password))) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        user.activeToken = refreshToken; 
+        await user.save(); 
+
+        res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+        res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
+
+        res.status(200).json({
+            message: 'Logged in successfully',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isVerified: user.isVerified
+            }
+        });
+
+    } catch (error) {
+        console.error('Error during login:', error); // Log the actual error
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
 
 exports.getMe = async (req, res) => {
-   
-    const user = await User.findById(req.user.id);
+  
+    const user = await User.findById(req.user.id).select('-password -activeToken'); 
 
     if (user) {
         res.status(200).json({
