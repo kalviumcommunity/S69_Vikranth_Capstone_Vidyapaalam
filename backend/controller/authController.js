@@ -551,9 +551,6 @@ const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
-const ACCESS_TOKEN_AGE = 15 * 60 * 1000; // 15 minutes
-const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
-
 const cookieOptions = {
     httpOnly: true,
     secure: true,  
@@ -561,16 +558,26 @@ const cookieOptions = {
     path: '/',
 };
 
+const ACCESS_TOKEN_EXPIRATION = '15m'; // e.g., 15 minutes
+const REFRESH_TOKEN_EXPIRATION = '7d';  // e.g., 7 days
+
+const ACCESS_TOKEN_AGE = 15 * 60 * 1000; // 15 minutes in milliseconds
+const REFRESH_TOKEN_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
 const generateAccessToken = (user) => {
-    return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-        expiresIn: process.env.JWT_ACCESS_EXPIRES_IN,
-    });
+    return jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: ACCESS_TOKEN_EXPIRATION }
+    );
 };
 
 const generateRefreshToken = (user) => {
-    return jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, {
-        expiresIn: process.env.JWT_REFRESH_EXPIRES_IN,
-    });
+    return jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_REFRESH_SECRET,
+        { expiresIn: REFRESH_TOKEN_EXPIRATION }
+    );
 };
 
 exports.registerUser = async (req, res) => {
@@ -673,43 +680,74 @@ exports.refreshToken = async (req, res) => {
     const refreshTokenCookie = req.cookies.refreshToken;
 
     if (!refreshTokenCookie) {
-        
-        console.log("No refresh token cookie found in request.");
-        return res.status(401).json({ message: 'No refresh token provided' });
-    }
-
-    const isBlacklisted = await BlacklistedToken.findOne({ token: refreshTokenCookie });
-    if (isBlacklisted) {
-        console.log('Blacklisted refresh token detected:', refreshTokenCookie);
+        console.log("[Refresh Token] No refresh token cookie found in request.");
+        // If no refresh token, clear existing cookies to ensure clean state
         res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
         res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
-        return res.status(401).json({ message: 'Not authorized, token blacklisted' });
+        return res.status(401).json({ message: 'No refresh token provided. Please log in.' });
+    }
+
+    try {
+        const isBlacklisted = await BlacklistedToken.findOne({ token: refreshTokenCookie });
+        if (isBlacklisted) {
+            console.warn(`[Refresh Token] Blacklisted refresh token detected: ${refreshTokenCookie}. Clearing cookies.`);
+            res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
+            res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
+            return res.status(401).json({ message: 'Session invalid. Please log in again.' });
+        }
+    } catch (err) {
+        console.error("[Refresh Token] Error checking blacklisted token:", err);
+        return res.status(500).json({ message: 'Server error during token validation.' });
     }
 
     try {
         const decoded = jwt.verify(refreshTokenCookie, process.env.JWT_REFRESH_SECRET);
-        const user = await User.findById(decoded.id);
+
+        const user = await User.findById(decoded.id).select('activeToken'); 
 
         if (!user) {
-            console.log("User not found for decoded refresh token ID:", decoded.id);
-            // Clear cookies if user doesn't exist for the token
+            console.warn(`[Refresh Token] User not found for decoded refresh token ID: ${decoded.id}. Clearing cookies.`);
             res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
             res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
-            return res.status(401).json({ message: 'Invalid refresh token (user not found)' });
+            return res.status(401).json({ message: 'Invalid refresh token (user not found). Please log in again.' });
         }
 
-        const accessToken = generateAccessToken(user);
-        const newRefreshToken = generateRefreshToken(user); // Generate a new refresh token for rolling window strategy
 
-        res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+        if (user.activeToken !== refreshTokenCookie) {
+            console.warn(`[Refresh Token] Refresh token mismatch for user ${user._id}. Stored activeToken: ${user.activeToken}, Incoming: ${refreshTokenCookie}. Invalidating session.`);
+
+            user.activeToken = null; 
+            await user.save();
+
+            res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
+            res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
+            return res.status(401).json({ message: 'Session compromised or outdated. Please log in again.' });
+        }
+
+        const newAccessToken = generateAccessToken(user);
+        const newRefreshToken = generateRefreshToken(user);
+
+        user.activeToken = newRefreshToken;
+        await user.save(); 
+
+        res.cookie('accessToken', newAccessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
         res.cookie('refreshToken', newRefreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
 
-        res.status(200).json({ message: 'Access token refreshed' });
+        console.log(`[Refresh Token] Tokens refreshed successfully for user ${user._id}.`);
+        return res.status(200).json({ message: 'Access token refreshed successfully' });
+
     } catch (error) {
-        console.error('Refresh token verification error:', error);
+        console.error(`[Refresh Token] JWT verification failed: ${error.name} - ${error.message}. Clearing cookies.`);
+        
         res.clearCookie('accessToken', { ...cookieOptions, maxAge: 0 });
         res.clearCookie('refreshToken', { ...cookieOptions, maxAge: 0 });
-        res.status(401).json({ message: 'Not authorized, token failed' });
+        
+        if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Refresh token expired. Please log in again.' });
+        } else if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Invalid refresh token. Please log in again.' });
+        }
+        return res.status(401).json({ message: 'Authentication failed. Please log in again.' });
     }
 };
 
