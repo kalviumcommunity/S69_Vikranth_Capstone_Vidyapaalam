@@ -6,30 +6,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "../../contexts/AuthContext";
 
 const timeSlots = [
-  "12:00 AM - 01:00 AM",
-  "01:00 AM - 02:00 AM",
-  "02:00 AM - 03:00 AM",
-  "03:00 AM - 04:00 AM",
-  "04:00 AM - 05:00 AM",
-  "05:00 AM - 06:00 AM",
-  "06:00 AM - 07:00 AM",
-  "07:00 AM - 08:00 AM",
-  "08:00 AM - 09:00 AM",
-  "09:00 AM - 10:00 AM",
-  "10:00 AM - 11:00 AM",
-  "11:00 AM - 12:00 PM",
-  "01:00 PM - 02:00 PM",
-  "02:00 PM - 03:00 PM",
-  "03:00 PM - 04:00 PM",
-  "04:00 PM - 05:00 PM",
-  "05:00 PM - 06:00 PM",
-  "06:00 PM - 07:00 PM",
-  "07:00 PM - 08:00 PM",
-  "08:00 PM - 09:00 PM",
-  "09:00 PM - 10:00 PM",
-  "10:00 PM - 11:00 PM",
-  "11:00 PM - 12:00 AM",
-  
+  "12:00 AM - 01:00 AM", "01:00 AM - 02:00 AM", "02:00 AM - 03:00 AM",
+  "03:00 AM - 04:00 AM", "04:00 AM - 05:00 AM", "05:00 AM - 06:00 AM",
+  "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
+  "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
+  "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM",
+  "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM",
+  "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM",
+  "10:00 PM - 11:00 PM", "11:00 PM - 12:00 AM",
 ];
 
 const skills = [
@@ -83,7 +67,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       } else if (step === "expertise") {
         setTeachingSkills(authUser.teachingSkills ? [...authUser.teachingSkills] : []);
       }
-
     }
   }, [authUser, authLoading, step]);
 
@@ -212,14 +195,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         isValid = false;
       }
     } else if (currentStep === "availability") {
-      if (!date) {
-        newErrors.date = "Please select a date for your availability.";
-        isValid = false;
-      }
-      if (selectedSlots.length === 0) {
-        newErrors.selectedSlots = "Please select at least one time slot.";
-        isValid = false;
-      }
+        if (selectedSlots.length === 0) {
+            newErrors.selectedSlots = "Please select at least one time slot for any date.";
+            isValid = false;
+        }
     }
 
     setErrors(newErrors);
@@ -247,12 +226,33 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       } else if (currentStep === "expertise") {
         await updateTeachingSkills(teachingSkills);
       } else if (currentStep === "availability") {
-        await updateAvailability({
-          date: date.toISOString(), 
-          slots: selectedSlots,
+        const slotsByDate = {};
+
+        selectedSlots.forEach((entry) => {
+          const [datePart, slotPart] = entry.split("|");
+          if (!slotsByDate[datePart]) {
+            slotsByDate[datePart] = [];
+          }
+          slotsByDate[datePart].push(slotPart);
         });
+
+        for (const [dateKey, slots] of Object.entries(slotsByDate)) {
+          const formattedSlots = slots.map(slotString => {
+            const parts = slotString.split(' - ');
+            return {
+              startTime: parts[0].replace(' AM', '').replace(' PM', '').replace('12:00 AM', '00:00').replace('12:00 PM', '12:00'), // Adjust for AM/PM to 24hr format if necessary, assuming backend expects HH:MM
+              endTime: parts[1].replace(' AM', '').replace(' PM', '').replace('12:00 AM', '00:00').replace('12:00 PM', '12:00') // More robust parsing might be needed based on actual time slot format
+            };
+          });
+
+          await updateAvailability({
+            date: dateKey,
+            slots: formattedSlots,
+          });
+        }
       }
 
+      await fetchUser(); 
       toast.success("Information saved successfully!");
       onNext();
 
@@ -261,7 +261,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
-      await fetchUser();
     }
   };
 
@@ -458,11 +457,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
             <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
             <div className="grid grid-cols-1 gap-2">
               {timeSlots.map((slot) => {
-                const isSelected = selectedSlots.includes(`${dateString}|${slot}`); // Check against the current date string
+                const isSelected = selectedSlots.includes(`${dateString}|${slot}`);
                 return (
                   <div key={slot} className="flex items-center gap-2">
                     <div
-                      onClick={() => handleSlotToggle(`${dateString}|${slot}`)} // Toggle for current date's slot
+                      onClick={() => handleSlotToggle(`${dateString}|${slot}`)}
                       className={`flex-1 p-2 border rounded-md transition-colors duration-200 ease-in-out cursor-pointer
                         ${isSelected ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
                         ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -475,7 +474,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleWholeWeekToggle(slot)} // Toggle for this slot across the week
+                      onClick={() => handleWholeWeekToggle(slot)}
                       className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
                     >
                       Whole Week
