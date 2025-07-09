@@ -6,30 +6,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from "../../contexts/AuthContext";
 
 const timeSlots = [
-  "12:00 AM - 01:00 AM",
-  "01:00 AM - 02:00 AM",
-  "02:00 AM - 03:00 AM",
-  "03:00 AM - 04:00 AM",
-  "04:00 AM - 05:00 AM",
-  "05:00 AM - 06:00 AM",
-  "06:00 AM - 07:00 AM",
-  "07:00 AM - 08:00 AM",
-  "08:00 AM - 09:00 AM",
-  "09:00 AM - 10:00 AM",
-  "10:00 AM - 11:00 AM",
-  "11:00 AM - 12:00 PM",
-  "01:00 PM - 02:00 PM",
-  "02:00 PM - 03:00 PM",
-  "03:00 PM - 04:00 PM",
-  "04:00 PM - 05:00 PM",
-  "05:00 PM - 06:00 PM",
-  "06:00 PM - 07:00 PM",
-  "07:00 PM - 08:00 PM",
-  "08:00 PM - 09:00 PM",
-  "09:00 PM - 10:00 PM",
-  "10:00 PM - 11:00 PM",
-  "11:00 PM - 12:00 AM",
-  
+  "12:00 AM - 01:00 AM", "01:00 AM - 02:00 AM", "02:00 AM - 03:00 AM",
+  "03:00 AM - 04:00 AM", "04:00 AM - 05:00 AM", "05:00 AM - 06:00 AM",
+  "06:00 AM - 07:00 AM", "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM",
+  "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM",
+  "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM",
+  "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM",
+  "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM",
+  "10:00 PM - 11:00 PM", "11:00 PM - 12:00 AM",
 ];
 
 const skills = [
@@ -47,6 +31,21 @@ const skills = [
   { id: "fitness", label: "Fitness & Exercise" },
 ];
 
+const convertTo24Hour = (time12h) => {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':');
+
+    if (hours === '12') {
+        hours = '00';
+    }
+
+    if (modifier === 'PM') {
+        hours = parseInt(hours, 10) + 12;
+    }
+    return `${String(hours).padStart(2, '0')}:${minutes}`;
+};
+
+
 const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const { api, user: authUser, loading: authLoading, fetchUser, updateGeneralProfile, updateTeachingSkills, updateAvailability } = useAuth();
 
@@ -59,7 +58,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   const [customSkillInput, setCustomSkillInput] = useState("");
   const [date, setDate] = useState(new Date());
 
-  const [selectedSlots, setSelectedSlots] = useState([]);
+  const [selectedSlotsByDate, setSelectedSlotsByDate] = useState({});
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -82,10 +81,38 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         }));
       } else if (step === "expertise") {
         setTeachingSkills(authUser.teachingSkills ? [...authUser.teachingSkills] : []);
+      } else if (step === "availability") {
+          const initialAvailability = {};
+          if (authUser.availability && Array.isArray(authUser.availability)) {
+              authUser.availability.forEach(item => {
+                  const dateKey = new Date(item.date).toISOString().split('T')[0];
+                  if (!initialAvailability[dateKey]) {
+                      initialAvailability[dateKey] = [];
+                  }
+                  item.slots.forEach(slot => {
+                      const start = convertTo12Hour(slot.startTime);
+                      const end = convertTo12Hour(slot.endTime);
+                      const matchedSlot = timeSlots.find(ts => ts.includes(start) && ts.includes(end));
+                      if (matchedSlot) {
+                          initialAvailability[dateKey].push(matchedSlot);
+                      }
+                  });
+              });
+          }
+          setSelectedSlotsByDate(initialAvailability);
       }
-
     }
   }, [authUser, authLoading, step]);
+
+  const convertTo12Hour = (time24h) => {
+    const [hours, minutes] = time24h.split(':');
+    let h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12;
+    h = h ? h : 12;
+    return `${h}:${minutes} ${ampm}`;
+  };
+
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -134,15 +161,28 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     setErrors((prevErrors) => ({ ...prevErrors, teachingSkills: "" }));
   }, [customSkillInput, teachingSkills]);
 
-  const handleSlotToggle = useCallback((slotKey) => {
-    setSelectedSlots((prev) => {
-      const newState = prev.includes(slotKey)
-        ? prev.filter((s) => s !== slotKey)
-        : [...prev, slotKey];
+  const handleSlotToggle = useCallback((slotString) => {
+    const dateString = date.toISOString().split('T')[0];
+    setSelectedSlotsByDate((prev) => {
+      const currentSlotsForDate = prev[dateString] ? [...prev[dateString]] : [];
+      let updatedSlotsForDate;
+
+      if (currentSlotsForDate.includes(slotString)) {
+        updatedSlotsForDate = currentSlotsForDate.filter((s) => s !== slotString);
+      } else {
+        updatedSlotsForDate = [...currentSlotsForDate, slotString];
+      }
+
+      const newState = { ...prev };
+      if (updatedSlotsForDate.length === 0) {
+        delete newState[dateString];
+      } else {
+        newState[dateString] = updatedSlotsForDate;
+      }
       return newState;
     });
     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
-  }, []);
+  }, [date]);
 
   const handleWholeWeekToggle = useCallback((slot) => {
     const currentDate = new Date(date);
@@ -157,27 +197,39 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       weekDates.push(weekDate.toISOString().split('T')[0]);
     }
 
-    setSelectedSlots((prev) => {
-      const updatedSlotsSet = new Set(prev); 
-
-      const allWeekSelectedForThisSlot = weekDates.every(dateStr =>
-        updatedSlotsSet.has(`${dateStr}|${slot}`)
-      );
+    setSelectedSlotsByDate((prev) => {
+      const newState = { ...prev };
+      let allWeekSelectedForThisSlot = true;
+      for (const dateStr of weekDates) {
+        if (!newState[dateStr] || !newState[dateStr].includes(slot)) {
+          allWeekSelectedForThisSlot = false;
+          break;
+        }
+      }
 
       if (allWeekSelectedForThisSlot) {
         weekDates.forEach(dateStr => {
-          updatedSlotsSet.delete(`${dateStr}|${slot}`);
+          if (newState[dateStr]) {
+            newState[dateStr] = newState[dateStr].filter(s => s !== slot);
+            if (newState[dateStr].length === 0) {
+              delete newState[dateStr];
+            }
+          }
         });
       } else {
         weekDates.forEach(dateStr => {
-          updatedSlotsSet.add(`${dateStr}|${slot}`);
+          if (!newState[dateStr]) {
+            newState[dateStr] = [];
+          }
+          if (!newState[dateStr].includes(slot)) {
+            newState[dateStr].push(slot);
+          }
         });
       }
-
-      return Array.from(updatedSlotsSet); 
+      return newState;
     });
     setErrors((prevErrors) => ({ ...prevErrors, selectedSlots: "" }));
-  }, [date]); 
+  }, [date]);
 
   const handleDateSelect = useCallback((selectedDate) => {
     if (selectedDate instanceof Date) {
@@ -212,14 +264,10 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         isValid = false;
       }
     } else if (currentStep === "availability") {
-      if (!date) {
-        newErrors.date = "Please select a date for your availability.";
-        isValid = false;
-      }
-      if (selectedSlots.length === 0) {
-        newErrors.selectedSlots = "Please select at least one time slot.";
-        isValid = false;
-      }
+        if (Object.keys(selectedSlotsByDate).length === 0) {
+            newErrors.selectedSlots = "Please select at least one time slot for any date.";
+            isValid = false;
+        }
     }
 
     setErrors(newErrors);
@@ -247,21 +295,37 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
       } else if (currentStep === "expertise") {
         await updateTeachingSkills(teachingSkills);
       } else if (currentStep === "availability") {
-        await updateAvailability({
-          date: date.toISOString(), 
-          slots: selectedSlots,
-        });
+        const availabilityData = [];
+        for (const [dateKey, slots] of Object.entries(selectedSlotsByDate)) {
+          const formattedSlots = slots.map(slotString => {
+            const parts = slotString.split(' - ');
+            return {
+              startTime: convertTo24Hour(parts[0]),
+              endTime: convertTo24Hour(parts[1])
+            };
+          });
+          availabilityData.push({
+            date: dateKey,
+            slots: formattedSlots,
+          });
+        }
+        
+        await updateAvailability(availabilityData);
       }
 
+      await fetchUser();
       toast.success("Information saved successfully!");
       onNext();
 
     } catch (error) {
       console.error("Onboarding step failed:", error.response?.data || error.message, error);
-      toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
+      if (currentStep === "availability" && error.response?.data?.message) {
+        toast.error(`Availability save failed: ${error.response.data.message}`);
+      } else {
+        toast.error(error.response?.data?.message || "An unexpected error occurred. Please try again.");
+      }
     } finally {
       setIsLoading(false);
-      await fetchUser();
     }
   };
 
@@ -269,7 +333,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
     setIsLoading(true);
     try {
       await api.patch("/auth/profile", { teacherOnboardingComplete: true });
-      await fetchUser(); 
+      await fetchUser();
 
       toast.success("Onboarding complete! Welcome to the teacher community.");
       onComplete();
@@ -284,6 +348,8 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
   if (authLoading) {
     return <div className="text-center p-12 text-lg text-gray-600 font-inter">Loading User Data...</div>;
   }
+
+  const currentDateString = date ? date.toISOString().split('T')[0] : '';
 
   if (step === "info") {
     return (
@@ -437,7 +503,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
 
   if (step === "availability") {
     const currentDate = date || new Date();
-    const dateString = currentDate.toISOString().split('T')[0]; 
+    const dateString = currentDate.toISOString().split('T')[0];
 
     return (
       <div className="max-w-md mx-auto p-6 rounded-lg shadow-md bg-white font-inter">
@@ -458,11 +524,11 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
             <h3 className="text-base font-medium text-gray-800 mb-2">Available Time Slots</h3>
             <div className="grid grid-cols-1 gap-2">
               {timeSlots.map((slot) => {
-                const isSelected = selectedSlots.includes(`${dateString}|${slot}`); // Check against the current date string
+                const isSelected = selectedSlotsByDate[dateString]?.includes(slot) || false;
                 return (
                   <div key={slot} className="flex items-center gap-2">
                     <div
-                      onClick={() => handleSlotToggle(`${dateString}|${slot}`)} // Toggle for current date's slot
+                      onClick={() => handleSlotToggle(slot)}
                       className={`flex-1 p-2 border rounded-md transition-colors duration-200 ease-in-out cursor-pointer
                         ${isSelected ? "bg-blue-50 border-blue-500" : "hover:bg-gray-50 border-gray-300"}
                         ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
@@ -475,7 +541,7 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleWholeWeekToggle(slot)} // Toggle for this slot across the week
+                      onClick={() => handleWholeWeekToggle(slot)}
                       className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
                     >
                       Whole Week

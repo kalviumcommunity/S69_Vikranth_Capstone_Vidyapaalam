@@ -625,38 +625,56 @@ exports.registerUser = async (req, res) => {
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    try {
+        const user = await User.findOne({ email }).select('+password'); // Select password for comparison
 
-    if (!user) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    if (!user.password || !(await user.matchPassword(password))) {
-        return res.status(400).json({ message: 'Invalid credentials' });
-    }
-
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-
-    // Setting cookies with specific maxAge
-    res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
-    res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
-
-    res.status(200).json({
-        message: 'Logged in successfully',
-        user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            isVerified: user.isVerified
+        // Handle user not found or password not set
+        if (!user || !user.password) {
+            return res.status(400).json({ message: 'Invalid credentials' });
         }
-    });
+
+        // Compare entered password with hashed password
+        if (!(await user.matchPassword(password))) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // Generate new tokens
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        // --- ADDED THIS CRITICAL PART ---
+        // Store the newly generated refresh token as the user's activeToken
+        user.activeToken = refreshToken; 
+        await user.save(); // Save the user document to persist the activeToken
+        // --- END ADDED PART ---
+
+        // Setting cookies with specific maxAge
+        res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+        res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
+
+        res.status(200).json({
+            message: 'Logged in successfully',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                isVerified: user.isVerified
+            }
+        });
+
+    } catch (error) {
+        console.error('Error during login:', error); // Log the actual error
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
 };
 
 exports.getMe = async (req, res) => {
-   
-    const user = await User.findById(req.user.id);
+    // This function doesn't need changes for the token logic,
+    // as it relies on the 'protect' middleware already having authenticated req.user.id
+    
+    // Ensure you select necessary fields, but not sensitive ones like 'password' or 'activeToken'
+    const user = await User.findById(req.user.id).select('-password -activeToken'); 
 
     if (user) {
         res.status(200).json({
