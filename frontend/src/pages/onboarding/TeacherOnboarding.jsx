@@ -638,10 +638,9 @@ const convertTo24Hour = (time12h) => {
     let [hours, minutes] = time.split(':');
 
     if (hours === '12') {
-        hours = '00'; // 12 AM is 00, 12 PM is 12
-    }
-
-    if (modifier === 'PM' && hours !== '12') { // Don't add 12 to 12 PM
+        // 12 AM is 00 hours, 12 PM is 12 hours
+        hours = modifier === 'AM' ? '00' : '12';
+    } else if (modifier === 'PM') {
         hours = parseInt(hours, 10) + 12;
     }
     return `${String(hours).padStart(2, '0')}:${minutes}`;
@@ -906,7 +905,6 @@ const TeacherOnboarding = ({ step, onNext, onBack, onComplete, onSetStep }) => {
         for (const [dateKey, slots] of Object.entries(selectedSlotsByDate)) {
           const formattedSlots = slots.map(slotString => {
             const parts = slotString.split(' - ');
-            // Handle cases where 12 AM - 12 AM indicates a full day, or adjust as per backend needs
             const startTime24h = convertTo24Hour(parts[0]);
             const endTime24h = convertTo24Hour(parts[1]);
 
