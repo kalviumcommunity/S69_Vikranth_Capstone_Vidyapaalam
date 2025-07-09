@@ -323,6 +323,7 @@ export function AuthProvider({ children }) {
         updateTeachingSkills,
         updateAvailability,
         updateGeneralProfile,
+        api
       }}
     >
       {children}
