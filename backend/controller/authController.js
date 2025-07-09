@@ -931,15 +931,17 @@ exports.updateTeachingSkills = async (req, res) => {
     }
 };
 
+
 exports.updateAvailability = async (req, res) => {
     if (!req.user || !req.user.id) {
         return res.status(401).json({ message: 'Authentication required.' });
     }
 
-    const { date, slots } = req.body;
+    const availabilityData = req.body; // Expecting an array of availability objects
 
-    if (!date || !Array.isArray(slots)) {
-        return res.status(400).json({ message: 'Date and slots array are required.' });
+    // Validate that the entire body is an array
+    if (!Array.isArray(availabilityData)) {
+        return res.status(400).json({ message: 'Request body must be an array of availability objects.' });
     }
 
     try {
@@ -949,23 +951,44 @@ exports.updateAvailability = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        const inputDate = new Date(date);
-        if (isNaN(inputDate.getTime())) {
-            return res.status(400).json({ message: 'Invalid date format provided.' });
-        }
-        inputDate.setUTCHours(0, 0, 0, 0);
+        // Initialize a new availability array to build up the updated state
+        let updatedUserAvailability = [];
 
-        let existingAvailability = user.availability.find(a => {
-            const storedDate = new Date(a.date);
-            storedDate.setUTCHours(0, 0, 0, 0);
-            return storedDate.getTime() === inputDate.getTime();
-        });
+        for (const item of availabilityData) {
+            const { date, slots } = item;
 
-        if (existingAvailability) {
-            existingAvailability.slots = slots;
-        } else {
-            user.availability.push({ date: inputDate, slots: slots });
+            // Validate each item in the array
+            if (!date || !Array.isArray(slots)) {
+                console.warn(`Skipping malformed availability item received: ${JSON.stringify(item)}`);
+                continue;
+            }
+
+            const inputDate = new Date(date);
+            if (isNaN(inputDate.getTime())) {
+                console.warn(`Skipping availability item with invalid date: ${date}`);
+                continue;
+            }
+            // Normalize date to start of day UTC for consistent comparison/storage
+            inputDate.setUTCHours(0, 0, 0, 0);
+
+            // Add or update the entry in our temporary updatedUserAvailability array
+            let existingEntryIndex = updatedUserAvailability.findIndex(a => {
+                const storedDate = new Date(a.date);
+                storedDate.setUTCHours(0, 0, 0, 0);
+                return storedDate.getTime() === inputDate.getTime();
+            });
+
+            if (existingEntryIndex !== -1) {
+                // If the date already exists in the new data, update its slots
+                updatedUserAvailability[existingEntryIndex].slots = slots;
+            } else {
+                // Otherwise, add the new entry
+                updatedUserAvailability.push({ date: inputDate, slots: slots });
+            }
         }
+
+        // Assign the newly constructed availability array to the user object
+        user.availability = updatedUserAvailability; // This replaces the old availability array
 
         await user.save();
 
@@ -976,8 +999,9 @@ exports.updateAvailability = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                availability: user.availability,
-                isVerified: user.isVerified
+                availability: user.availability, // Send back the updated availability
+                isVerified: user.isVerified,
+                // Include other relevant fields that the frontend might need to update its context
             }
         });
 
