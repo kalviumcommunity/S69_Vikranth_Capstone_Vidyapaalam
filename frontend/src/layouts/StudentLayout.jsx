@@ -241,22 +241,15 @@
 
 
 
-// src/layouts/StudentLayout.jsx (or src/StudentLayout.jsx)
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, Search, Heart, Settings, LogOut, Menu, X, Bell, BarChart3, User } from 'lucide-react';
+import { Home, Search, Heart, Settings, LogOut, Menu, X, Bell, BarChart3 } from 'lucide-react';
+import { toast } from "@/hooks/use-toast"; 
+import { useAuth } from "../contexts/AuthContext"; 
 
-// Assuming you have a custom toast hook at this path
-// If you're using react-hot-toast, you'd import { toast } from 'react-hot-toast';
-import { toast } from "@/hooks/use-toast";
-
-// Import your AuthContext
-import { useAuth } from "../contexts/AuthContext";
-
-// Helper hook for screen size detection (for responsiveness)
 function useScreenSize() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024); // Tailwind's 'lg' breakpoint
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handler);
@@ -265,35 +258,36 @@ function useScreenSize() {
   return isMobile;
 }
 
-const StudentLayout = () => {
+const StudentLayout = ({ children }) => {
   const location = useLocation();
   const isMobile = useScreenSize();
-  const { user, logout: authLogout, loading: authLoading } = useAuth(); // Get user, logout, and loading from AuthContext
+  const { user, logout: authLogout, loading: authLoading } = useAuth(); 
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024); // Start open on desktop
+  const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Sync sidebar open state with screen size changes (for initial load and resize)
   useEffect(() => {
-    setIsSidebarOpen(window.innerWidth >= 1024);
+    if (window.innerWidth >= 1024) { 
+      setIsSidebarOpen(true);
+    } else { 
+      setIsSidebarOpen(false); 
+    }
   }, [isMobile]);
 
-  // User profile display states
   const [displayedUserName, setDisplayedUserName] = useState("Guest");
   const [avatarInitials, setAvatarInitials] = useState("G");
 
-  // Update user display info when user data from AuthContext changes
   useEffect(() => {
     if (user && user.name) {
       setDisplayedUserName(user.name);
-      // Generate initials from user name
       const initials = user.name
         .split(" ")
         .map((n) => n[0])
         .join("")
         .toUpperCase()
-        .substring(0, 2); // Get up to 2 initials
-      setAvatarInitials(initials.length > 0 ? initials : user.name[0].toUpperCase() || 'U'); // Fallback to first char, then 'U'
+        .substring(0, 2);
+      setAvatarInitials(initials.length > 0 ? initials : user.name[0].toUpperCase());
     } else {
       setDisplayedUserName("Guest");
       setAvatarInitials("G");
@@ -305,16 +299,13 @@ const StudentLayout = () => {
   };
 
   const toggleCollapse = () => {
-    // Only allow collapsing/expanding sidebar on desktop
     if (!isMobile) {
       setIsSidebarCollapsed(!isSidebarCollapsed);
     } else {
-      // On mobile, this button should close the sidebar if it's open
       setIsSidebarOpen(false);
     }
   };
 
-  // Define navigation items for the sidebar
   const navItems = [
     { icon: Home, label: 'Overview', to: '/student/overview' },
     { icon: Search, label: 'Find Teachers', to: '/student/find-teacher' },
@@ -322,51 +313,38 @@ const StudentLayout = () => {
     { icon: Settings, label: 'Settings', to: '/student/settings' },
   ];
 
-  // Handle user logout
   const handleLogout = async () => {
     try {
-      await authLogout(); // Call the logout function from AuthContext
-      toast({ title: "Logged out successfully", description: "You have been securely logged out." });
+      await authLogout(); 
+      toast({ title: "Logged out successfully" });
     } catch (error) {
       console.error("Logout failed in StudentLayout:", error);
-      toast({ title: "Logout failed", description: "Could not log out. Please try again.", variant: "destructive" });
+      toast({ title: "Logout failed", description: "Please try again.", variant: "destructive" });
     }
   };
 
-  // Determine the current page title based on the URL path
   const getPageTitle = useCallback(() => {
     const path = location.pathname;
     if (path === "/student" || path === "/student/overview") return "Overview";
-    if (path.startsWith("/student/find-teacher")) return "Find Teachers";
+    if (path.startsWith("/student/find-teacher")) return "Find Teacher";
     if (path.startsWith("/student/favorites")) return "Favorites";
     if (path.startsWith("/student/settings")) return "Account Settings";
     if (path.startsWith("/student/chat")) return "Chat";
     if (path.match(/^\/student\/teacher-profile\/.+/) || path.match(/^\/student\/teacher\/.+/)) return "Teacher Profile";
     if (path.match(/^\/student\/book-session\/.+/)) return "Book Session";
-    return "Dashboard"; // Default title if no specific match
+    return "Dashboard"; 
   }, [location.pathname]);
 
-
-  // Display a loading indicator while user data is being fetched
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-700">
-        <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p className="text-xl">Loading dashboard...</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <p className="text-xl text-gray-700">Loading user data...</p>
       </div>
     );
   }
 
-  // Define sidebar dimensions for motion animation
-  const sidebarWidthExpanded = 288; // Equivalent to Tailwind's w-72 (288px)
-  const sidebarWidthCollapsed = 80;  // Equivalent to Tailwind's w-20 (80px)
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex font-sans antialiased">
-      {/* Mobile Overlay: Appears when sidebar is open on small screens */}
       <AnimatePresence>
         {isMobile && isSidebarOpen && (
           <motion.div
@@ -374,93 +352,87 @@ const StudentLayout = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden"
+            className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" // Ensure it's hidden on desktop
             onClick={toggleSidebar}
             aria-hidden="true"
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar Component */}
+      {/* Sidebar */}
       <motion.aside
-        initial={false} // Disable initial animation on mount
+        initial={false}
         animate={{
-          x: isMobile ? (isSidebarOpen ? 0 : -sidebarWidthExpanded) : 0, // Slide in/out on mobile
-          width: isSidebarCollapsed && !isMobile ? sidebarWidthCollapsed : sidebarWidthExpanded, // Collapse/expand on desktop
-          minWidth: isSidebarCollapsed && !isMobile ? sidebarWidthCollapsed : sidebarWidthExpanded,
-          maxWidth: isSidebarCollapsed && !isMobile ? sidebarWidthCollapsed : sidebarWidthExpanded,
+          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0, 
+          width: isMobile ? (isSidebarOpen ? 288 : 0) : (isSidebarCollapsed ? 80 : 288),
+          minWidth: isMobile ? (isSidebarOpen ? 288 : 0) : (isSidebarCollapsed ? 80 : 288),
+          maxWidth: isMobile ? (isSidebarOpen ? 288 : 0) : (isSidebarCollapsed ? 80 : 288),
         }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
-        className="
+        className={`
           flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
-          h-screen fixed z-50 top-0 left-0 lg:relative lg:z-10 lg:static
-          transition-all
-        "
-        // Hide completely on mobile if closed to prevent scroll issues
-        style={isMobile && !isSidebarOpen ? { display: "none" } : {}}
+          h-screen fixed z-50 top-0 left-0 // Mobile positioning
+          lg:relative lg:z-10 lg:static // Desktop positioning - pulls it into the flex flow
+          transition-all // For general transitions
+          ${isMobile && !isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'} // Mobile hidden state
+        `}
       >
-        {/* Brand & Toggle Button */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20">
           <Link to="/student/overview" className="flex items-center gap-2 min-w-0" aria-label="Home">
             <span className="text-3xl font-extrabold text-orange-600">
-              {isSidebarCollapsed && !isMobile ? "VP" : "VidyaPaalam"} {/* Conditionally display full name or initials */}
+              {!isMobile && isSidebarCollapsed ? "VP" : "VidyaPaalam"}
             </span>
           </Link>
 
-          {/* Sidebar Toggle Button (Desktop & Mobile) */}
           <button
             onClick={toggleCollapse}
             className="text-gray-500 hover:text-gray-700 p-2 focus:outline-none rounded-md"
             aria-label={isSidebarCollapsed && !isMobile ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isSidebarCollapsed && !isMobile ? <Menu className="h-6 w-6" /> : <X className="h-6 w-6" />}
+            {isMobile && isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
-        {/* User Profile Section */}
+        {/* User Profile */}
         <div className="flex flex-col items-center px-5 py-4 border-b border-gray-100 pb-8">
           <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full border-2 border-orange-300 shadow-md ${isSidebarCollapsed && !isMobile ? "h-10 w-10 text-lg" : "h-16 w-16 text-2xl"}`}>
             {avatarInitials}
-            {/* Online status indicator */}
             <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
           </div>
-          {/* User Name and Role (hidden when collapsed) */}
+          {/* Only show user details if sidebar is not collapsed */}
           {!isSidebarCollapsed && (
             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09, duration: 0.2 }} className="mt-3 text-center">
               <div className="text-lg font-bold text-gray-900 truncate">{displayedUserName}</div>
-              <div className="text-xs text-gray-500">{user?.role || "User"}</div> {/* Display user's role */}
+              <div className="text-xs text-gray-500">{user?.role || "User"}</div>
             </motion.div>
           )}
         </div>
 
-        {/* Primary Navigation Menu */}
+        {/* Navigation */}
         <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
           {navItems.map(({ label, to, icon: Icon }) => {
-            const active = location.pathname === to; // Check if the current path matches the item's 'to' prop
+            const active = location.pathname.startsWith(to); 
             return (
-              <div key={label} className="group relative"> {/* Wrapper for custom tooltip */}
+              <div key={label} className="group relative">
                 <Link
                   to={to}
                   className={`flex items-center justify-center p-0.5 rounded-xl transition-all duration-200 w-full
                     ${active ? "bg-orange-50 text-orange-700 font-semibold" : "text-gray-700 hover:bg-gray-100"}
                     hover:text-orange-600 group relative
-                    ${isSidebarCollapsed && !isMobile ? "py-3" : "flex-row gap-3 px-3 py-2 my-1"}`}
+                    ${!isSidebarCollapsed || isMobile ? "flex-row gap-3 px-3 py-2 my-1" : "py-3"}`} 
                   aria-current={active ? "page" : undefined}
-                  onClick={() => isMobile && setIsSidebarOpen(false)} // Close sidebar on mobile after click
-                  style={{ minHeight: 44 }} // Ensure consistent height for all items
+                  onClick={() => isMobile && setIsSidebarOpen(false)} 
+                  style={{ minHeight: 44 }}
                 >
                   <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
-                  {/* Label (hidden when collapsed) */}
-                  {!isSidebarCollapsed && (
+                  {(!isSidebarCollapsed || isMobile) && (
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">
                       {label}
                     </motion.span>
                   )}
-                  {/* Screen reader text for accessibility when collapsed */}
-                  {isSidebarCollapsed && <span className="sr-only">{label}</span>}
+                  {isSidebarCollapsed && !isMobile && <span className="sr-only">{label}</span>}
                 </Link>
-                {/* Custom Tooltip for collapsed sidebar items */}
-                {isSidebarCollapsed && (
+                {isSidebarCollapsed && !isMobile && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                     <span>{label}</span>
                   </div>
@@ -470,19 +442,19 @@ const StudentLayout = () => {
           })}
         </nav>
 
-        {/* Logout Section */}
+        {/* Logout */}
         <div className="px-5 py-4 border-t border-gray-100">
-          <div className="group relative"> {/* Wrapper for custom tooltip */}
+          <div className="group relative">
             <button
               onClick={handleLogout}
               className={`flex items-center justify-center w-full p-2 rounded-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
-                ${isSidebarCollapsed && !isMobile ? "" : "flex-row gap-2"}`}
+                ${!isSidebarCollapsed || isMobile ? "flex-row gap-2" : ""}`}
             >
               <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
-              {!isSidebarCollapsed && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
-              {isSidebarCollapsed && <span className="sr-only">Logout</span>}
+              {(!isSidebarCollapsed || isMobile) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
+              {isSidebarCollapsed && !isMobile && <span className="sr-only">Logout</span>}
             </button>
-            {isSidebarCollapsed && (
+            {isSidebarCollapsed && !isMobile && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                 <span>Logout</span>
               </div>
@@ -495,38 +467,31 @@ const StudentLayout = () => {
       <div
         className="flex-1 flex flex-col relative"
         style={{
-          // Adjust left margin on desktop to make space for the sidebar
-          marginLeft: !isMobile ? (isSidebarCollapsed ? sidebarWidthCollapsed : sidebarWidthExpanded) : 0,
+          marginLeft: !isMobile ? (isSidebarCollapsed ? 80 : 288) : 0,
           transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
         }}
       >
-        {/* Header */}
         <header className="flex items-center gap-3 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30 h-20">
-          {/* Mobile Menu Button (to open sidebar) */}
-          {isMobile && (
+          {isMobile && ( 
             <button onClick={toggleSidebar} className="text-gray-600 p-2 rounded-md hover:bg-gray-100 focus:outline-none" aria-label="Open sidebar">
               <Menu className="h-6 w-6" />
             </button>
           )}
-          {/* Dynamic Page Title */}
           <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
-          
-          {/* Avatar in header when sidebar is collapsed on desktop */}
-          {!isMobile && isSidebarCollapsed && (
-            <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold flex-shrink-0">
-              {avatarInitials}
-            </div>
-          )}
-          {/* Notification Bell (always visible in header, hidden on very small screens) */}
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden sm:block flex-shrink-0">
+          {(!isMobile && isSidebarCollapsed) || (isMobile && !isSidebarOpen) ? (
+             <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold">
+               {avatarInitials}
+             </div>
+          ) : null}
+
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden sm:block">
             <Bell className="w-6 h-6 text-gray-600" />
           </button>
         </header>
 
-        {/* Page Content Area (Outlet for nested routes) */}
-        <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 min-h-[calc(100vh-5rem)]"> {/* min-h to ensure it fills remaining height */}
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 min-h-[calc(100vh-5rem)]">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="max-w-full mx-auto">
-            <Outlet /> {/* Renders the content of the current nested route */}
+            {children}
           </motion.div>
         </main>
       </div>
