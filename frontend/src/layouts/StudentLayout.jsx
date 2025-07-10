@@ -274,9 +274,13 @@ const StudentLayout = ({ children }) => {
   useEffect(() => {
     if (window.innerWidth >= 1024) { // Desktop (lg breakpoint and up)
       setIsSidebarOpen(true); // Always open on desktop
+      // If user was on mobile and resized to desktop, ensure not collapsed by default
+      if (isSidebarCollapsed && window.innerWidth < 1024) {
+        setIsSidebarCollapsed(false);
+      }
     } else { // Mobile / Tablet (below lg breakpoint)
       setIsSidebarOpen(false); // Always start closed on mobile/tablet on resize
-      setIsSidebarCollapsed(false); // Ensure desktop-only collapse state is off on mobile
+      setIsSidebarCollapsed(false); // Collapse state is irrelevant on mobile, reset it
     }
   }, [isMobile]);
 
@@ -369,14 +373,14 @@ const StudentLayout = ({ children }) => {
       <motion.aside
         initial={false}
         animate={{
-          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0,
-          width: !isMobile && isSidebarCollapsed ? 80 : 288,
+          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0, // Mobile: slides from -288px (full width) or 0 (open)
+          width: !isMobile && isSidebarCollapsed ? 80 : 288, // Desktop: 80px or 288px based on collapse
         }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         className={`
           flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
           h-screen
-          ${isMobile ? 'fixed z-50 top-0 left-0' : 'relative z-10'}
+          ${isMobile ? 'fixed z-50 top-0 left-0' : 'relative z-10'} // Mobile: fixed overlay. Desktop: relative in flow.
           ${isMobile && !isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
         `}
       >
@@ -402,6 +406,7 @@ const StudentLayout = ({ children }) => {
             {avatarInitials}
             <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
           </div>
+          {/* Show user details only if sidebar is expanded on desktop OR open on mobile */}
           {(!isMobile && !isSidebarCollapsed) || (isMobile && isSidebarOpen) ? (
             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09, duration: 0.2 }} className="mt-3 text-center">
               <div className="text-lg font-bold text-gray-900 truncate">{displayedUserName}</div>
@@ -419,24 +424,25 @@ const StudentLayout = ({ children }) => {
                 <Link
                   to={to}
                   className={`
-                    flex items-center justify-center p-0.5 rounded-xl transition-all duration-200 w-full
+                    flex items-center p-0.5 rounded-xl transition-all duration-200 w-full
                     ${active ? "bg-orange-50 text-orange-700 font-semibold" : "text-gray-700 hover:bg-gray-100"}
                     hover:text-orange-600 group relative
-                    ${isMobile ? "flex-row gap-3 px-3 py-2 my-1" : (isSidebarCollapsed ? "py-3" : "flex-row gap-3 px-3 py-2 my-1")}
+                    ${(!isMobile && isSidebarCollapsed) ? "justify-center py-3" : "flex-row gap-3 px-3 py-2 my-1"}
                   `}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => isMobile && setIsSidebarOpen(false)}
+                  onClick={() => isMobile && setIsSidebarOpen(false)} // Close sidebar on mobile after click
                   style={{ minHeight: 44 }}
                 >
                   <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
-                  {/* Only show text if NOT desktop collapsed */}
-                  {(!isMobile || !isSidebarCollapsed) && (
+                  {/* Corrected: Only show text if NOT desktop AND collapsed */}
+                  {!(isSidebarCollapsed && !isMobile) && (
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">
                       {label}
                     </motion.span>
                   )}
                   {isSidebarCollapsed && !isMobile && <span className="sr-only">{label}</span>}
                 </Link>
+                {/* Tooltip only on collapsed desktop sidebar */}
                 {isSidebarCollapsed && !isMobile && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                     <span>{label}</span>
@@ -453,12 +459,13 @@ const StudentLayout = ({ children }) => {
             <button
               onClick={handleLogout}
               className={`
-                flex items-center justify-center w-full p-2 rounded-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
-                ${isMobile ? "flex-row gap-2" : (isSidebarCollapsed ? "" : "flex-row gap-2")}
+                flex items-center w-full p-2 rounded-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
+                ${(!isMobile && isSidebarCollapsed) ? "justify-center" : "flex-row gap-2"}
               `}
             >
               <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
-              {(!isMobile || !isSidebarCollapsed) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
+              {/* Corrected: Only show text if NOT desktop AND collapsed */}
+              {!(isSidebarCollapsed && !isMobile) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
               {isSidebarCollapsed && !isMobile && <span className="sr-only">Logout</span>}
             </button>
             {isSidebarCollapsed && !isMobile && (
@@ -473,6 +480,7 @@ const StudentLayout = ({ children }) => {
       {/* Main Content Area */}
       <div
         className="flex-1 flex flex-col relative"
+        // Key Fix 1: Ensure marginLeft is 0 when sidebar is fully hidden on mobile
         style={{
           marginLeft: !isMobile ? (isSidebarCollapsed ? 80 : 288) : 0,
           transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
@@ -485,11 +493,17 @@ const StudentLayout = ({ children }) => {
             </button>
           )}
           <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
+          {/* Avatar in header:
+              - On desktop, if sidebar is collapsed.
+              - On mobile, if sidebar is closed.
+              - Otherwise (desktop expanded, or mobile open), avatar is in sidebar, so hide here.
+          */}
           {((!isMobile && isSidebarCollapsed) || (isMobile && !isSidebarOpen)) ? (
              <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold">
                {avatarInitials}
              </div>
           ) : null}
+
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden sm:block">
             <Bell className="w-6 h-6 text-gray-600" />
           </button>
