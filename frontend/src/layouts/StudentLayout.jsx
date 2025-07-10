@@ -332,7 +332,7 @@ export default function StudentLayout() {
   };
 
   // Sidebar width
-  const sidebarWidth = isMobile ? 260 : 280;
+  const sidebarWidth = isMobile ? 260 : 300;
   const sidebarCollapsed = 64;
 
   return (
@@ -420,8 +420,8 @@ export default function StudentLayout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-1 custom-scrollbar">
-            {navItems.map(({ name, to, icon: Icon }) => {
+          <nav className="flex flex-col gap-1 px-2 py-3 flex-1">
+            {navItems.map(({ name, to, icon: Icon }, i) => {
               const active = location.pathname === to;
               return (
                 <Tooltip key={name} placement="right">
@@ -429,15 +429,17 @@ export default function StudentLayout() {
                     <Link
                       to={to}
                       className={`
-                        flex items-center p-2 rounded-xl transition-all duration-200 ease-in-out
+                        flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 ease-in-out
                         ${active ? "bg-orange-50 text-orange-700 font-semibold shadow-sm" : "text-gray-700 hover:bg-gray-100"}
                         hover:text-orange-600 group relative
-                        ${!sidebarOpen ? "justify-center" : "gap-3"}
+                        ${sidebarOpen ? "flex-row items-center gap-2" : ""}
+                        w-full
                       `}
                       aria-current={active ? "page" : undefined}
                       onClick={() => isMobile && setSidebarOpen(false)}
+                      style={{ minHeight: 44 }}
                     >
-                      <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
+                      <Icon className={h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}} />
                       {sidebarOpen && (
                         <motion.span
                           initial={{ opacity: 0 }}
@@ -468,9 +470,9 @@ export default function StudentLayout() {
                 <button
                   onClick={handleLogout}
                   className={`
-                    flex items-center w-full p-2 rounded-xl text-gray-700
+                    flex flex-col items-center justify-center w-full p-2 rounded-xl text-gray-700
                     hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
-                    ${!sidebarOpen ? "justify-center" : "gap-3"}
+                    ${sidebarOpen ? "flex-row items-center gap-2" : ""}
                   `}
                 >
                   <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
