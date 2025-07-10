@@ -255,30 +255,30 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "../contexts/AuthContext";
 
-// Helper to get current screen size
-const useIsMobile = () => {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
+// Utility hook for screen size
+function useScreenSize() {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const handler = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
   }, []);
   return isMobile;
-};
+}
 
 export default function StudentLayout() {
   const location = useLocation();
-  const isMobile = useIsMobile();
+  const isMobile = useScreenSize();
   const { user, logout: authLogout } = useAuth();
 
-  // Sidebar open is true on desktop, false on mobile by default
-  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
+  // Sidebar open by default on desktop, closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
-    setSidebarOpen(window.innerWidth >= 768);
+    setSidebarOpen(window.innerWidth >= 1024);
   }, [isMobile]);
 
+  // Avatar and user name
   const [displayedUserName, setDisplayedUserName] = useState("Student");
   const [avatarInitials, setAvatarInitials] = useState("S");
 
@@ -332,22 +332,22 @@ export default function StudentLayout() {
   };
 
   // Sidebar width
-  const sidebarWidthOpen = 288;
-  const sidebarWidthClosed = 72;
+  const sidebarWidth = isMobile ? 260 : 280;
+  const sidebarCollapsed = 64;
 
   return (
     <TooltipProvider>
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
-        {/* Mobile Overlay */}
+        {/* Overlay for mobile when sidebar open */}
         <AnimatePresence>
-          {sidebarOpen && isMobile && (
+          {isMobile && sidebarOpen && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 bg-black bg-opacity-40 z-40"
               onClick={() => setSidebarOpen(false)}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
               aria-hidden="true"
             />
           )}
@@ -357,28 +357,33 @@ export default function StudentLayout() {
         <motion.aside
           initial={false}
           animate={{
-            width: sidebarOpen ? sidebarWidthOpen : sidebarWidthClosed,
-            x: isMobile && !sidebarOpen ? -sidebarWidthOpen : 0,
+            x: isMobile
+              ? sidebarOpen
+                ? 0
+                : -sidebarWidth - 10 // hide off screen mobile
+              : 0,
+            width: sidebarOpen ? sidebarWidth : sidebarCollapsed,
+            minWidth: sidebarOpen ? sidebarWidth : sidebarCollapsed,
+            maxWidth: sidebarOpen ? sidebarWidth : sidebarCollapsed,
           }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
+          transition={{ duration: 0.25, ease: "easeInOut" }}
           className={`
             flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
-            fixed z-50 h-screen
-            md:static md:z-10
-            ${isMobile ? "top-0 left-0" : ""}
+            h-screen fixed z-50 top-0 left-0
+            transition-all
+            ${!sidebarOpen && isMobile ? "pointer-events-none select-none" : ""}
+            ${sidebarOpen ? "visible" : ""}
+            md:relative md:z-10 md:static
           `}
           style={{
-            minWidth: sidebarOpen ? sidebarWidthOpen : sidebarWidthClosed,
-            maxWidth: sidebarOpen ? sidebarWidthOpen : sidebarWidthClosed,
-            transition: "width 0.3s, min-width 0.3s, max-width 0.3s",
             display: isMobile && !sidebarOpen ? "none" : "flex",
           }}
         >
-          {/* Header (Logo and Toggle Button) */}
-          <div className="flex items-center justify-between px-4 py-6 border-b border-gray-100 h-20 flex-shrink-0">
+          {/* Sidebar Header */}
+          <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20 flex-shrink-0">
             <Link
               to="/"
-              className="flex items-center gap-2 min-w-0"
+              className="flex items-center gap-2 overflow-hidden min-w-0"
               aria-label="VidyaPaalam Home"
             >
               <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap flex-shrink-0">
@@ -387,7 +392,7 @@ export default function StudentLayout() {
             </Link>
             <button
               onClick={() => setSidebarOpen((o) => !o)}
-              className="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded-md p-1 transition-colors duration-200 md:block"
+              className="text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-orange-500 rounded-md p-2"
               aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -395,7 +400,7 @@ export default function StudentLayout() {
           </div>
 
           {/* User Info */}
-          <div className="flex flex-col items-center px-4 pt-6 border-b border-gray-100 pb-8 flex-shrink-0">
+          <div className="flex flex-col items-center px-5 py-4 border-b border-gray-100 pb-8 flex-shrink-0">
             <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md flex-shrink-0
               ${sidebarOpen ? "h-16 w-16 text-2xl" : "h-10 w-10 text-lg"}`}>
               {avatarInitials}
@@ -403,9 +408,9 @@ export default function StudentLayout() {
             </div>
             {sidebarOpen && (
               <motion.div
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, duration: 0.2 }}
+                transition={{ delay: 0.09, duration: 0.2 }}
                 className="mt-3 text-center overflow-hidden"
               >
                 <div className="text-lg font-bold text-gray-900 truncate">{displayedUserName}</div>
@@ -424,7 +429,7 @@ export default function StudentLayout() {
                     <Link
                       to={to}
                       className={`
-                        flex items-center p-3 rounded-xl transition-all duration-200 ease-in-out
+                        flex items-center p-2 rounded-xl transition-all duration-200 ease-in-out
                         ${active ? "bg-orange-50 text-orange-700 font-semibold shadow-sm" : "text-gray-700 hover:bg-gray-100"}
                         hover:text-orange-600 group relative
                         ${!sidebarOpen ? "justify-center" : "gap-3"}
@@ -432,12 +437,12 @@ export default function StudentLayout() {
                       aria-current={active ? "page" : undefined}
                       onClick={() => isMobile && setSidebarOpen(false)}
                     >
-                      <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
+                      <Icon className={h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}} />
                       {sidebarOpen && (
                         <motion.span
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          transition={{ delay: 0.1, duration: 0.2 }}
+                          transition={{ delay: 0.09, duration: 0.2 }}
                           className="text-base whitespace-nowrap"
                         >
                           {name}
@@ -456,14 +461,14 @@ export default function StudentLayout() {
             })}
           </nav>
 
-          {/* Logout Section */}
-          <div className="px-4 py-4 border-t border-gray-100 flex-shrink-0">
+          {/* Logout */}
+          <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0">
             <Tooltip placement="right">
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
                   className={`
-                    flex items-center w-full p-3 rounded-xl text-gray-700
+                    flex items-center w-full p-2 rounded-xl text-gray-700
                     hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
                     ${!sidebarOpen ? "justify-center" : "gap-3"}
                   `}
@@ -473,7 +478,7 @@ export default function StudentLayout() {
                     <motion.span
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      transition={{ delay: 0.1, duration: 0.2 }}
+                      transition={{ delay: 0.09, duration: 0.2 }}
                       className="text-base whitespace-nowrap"
                     >
                       Logout
@@ -491,18 +496,22 @@ export default function StudentLayout() {
           </div>
         </motion.aside>
 
-        {/* Main Content Area */}
+        {/* Main content */}
         <div
           className="flex-1 flex flex-col relative md:static"
           style={{
-            marginLeft: isMobile ? 0 : (sidebarOpen ? sidebarWidthOpen : sidebarWidthClosed),
-            transition: "margin-left 0.3s",
+            marginLeft:
+              !isMobile && sidebarOpen
+                ? sidebarWidth
+                : !isMobile && !sidebarOpen
+                ? sidebarCollapsed
+                : 0,
+            transition: "margin-left 0.25s",
           }}
         >
-          {/* Header for main content */}
+          {/* Top navbar/header */}
           <header className="flex items-center gap-3 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30 h-20">
-            {/* Mobile menu button only appears when sidebar is closed */}
-            {isMobile && !sidebarOpen && (
+            {isMobile && (
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="text-gray-600 text-2xl p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -519,7 +528,8 @@ export default function StudentLayout() {
               </div>
             )}
           </header>
-          <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50">
+
+          <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 min-h-[calc(100vh-5rem)]">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
