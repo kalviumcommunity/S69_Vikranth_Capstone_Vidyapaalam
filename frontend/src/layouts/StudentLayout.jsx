@@ -241,7 +241,6 @@
 
 
 
-
 import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -255,7 +254,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "../contexts/AuthContext";
 
-// Responsive screen size hook
+// Hook to detect mobile view
 function useScreenSize() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   useEffect(() => {
@@ -271,14 +270,12 @@ export default function StudentLayout() {
   const isMobile = useScreenSize();
   const { user, logout: authLogout } = useAuth();
 
-  // Sidebar open by default on desktop, closed on mobile
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 1024);
 
   useEffect(() => {
     setSidebarOpen(window.innerWidth >= 1024);
   }, [isMobile]);
 
-  // Avatar and user name
   const [displayedUserName, setDisplayedUserName] = useState("Student");
   const [avatarInitials, setAvatarInitials] = useState("S");
 
@@ -331,14 +328,13 @@ export default function StudentLayout() {
     return "Dashboard";
   };
 
-  // Sidebar width
   const sidebarWidth = 300;
   const sidebarCollapsed = 72;
 
   return (
     <TooltipProvider>
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
-        {/* Overlay for mobile when sidebar open */}
+        {/* Mobile Overlay */}
         <AnimatePresence>
           {isMobile && sidebarOpen && (
             <motion.div
@@ -357,34 +353,19 @@ export default function StudentLayout() {
         <motion.aside
           initial={false}
           animate={{
-            x: isMobile
-              ? sidebarOpen
-                ? 0
-                : -sidebarWidth - 10 // hide off screen mobile
-              : 0,
+            x: isMobile ? (sidebarOpen ? 0 : -sidebarWidth - 10) : 0,
             width: sidebarOpen ? sidebarWidth : sidebarCollapsed,
-            minWidth: sidebarOpen ? sidebarWidth : sidebarCollapsed,
-            maxWidth: sidebarOpen ? sidebarWidth : sidebarCollapsed,
           }}
           transition={{ duration: 0.25, ease: "easeInOut" }}
-          className={`
-            flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
-            h-screen fixed z-50 top-0 left-0
-            transition-all
-            md:relative md:z-10 md:static
-          `}
-          style={{
-            display: isMobile && !sidebarOpen ? "none" : "flex",
-          }}
+          className={`${
+            isMobile && !sidebarOpen ? "hidden" : "flex"
+          } flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
+          h-screen fixed z-50 top-0 left-0 md:relative md:z-10 md:static`}
         >
-          {/* Sidebar Header */}
-          <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20 flex-shrink-0">
-            <Link
-              to="/"
-              className="flex items-center gap-2 overflow-hidden min-w-0"
-              aria-label="VidyaPaalam Home"
-            >
-              <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap flex-shrink-0">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20">
+            <Link to="/" className="flex items-center gap-2">
+              <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap">
                 {sidebarOpen ? "VidyaPaalam" : "VP"}
               </span>
             </Link>
@@ -397,19 +378,21 @@ export default function StudentLayout() {
             </button>
           </div>
 
-          {/* User Info */}
-          <div className="flex flex-col items-center px-5 py-4 border-b border-gray-100 pb-8 flex-shrink-0">
-            <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md flex-shrink-0
-              ${sidebarOpen ? "h-16 w-16 text-2xl" : "h-10 w-10 text-lg"}`}>
+          {/* Avatar */}
+          <div className="flex flex-col items-center px-5 py-4 border-b border-gray-100 pb-8">
+            <div
+              className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md
+                ${sidebarOpen ? "h-16 w-16 text-2xl" : "h-10 w-10 text-lg"}`}
+            >
               {avatarInitials}
-              <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
+              <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white" />
             </div>
             {sidebarOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.09, duration: 0.2 }}
-                className="mt-3 text-center overflow-hidden"
+                className="mt-3 text-center"
               >
                 <div className="text-lg font-bold text-gray-900 truncate">{displayedUserName}</div>
                 <div className="text-xs text-gray-500">Student</div>
@@ -417,7 +400,7 @@ export default function StudentLayout() {
             )}
           </div>
 
-          {/* Navigation */}
+          {/* Nav Items */}
           <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
             {navItems.map(({ name, to, icon: Icon }) => {
               const active = location.pathname === to;
@@ -426,16 +409,11 @@ export default function StudentLayout() {
                   <TooltipTrigger asChild>
                     <Link
                       to={to}
-                      className={`
-                        flex flex-col items-center justify-center p-0.5 rounded-xl transition-all duration-200 ease-in-out
-                        w-full
-                        ${active ? "bg-orange-50 text-orange-700 font-semibold" : "text-gray-700 hover:bg-gray-100"}
-                        hover:text-orange-600 group relative
-                        ${sidebarOpen ? "flex-row items-center gap-3 px-3 py-2 my-1" : "py-3"}
+                      className={`flex items-center justify-center w-full p-2 rounded-xl transition-all duration-200 ease-in-out
+                        ${active ? "bg-orange-50 text-orange-700 font-semibold" : "text-gray-700 hover:bg-gray-100 hover:text-orange-600"}
+                        ${sidebarOpen ? "flex-row gap-3 px-3 py-2" : "flex-col"}
                       `}
-                      aria-current={active ? "page" : undefined}
                       onClick={() => isMobile && setSidebarOpen(false)}
-                      style={{ minHeight: 44 }}
                     >
                       <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
                       {sidebarOpen && (
@@ -462,15 +440,15 @@ export default function StudentLayout() {
           </nav>
 
           {/* Logout */}
-          <div className="px-5 py-4 border-t border-gray-100 flex-shrink-0">
+          <div className="px-5 py-4 border-t border-gray-100">
             <Tooltip placement="right">
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className={`
-                    flex flex-col items-center justify-center w-full p-2 rounded-xl text-gray-700
+                  aria-label="Logout"
+                  className={`flex items-center justify-center w-full p-2 rounded-xl text-gray-700
                     hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
-                    ${sidebarOpen ? "flex-row items-center gap-2" : ""}
+                    ${sidebarOpen ? "flex-row gap-2" : "flex-col"}
                   `}
                 >
                   <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
@@ -498,19 +476,16 @@ export default function StudentLayout() {
 
         {/* Main content */}
         <div
-          className="flex-1 flex flex-col relative md:static"
+          className="flex-1 flex flex-col relative md:static transition-all duration-300"
           style={{
-            marginLeft:
-              !isMobile
-                ? sidebarOpen
-                  ? sidebarWidth
-                  : sidebarCollapsed
-                : 0,
-            transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
-            background: "transparent", // ensure no gap color
+            marginLeft: !isMobile
+              ? sidebarOpen
+                ? `${sidebarWidth}px`
+                : `${sidebarCollapsed}px`
+              : "0px",
           }}
         >
-          {/* Top navbar/header */}
+          {/* Header */}
           <header className="flex items-center gap-3 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30 h-20">
             {isMobile && (
               <button
@@ -522,15 +497,14 @@ export default function StudentLayout() {
               </button>
             )}
             <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
-            {/* Desktop: Show avatar in header if sidebar is collapsed */}
             {!isMobile && !sidebarOpen && (
-              <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold flex-shrink-0">
+              <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold">
                 {avatarInitials}
               </div>
             )}
           </header>
 
-          <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 min-h-[calc(100vh-5rem)]">
+          <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 min-h-[calc(100vh-80px)]">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -545,3 +519,4 @@ export default function StudentLayout() {
     </TooltipProvider>
   );
 }
+
