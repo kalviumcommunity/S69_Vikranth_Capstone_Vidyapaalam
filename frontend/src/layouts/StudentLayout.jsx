@@ -1,33 +1,57 @@
 
-
-// import { useState } from "react";
+// import { useState, useEffect } from "react"; // Added useEffect
 // import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 // import { motion } from "framer-motion";
-// import { Home, Star, Settings, LogOut, Menu, X } from "lucide-react";
-// import {
+// import { Home, Star, Settings, LogOut, Menu, X, Search } from "lucide-react"; // Added Search icon
+// import { // Ensure these imports are correct based on your project setup
 //   Tooltip,
 //   TooltipProvider,
 //   TooltipTrigger,
 //   TooltipContent,
 // } from "@/components/ui/tooltip";
 // import { toast } from "@/hooks/use-toast";
+// import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
 
 // export default function StudentLayout() {
 //   const location = useLocation();
 //   const navigate = useNavigate();
 //   const [sidebarOpen, setSidebarOpen] = useState(true);
-//   const userName = "John Doe";
+//   const { user, logout: authLogout } = useAuth(); // Destructure user and rename logout from context
+
+//   // State to hold the displayed name and initials, dynamic from AuthContext
+//   const [displayedUserName, setDisplayedUserName] = useState("Guest");
+//   const [avatarInitials, setAvatarInitials] = useState("?");
+
+//   // Effect to update user name and initials when auth context user changes
+//   useEffect(() => {
+//     if (user && user.name) {
+//       setDisplayedUserName(user.name);
+//       // Generate initials from user's name
+//       const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+//       setAvatarInitials(initials.length > 0 ? initials : user.name[0].toUpperCase());
+//     } else {
+//       // Default placeholder if user is not logged in or name is missing
+//       setDisplayedUserName("Student");
+//       setAvatarInitials("S");
+//     }
+//   }, [user]);
 
 //   const navItems = [
 //     { name: "Overview", to: "/student/overview", icon: Home },
-//     { name: "Find Teacher", to: "/student/find-teacher", icon: Star },
+//     { name: "Find Teacher", to: "/student/find-teacher", icon: Search }, // Changed icon to Search
 //     { name: "Favorites", to: "/student/favorites", icon: Star },
 //     { name: "Settings", to: "/student/settings", icon: Settings },
 //   ];
 
-//   const handleLogout = () => {
-//     toast({ title: "Logged out successfully" });
-//     navigate("/");
+//   const handleLogout = async () => {
+//     try {
+//       await authLogout(); // Use the logout function from AuthContext
+//       toast({ title: "Logged out successfully" });
+//       // authLogout function handles redirection, so no need to navigate here
+//     } catch (error) {
+//       console.error("Logout failed in StudentLayout:", error);
+//       toast({ title: "Logout failed", description: "Please try again.", variant: "destructive" });
+//     }
 //   };
 
 //   const getPageTitle = () => {
@@ -43,7 +67,7 @@
 //     )
 //       return "Teacher Profile";
 //     if (path.match(/^\/student\/book-session\/.+/)) return "Book Session";
-//     return "Dashboard"; 
+//     return "Dashboard";
 //   };
 
 //   return (
@@ -51,15 +75,15 @@
 //       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
 //         {/* Sidebar */}
 //         <motion.aside
-//           initial={false} 
-//           animate={{ width: sidebarOpen ? 288 : 80 }} 
+//           initial={false}
+//           animate={{ width: sidebarOpen ? 288 : 80 }}
 //           transition={{ duration: 0.3, ease: "easeInOut" }}
 //           className="flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden fixed md:relative h-screen z-30"
 //         >
-//           {/* Header */}
-//           <div className="flex items-center justify-between p-6 border-b border-gray-100 h-20 flex-shrink-0">
-//             <Link to="/" className="flex items-center gap-2 overflow-hidden" aria-label="VidyaPaalam Home">
-//               <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap">
+//           {/* Header (Logo and Toggle Button) */}
+//           <div className="flex items-center justify-between px-6 py-6 border-b border-gray-100 h-20 flex-shrink-0">
+//             <Link to="/" className="flex items-center gap-2 overflow-hidden min-w-0" aria-label="VidyaPaalam Home">
+//               <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap flex-shrink-0">
 //                 {sidebarOpen ? "VidyaPaalam" : "VP"}
 //               </span>
 //             </Link>
@@ -72,12 +96,16 @@
 //             </button>
 //           </div>
 
-//           {/* User Info */}
-//           <div className="flex flex-col items-center p-6 border-b border-gray-100 pb-8 flex-shrink-0">
-//             <div className="relative h-20 w-20 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-3xl font-bold border-2 border-orange-300 shadow-md">
-//               JD
+//           {/* User Info (Avatar and Name) */}
+//           <div className="flex flex-col items-center px-6 py-6 border-b border-gray-100 pb-8 flex-shrink-0">
+//             {/* User Avatar - dynamically sized */}
+//             <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md flex-shrink-0
+//               ${sidebarOpen ? "h-20 w-20 text-3xl" : "h-10 w-10 text-lg"}`}>
+//               {avatarInitials} {/* Display dynamic initials */}
 //               <span className="absolute bottom-0 right-0 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></span>
 //             </div>
+            
+//             {/* User Name and Role - Conditionally rendered for smooth animation */}
 //             {sidebarOpen && (
 //               <motion.div
 //                 initial={{ opacity: 0, y: 10 }}
@@ -85,14 +113,14 @@
 //                 transition={{ delay: 0.1, duration: 0.2 }}
 //                 className="mt-4 text-center overflow-hidden"
 //               >
-//                 <div className="text-xl font-bold text-gray-900 truncate">{userName}</div>
+//                 <div className="text-xl font-bold text-gray-900 truncate">{displayedUserName}</div>
 //                 <div className="text-sm text-gray-500">Student</div>
 //               </motion.div>
 //             )}
 //           </div>
 
 //           {/* Navigation */}
-//           <nav className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+//           <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-2 custom-scrollbar">
 //             {navItems.map(({ name, to, icon: Icon }) => {
 //               const active = location.pathname === to;
 //               return (
@@ -133,8 +161,8 @@
 //             })}
 //           </nav>
 
-//           {/* Logout */}
-//           <div className="p-4 border-t border-gray-100 flex-shrink-0">
+//           {/* Logout Section */}
+//           <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
 //             <Tooltip placement="right">
 //               <TooltipTrigger asChild>
 //                 <button
@@ -169,9 +197,9 @@
 //           </div>
 //         </motion.aside>
 
-        
+//         {/* Main Content Area */}
 //         <div className="flex-1 flex flex-col relative md:static">
-
+//           {/* Header for main content */}
 //           <header className="flex items-center gap-4 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20 h-20">
 //             {!sidebarOpen && (
 //               <button
@@ -183,9 +211,7 @@
 //               </button>
 //             )}
 //             <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
-//             {!sidebarOpen && (
-//                  <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold flex-shrink-0">JD</div>
-//             )}
+//             {/* Removed the redundant "JD" avatar from the header, as the main one in the sidebar is now dynamic and handles this */}
 //           </header>
 
 //           <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
@@ -200,6 +226,7 @@
 //           </main>
 //         </div>
 
+//         {/* Overlay for mobile when sidebar is open */}
 //         {sidebarOpen && (
 //           <div
 //             onClick={() => setSidebarOpen(false)}
@@ -214,38 +241,35 @@
 
 
 
-import { useState, useEffect } from "react"; // Added useEffect
+
+import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Home, Star, Settings, LogOut, Menu, X, Search } from "lucide-react"; // Added Search icon
-import { // Ensure these imports are correct based on your project setup
+import {
   Tooltip,
   TooltipProvider,
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
-import { useAuth } from "../contexts/AuthContext"; // Import useAuth hook
+import { useAuth } from "../contexts/AuthContext";
 
 export default function StudentLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout: authLogout } = useAuth(); // Destructure user and rename logout from context
+  const { user, logout: authLogout } = useAuth();
 
-  // State to hold the displayed name and initials, dynamic from AuthContext
   const [displayedUserName, setDisplayedUserName] = useState("Guest");
   const [avatarInitials, setAvatarInitials] = useState("?");
 
-  // Effect to update user name and initials when auth context user changes
   useEffect(() => {
     if (user && user.name) {
       setDisplayedUserName(user.name);
-      // Generate initials from user's name
       const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
       setAvatarInitials(initials.length > 0 ? initials : user.name[0].toUpperCase());
     } else {
-      // Default placeholder if user is not logged in or name is missing
       setDisplayedUserName("Student");
       setAvatarInitials("S");
     }
@@ -253,16 +277,15 @@ export default function StudentLayout() {
 
   const navItems = [
     { name: "Overview", to: "/student/overview", icon: Home },
-    { name: "Find Teacher", to: "/student/find-teacher", icon: Search }, // Changed icon to Search
+    { name: "Find Teacher", to: "/student/find-teacher", icon: Search },
     { name: "Favorites", to: "/student/favorites", icon: Star },
     { name: "Settings", to: "/student/settings", icon: Settings },
   ];
 
   const handleLogout = async () => {
     try {
-      await authLogout(); // Use the logout function from AuthContext
+      await authLogout();
       toast({ title: "Logged out successfully" });
-      // authLogout function handles redirection, so no need to navigate here
     } catch (error) {
       console.error("Logout failed in StudentLayout:", error);
       toast({ title: "Logout failed", description: "Please try again.", variant: "destructive" });
@@ -288,14 +311,12 @@ export default function StudentLayout() {
   return (
     <TooltipProvider>
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
-        {/* Sidebar */}
         <motion.aside
           initial={false}
           animate={{ width: sidebarOpen ? 288 : 80 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className="flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden fixed md:relative h-screen z-30"
         >
-          {/* Header (Logo and Toggle Button) */}
           <div className="flex items-center justify-between px-6 py-6 border-b border-gray-100 h-20 flex-shrink-0">
             <Link to="/" className="flex items-center gap-2 overflow-hidden min-w-0" aria-label="VidyaPaalam Home">
               <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap flex-shrink-0">
@@ -311,7 +332,6 @@ export default function StudentLayout() {
             </button>
           </div>
 
-          {/* User Info (Avatar and Name) */}
           <div className="flex flex-col items-center px-6 py-6 border-b border-gray-100 pb-8 flex-shrink-0">
             {/* User Avatar - dynamically sized */}
             <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md flex-shrink-0
@@ -320,7 +340,6 @@ export default function StudentLayout() {
               <span className="absolute bottom-0 right-0 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></span>
             </div>
             
-            {/* User Name and Role - Conditionally rendered for smooth animation */}
             {sidebarOpen && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -334,7 +353,6 @@ export default function StudentLayout() {
             )}
           </div>
 
-          {/* Navigation */}
           <nav className="flex-1 overflow-y-auto px-6 py-4 space-y-2 custom-scrollbar">
             {navItems.map(({ name, to, icon: Icon }) => {
               const active = location.pathname === to;
@@ -347,11 +365,12 @@ export default function StudentLayout() {
                         flex items-center gap-4 p-3 rounded-xl transition-all duration-200 ease-in-out
                         ${active ? "bg-orange-50 text-orange-700 font-semibold shadow-sm" : "text-gray-700 hover:bg-gray-100"}
                         hover:text-orange-600 group relative
+                        ${!sidebarOpen ? 'justify-center' : ''} {/* Centering icons when sidebar is closed */}
                       `}
                       aria-current={active ? "page" : undefined}
                     >
                       <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
-                      {sidebarOpen && (
+                      {sidebarOpen && ( // <-- Conditional rendering for name
                         <motion.span
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
@@ -362,7 +381,7 @@ export default function StudentLayout() {
                         </motion.span>
                       )}
                       {!sidebarOpen && (
-                        <span className="sr-only">{name}</span>
+                        <span className="sr-only">{name}</span> // Screen reader only text
                       )}
                     </Link>
                   </TooltipTrigger>
@@ -376,19 +395,19 @@ export default function StudentLayout() {
             })}
           </nav>
 
-          {/* Logout Section */}
           <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
             <Tooltip placement="right">
               <TooltipTrigger asChild>
                 <button
                   onClick={handleLogout}
-                  className="
+                  className={`
                     flex items-center gap-4 w-full p-3 rounded-xl text-gray-700
                     hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
-                  "
+                    ${!sidebarOpen ? 'justify-center' : ''} {/* Centering icon when sidebar is closed */}
+                  `}
                 >
                   <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
-                  {sidebarOpen && (
+                  {sidebarOpen && ( // <-- Conditional rendering for logout text
                     <motion.span
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -399,7 +418,7 @@ export default function StudentLayout() {
                     </motion.span>
                   )}
                   {!sidebarOpen && (
-                    <span className="sr-only">Logout</span>
+                    <span className="sr-only">Logout</span> // Screen reader only text
                   )}
                 </button>
               </TooltipTrigger>
@@ -412,9 +431,7 @@ export default function StudentLayout() {
           </div>
         </motion.aside>
 
-        {/* Main Content Area */}
         <div className="flex-1 flex flex-col relative md:static">
-          {/* Header for main content */}
           <header className="flex items-center gap-4 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-20 h-20">
             {!sidebarOpen && (
               <button
@@ -426,7 +443,6 @@ export default function StudentLayout() {
               </button>
             )}
             <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
-            {/* Removed the redundant "JD" avatar from the header, as the main one in the sidebar is now dynamic and handles this */}
           </header>
 
           <main className="flex-1 p-6 overflow-y-auto bg-gray-50">
@@ -441,7 +457,6 @@ export default function StudentLayout() {
           </main>
         </div>
 
-        {/* Overlay for mobile when sidebar is open */}
         {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
