@@ -369,8 +369,8 @@ export default function StudentLayout() {
           <div className="flex items-center justify-between px-6 py-6 border-b border-gray-100 h-20 flex-shrink-0">
             <Link to="/" className="flex items-center gap-2 overflow-hidden min-w-0" aria-label="VidyaPaalam Home">
               <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap flex-shrink-0">
-                {/* Always show "VidyaPaalam" when sidebar is open or on desktop/tablet */}
-                {(sidebarOpen || window.innerWidth >= 768) ? "VidyaPaalam" : "VP"} 
+                {/* Show "VidyaPaalam" if sidebar is open, "VP" if collapsed */}
+                {sidebarOpen ? "VidyaPaalam" : "VP"} 
               </span>
             </Link>
           </div>
