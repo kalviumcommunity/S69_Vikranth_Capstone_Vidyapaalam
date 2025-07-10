@@ -245,11 +245,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Home, Search, Heart, Settings, LogOut, Menu, X, Bell, BarChart3 } from 'lucide-react';
-import { toast } from "@/hooks/use-toast"; 
-import { useAuth } from "../contexts/AuthContext"; 
+import { toast } from "@/hooks/use-toast"; // Assuming this is your custom toast hook
+import { useAuth } from "../contexts/AuthContext"; // Import your AuthContext
 
+// Helper hook for screen size detection
 function useScreenSize() {
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024); // Tailwind's 'lg' breakpoint
   useEffect(() => {
     const handler = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener("resize", handler);
@@ -261,23 +262,35 @@ function useScreenSize() {
 const StudentLayout = ({ children }) => {
   const location = useLocation();
   const isMobile = useScreenSize();
-  const { user, logout: authLogout, loading: authLoading } = useAuth(); 
+  const { user, logout: authLogout, loading: authLoading } = useAuth(); // Get user, logout, and loading from AuthContext
 
+  // On desktop (lg breakpoint and up), sidebar starts open. On mobile/tablet, it starts closed.
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
-
+  // Sidebar starts uncollapsed on desktop, but can be collapsed by user.
+  // This state is only relevant for desktop (non-mobile) view for width control.
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+  // Effect to manage sidebar state on resize (e.g., rotating tablet, dragging browser window)
   useEffect(() => {
-    if (window.innerWidth >= 1024) { 
-      setIsSidebarOpen(true);
-    } else { 
-      setIsSidebarOpen(false); 
+    if (window.innerWidth >= 1024) { // Desktop (lg breakpoint and up)
+      setIsSidebarOpen(true); // Always open on desktop
+      // When transitioning from mobile to desktop, ensure it's not collapsed initially
+      // unless user explicitly collapsed it before.
+      // For simplicity, we'll ensure it's expanded if it's not already explicitly collapsed.
+      // If you want user preference to persist better, you'd save it to localStorage.
+      if (isSidebarCollapsed && window.innerWidth < 1024) { // Only reset if coming from mobile state where collapse might be irrelevant
+         setIsSidebarCollapsed(false);
+      }
+    } else { // Mobile / Tablet (below lg breakpoint)
+      setIsSidebarOpen(false); // Always start closed on mobile/tablet on resize
     }
-  }, [isMobile]);
+  }, [isMobile]); // Re-run when breakpoint changes
 
+  // User profile display states
   const [displayedUserName, setDisplayedUserName] = useState("Guest");
   const [avatarInitials, setAvatarInitials] = useState("G");
 
+  // Update user display info when authUser changes
   useEffect(() => {
     if (user && user.name) {
       setDisplayedUserName(user.name);
@@ -299,10 +312,12 @@ const StudentLayout = ({ children }) => {
   };
 
   const toggleCollapse = () => {
+    // This button acts as a collapse/expand on desktop.
+    // On mobile/tablet, it always acts as a close button if the sidebar is open.
     if (!isMobile) {
       setIsSidebarCollapsed(!isSidebarCollapsed);
     } else {
-      setIsSidebarOpen(false);
+      setIsSidebarOpen(false); // On mobile, close the sidebar
     }
   };
 
@@ -315,7 +330,7 @@ const StudentLayout = ({ children }) => {
 
   const handleLogout = async () => {
     try {
-      await authLogout(); 
+      await authLogout(); // Call the logout function from AuthContext
       toast({ title: "Logged out successfully" });
     } catch (error) {
       console.error("Logout failed in StudentLayout:", error);
@@ -332,9 +347,10 @@ const StudentLayout = ({ children }) => {
     if (path.startsWith("/student/chat")) return "Chat";
     if (path.match(/^\/student\/teacher-profile\/.+/) || path.match(/^\/student\/teacher\/.+/)) return "Teacher Profile";
     if (path.match(/^\/student\/book-session\/.+/)) return "Book Session";
-    return "Dashboard"; 
+    return "Dashboard"; // Default title
   }, [location.pathname]);
 
+  // Show loading state if authUser is still loading
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -345,6 +361,7 @@ const StudentLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex font-sans antialiased">
+      {/* Mobile Overlay - Only visible on mobile/tablet when sidebar is open */}
       <AnimatePresence>
         {isMobile && isSidebarOpen && (
           <motion.div
@@ -352,7 +369,7 @@ const StudentLayout = ({ children }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" // Ensure it's hidden on desktop
+            className="fixed inset-0 bg-black bg-opacity-40 z-40 lg:hidden" // Ensures it's hidden on desktop
             onClick={toggleSidebar}
             aria-hidden="true"
           />
@@ -361,57 +378,64 @@ const StudentLayout = ({ children }) => {
 
       {/* Sidebar */}
       <motion.aside
-        initial={false}
+        initial={false} // Disable initial animation on mount
+        // Animate 'x' for mobile slide-in/out, and 'width' for desktop collapse/expand
         animate={{
-          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0, 
-          width: isMobile ? (isSidebarOpen ? 288 : 0) : (isSidebarCollapsed ? 80 : 288),
-          minWidth: isMobile ? (isSidebarOpen ? 288 : 0) : (isSidebarCollapsed ? 80 : 288),
-          maxWidth: isMobile ? (isSidebarOpen ? 288 : 0) : (isSidebarCollapsed ? 80 : 288),
+          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0, // On mobile, slide in/out. On desktop, fixed at 0.
+          width: !isMobile && isSidebarCollapsed ? 80 : 288, // Desktop: 80px when collapsed, 288px when expanded.
+                                                             // Mobile: width is implicitly 288px when open,
+                                                             // its visibility is controlled by 'x' and opacity.
         }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         className={`
           flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
-          h-screen fixed z-50 top-0 left-0 // Mobile positioning
-          lg:relative lg:z-10 lg:static // Desktop positioning - pulls it into the flex flow
+          h-screen // Full height
+          ${isMobile ? 'fixed z-50 top-0 left-0' : 'relative z-10'} // Mobile: fixed overlay. Desktop: relative in flow.
           transition-all // For general transitions
-          ${isMobile && !isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'} // Mobile hidden state
+          // Mobile visibility: hidden (opacity 0, no pointer events) when not open
+          ${isMobile && !isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
         `}
       >
+        {/* Brand & Toggle Button */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20">
           <Link to="/student/overview" className="flex items-center gap-2 min-w-0" aria-label="Home">
-            <span className="text-3xl font-extrabold text-orange-600">
+            <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap">
+              {/* Show "VP" on collapsed desktop, "VidyaPaalam" otherwise */}
               {!isMobile && isSidebarCollapsed ? "VP" : "VidyaPaalam"}
             </span>
           </Link>
 
+          {/* Sidebar Toggle Button (Desktop & Mobile) */}
           <button
             onClick={toggleCollapse}
             className="text-gray-500 hover:text-gray-700 p-2 focus:outline-none rounded-md"
             aria-label={isSidebarCollapsed && !isMobile ? "Expand sidebar" : "Collapse sidebar"}
           >
+            {/* On mobile, show X when sidebar is open, Menu when closed.
+                On desktop, show Menu for collapse, X for expand. */}
             {isMobile && isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
         {/* User Profile */}
         <div className="flex flex-col items-center px-5 py-4 border-b border-gray-100 pb-8">
-          <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full border-2 border-orange-300 shadow-md ${isSidebarCollapsed && !isMobile ? "h-10 w-10 text-lg" : "h-16 w-16 text-2xl"}`}>
+          <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full border-2 border-orange-300 shadow-md ${!isMobile && isSidebarCollapsed ? "h-10 w-10 text-lg" : "h-16 w-16 text-2xl"}`}>
             {avatarInitials}
             <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
           </div>
-          {/* Only show user details if sidebar is not collapsed */}
-          {!isSidebarCollapsed && (
+          {/* Only show user details if it's desktop and sidebar is not collapsed, OR if it's mobile and sidebar is open */}
+          {(!isMobile && !isSidebarCollapsed) || (isMobile && isSidebarOpen) ? (
             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09, duration: 0.2 }} className="mt-3 text-center">
               <div className="text-lg font-bold text-gray-900 truncate">{displayedUserName}</div>
               <div className="text-xs text-gray-500">{user?.role || "User"}</div>
             </motion.div>
-          )}
+          ) : null}
         </div>
 
         {/* Navigation */}
         <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
           {navItems.map(({ label, to, icon: Icon }) => {
-            const active = location.pathname.startsWith(to); 
+            const active = location.pathname.startsWith(to); // Use startsWith for active state on nested routes
             return (
               <div key={label} className="group relative">
                 <Link
@@ -419,19 +443,22 @@ const StudentLayout = ({ children }) => {
                   className={`flex items-center justify-center p-0.5 rounded-xl transition-all duration-200 w-full
                     ${active ? "bg-orange-50 text-orange-700 font-semibold" : "text-gray-700 hover:bg-gray-100"}
                     hover:text-orange-600 group relative
-                    ${!isSidebarCollapsed || isMobile ? "flex-row gap-3 px-3 py-2 my-1" : "py-3"}`} 
+                    ${(!isMobile && isSidebarCollapsed) ? "py-3" : "flex-row gap-3 px-3 py-2 my-1"}`} {/* Desktop collapsed: icon only. Otherwise: icon+text */}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => isMobile && setIsSidebarOpen(false)} 
+                  onClick={() => isMobile && setIsSidebarOpen(false)} // Close sidebar on mobile after click
                   style={{ minHeight: 44 }}
                 >
                   <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
-                  {(!isSidebarCollapsed || isMobile) && (
+                  {/* Only show text if it's NOT desktop and collapsed */}
+                  {(!isMobile || !isSidebarCollapsed) && ( // Show text if not desktop collapsed
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">
                       {label}
                     </motion.span>
                   )}
+                  {/* SR-only for collapsed state on desktop when text isn't shown */}
                   {isSidebarCollapsed && !isMobile && <span className="sr-only">{label}</span>}
                 </Link>
+                {/* Tooltip only on collapsed desktop sidebar */}
                 {isSidebarCollapsed && !isMobile && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                     <span>{label}</span>
@@ -448,12 +475,14 @@ const StudentLayout = ({ children }) => {
             <button
               onClick={handleLogout}
               className={`flex items-center justify-center w-full p-2 rounded-xl text-gray-700 hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
-                ${!isSidebarCollapsed || isMobile ? "flex-row gap-2" : ""}`}
+                ${(!isMobile && isSidebarCollapsed) ? "" : "flex-row gap-2"}`}
             >
               <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
-              {(!isSidebarCollapsed || isMobile) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
+              {/* Only show text if it's NOT desktop and collapsed */}
+              {(!isMobile || !isSidebarCollapsed) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
               {isSidebarCollapsed && !isMobile && <span className="sr-only">Logout</span>}
             </button>
+            {/* Tooltip only on collapsed desktop sidebar */}
             {isSidebarCollapsed && !isMobile && (
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
                 <span>Logout</span>
@@ -467,23 +496,30 @@ const StudentLayout = ({ children }) => {
       <div
         className="flex-1 flex flex-col relative"
         style={{
+          // On mobile, margin is 0 (sidebar is fixed/overlay). On desktop, margin adjusts based on sidebar collapse.
           marginLeft: !isMobile ? (isSidebarCollapsed ? 80 : 288) : 0,
           transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
         }}
       >
         <header className="flex items-center gap-3 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30 h-20">
-          {isMobile && ( 
+          {isMobile && ( // Show menu button only on mobile/tablet
             <button onClick={toggleSidebar} className="text-gray-600 p-2 rounded-md hover:bg-gray-100 focus:outline-none" aria-label="Open sidebar">
               <Menu className="h-6 w-6" />
             </button>
           )}
           <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
-          {(!isMobile && isSidebarCollapsed) || (isMobile && !isSidebarOpen) ? (
+          {/* Avatar in header:
+              - On desktop, if sidebar is collapsed.
+              - On mobile, if sidebar is closed.
+              - Otherwise (desktop expanded, or mobile open), avatar is in sidebar, so hide here.
+          */}
+          {((!isMobile && isSidebarCollapsed) || (isMobile && !isSidebarOpen)) ? (
              <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold">
                {avatarInitials}
              </div>
           ) : null}
 
+          {/* Notification Bell (always visible in header, hidden on very small screens if desired) */}
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden sm:block">
             <Bell className="w-6 h-6 text-gray-600" />
           </button>
