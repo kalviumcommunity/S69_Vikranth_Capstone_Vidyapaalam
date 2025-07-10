@@ -241,7 +241,6 @@
 
 
 
-// src/layouts/StudentLayout.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -254,7 +253,7 @@ function useScreenSize() {
   const [isMobile, setIsMobile] = useState(false); // Initialize to false
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkMobile(); // Set initial state
+    checkMobile(); // Set initial state on mount
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
@@ -266,23 +265,25 @@ const StudentLayout = ({ children }) => {
   const isMobile = useScreenSize();
   const { user, logout: authLogout, loading: authLoading } = useAuth();
 
-  // Initialize states with explicit booleans
+  // State for controlling sidebar's open/closed state (primarily for mobile)
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 1024);
+  // State for controlling sidebar's collapsed/expanded width (primarily for desktop)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // Effect to manage sidebar state on resize
+  // Effect to manage sidebar state on window resize (e.g., rotating tablet, dragging browser window)
   useEffect(() => {
     if (window.innerWidth >= 1024) { // Desktop (lg breakpoint and up)
-      setIsSidebarOpen(true); // Always open on desktop
-      // If user was on mobile and resized to desktop, ensure not collapsed by default
+      setIsSidebarOpen(true); // Always ensure sidebar is 'open' on desktop
+      // If coming from a mobile state, ensure desktop sidebar is not collapsed by default
+      // This allows user to collapse it later
       if (isSidebarCollapsed && window.innerWidth < 1024) {
         setIsSidebarCollapsed(false);
       }
     } else { // Mobile / Tablet (below lg breakpoint)
-      setIsSidebarOpen(false); // Always start closed on mobile/tablet on resize
+      setIsSidebarOpen(false); // Always start 'closed' on mobile/tablet on resize
       setIsSidebarCollapsed(false); // Collapse state is irrelevant on mobile, reset it
     }
-  }, [isMobile]);
+  }, [isMobile]); // Re-run when breakpoint changes
 
   const [displayedUserName, setDisplayedUserName] = useState("Guest");
   const [avatarInitials, setAvatarInitials] = useState("G");
@@ -308,9 +309,9 @@ const StudentLayout = ({ children }) => {
   };
 
   const toggleCollapse = () => {
-    if (!isMobile) { // Only collapse on desktop
+    if (!isMobile) { // Only collapse/expand on desktop
       setIsSidebarCollapsed(!isSidebarCollapsed);
-    } else { // On mobile, this button closes the sidebar
+    } else { // On mobile, this button explicitly closes the sidebar
       setIsSidebarOpen(false);
     }
   };
@@ -354,7 +355,7 @@ const StudentLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex font-sans antialiased">
-      {/* Mobile Overlay */}
+      {/* Mobile Overlay - Only visible on mobile/tablet when sidebar is open */}
       <AnimatePresence>
         {isMobile && isSidebarOpen && (
           <motion.div
@@ -371,29 +372,33 @@ const StudentLayout = ({ children }) => {
 
       {/* Sidebar */}
       <motion.aside
-        initial={false}
+        initial={false} // Disable initial animation on mount
+        // Animate 'x' for mobile slide-in/out, and 'width' for desktop collapse/expand
         animate={{
-          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0, // Mobile: slides from -288px (full width) or 0 (open)
-          width: !isMobile && isSidebarCollapsed ? 80 : 288, // Desktop: 80px or 288px based on collapse
+          x: isMobile ? (isSidebarOpen ? 0 : -288) : 0, // Mobile: slides from -288px (hidden) to 0 (visible)
+          width: !isMobile ? (isSidebarCollapsed ? 80 : 288) : (isSidebarOpen ? 288 : 0), // Desktop: 80px or 288px. Mobile: 288px when open, 0 when closed.
         }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
         className={`
           flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
-          h-screen
+          h-screen // Full height
           ${isMobile ? 'fixed z-50 top-0 left-0' : 'relative z-10'} // Mobile: fixed overlay. Desktop: relative in flow.
+          // Mobile visibility (opacity + pointer-events) is only needed when sidebar is truly hidden by width/x,
+          // but for consistency and fallback, keep it.
           ${isMobile && !isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
         `}
       >
         {/* Brand & Toggle Button */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20">
-          <Link to="/student/overview" className="flex items-center gap-2 min-w-0" aria-label="Home">
+          <Link to="/student/overview" className="flex items-center gap-2 min-w-0 flex-grow" aria-label="Home"> {/* flex-grow added here */}
             <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap">
               {!isMobile && isSidebarCollapsed ? "VP" : "VidyaPaalam"}
             </span>
           </Link>
+          {/* Burger button position fix: It should always be to the right */}
           <button
             onClick={toggleCollapse}
-            className="text-gray-500 hover:text-gray-700 p-2 focus:outline-none rounded-md"
+            className="text-gray-500 hover:text-gray-700 p-2 focus:outline-none rounded-md flex-shrink-0" /* flex-shrink-0 added */
             aria-label={isSidebarCollapsed && !isMobile ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isMobile && isSidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -434,13 +439,13 @@ const StudentLayout = ({ children }) => {
                   style={{ minHeight: 44 }}
                 >
                   <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
-                  {/* Corrected: Only show text if NOT desktop AND collapsed */}
-                  {!(isSidebarCollapsed && !isMobile) && (
+                  {/* Key Fix 2: Correctly hide text when desktop sidebar is collapsed */}
+                  {(!isSidebarCollapsed || isMobile) && ( /* Show text if NOT collapsed (desktop) OR if Mobile */
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">
                       {label}
                     </motion.span>
                   )}
-                  {isSidebarCollapsed && !isMobile && <span className="sr-only">{label}</span>}
+                  {isSidebarCollapsed && !isMobile && <span className="sr-only">{label}</span>} {/* SR-only for collapsed desktop */}
                 </Link>
                 {/* Tooltip only on collapsed desktop sidebar */}
                 {isSidebarCollapsed && !isMobile && (
@@ -464,8 +469,8 @@ const StudentLayout = ({ children }) => {
               `}
             >
               <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
-              {/* Corrected: Only show text if NOT desktop AND collapsed */}
-              {!(isSidebarCollapsed && !isMobile) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
+              {/* Key Fix 2: Correctly hide text when desktop sidebar is collapsed */}
+              {(!isSidebarCollapsed || isMobile) && <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">Logout</motion.span>}
               {isSidebarCollapsed && !isMobile && <span className="sr-only">Logout</span>}
             </button>
             {isSidebarCollapsed && !isMobile && (
@@ -480,7 +485,7 @@ const StudentLayout = ({ children }) => {
       {/* Main Content Area */}
       <div
         className="flex-1 flex flex-col relative"
-        // Key Fix 1: Ensure marginLeft is 0 when sidebar is fully hidden on mobile
+        // Key Fix 1: Ensure marginLeft is 0 when sidebar is fully hidden on mobile (width 0)
         style={{
           marginLeft: !isMobile ? (isSidebarCollapsed ? 80 : 288) : 0,
           transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
@@ -492,6 +497,7 @@ const StudentLayout = ({ children }) => {
               <Menu className="h-6 w-6" />
             </button>
           )}
+          {/* Ensure the title and avatar take available space and push the bell icon */}
           <h1 className="text-2xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
           {/* Avatar in header:
               - On desktop, if sidebar is collapsed.
@@ -499,19 +505,19 @@ const StudentLayout = ({ children }) => {
               - Otherwise (desktop expanded, or mobile open), avatar is in sidebar, so hide here.
           */}
           {((!isMobile && isSidebarCollapsed) || (isMobile && !isSidebarOpen)) ? (
-             <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold">
+             <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold flex-shrink-0">
                {avatarInitials}
              </div>
           ) : null}
 
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden sm:block">
+          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors hidden sm:block flex-shrink-0">
             <Bell className="w-6 h-6 text-gray-600" />
           </button>
         </header>
 
         <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50 min-h-[calc(100vh-5rem)]">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="max-w-full mx-auto">
-            {children}
+            {children} {/* This is where your route content will be rendered */}
           </motion.div>
         </main>
       </div>
