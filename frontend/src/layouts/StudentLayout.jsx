@@ -258,7 +258,7 @@ import { useAuth } from "../contexts/AuthContext";
 export default function StudentLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  // Initialize sidebarOpen: always true for desktop, false for mobile
+  // Initialize sidebarOpen: true for md+ screens (including iPads), false for smaller screens
   const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const { user, logout: authLogout } = useAuth();
 
@@ -285,9 +285,9 @@ export default function StudentLayout() {
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth >= 768) {
-        setSidebarOpen(true); // Always open sidebar on desktop
+        setSidebarOpen(true); // Always open sidebar on desktop/tablet (md breakpoint and above)
       } else {
-        setSidebarOpen(false); // Always close sidebar by default on mobile
+        setSidebarOpen(false); // Always close sidebar by default on mobile (below md breakpoint)
       }
     };
 
@@ -335,7 +335,7 @@ export default function StudentLayout() {
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
         {/* Mobile Overlay (Only visible when sidebar is open on small screens) */}
         <AnimatePresence>
-          {sidebarOpen && window.innerWidth < 768 && (
+          {sidebarOpen && window.innerWidth < 768 && ( // Only show overlay on screens less than md
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -351,48 +351,51 @@ export default function StudentLayout() {
         {/* Sidebar */}
         <motion.aside
           initial={false}
-          // On desktop, width is always 288. On mobile, it slides in/out.
+          // On screens >= 768px (desktop/tablet), width is always 288px, x is 0.
+          // On screens < 768px (mobile), width is 288px when open, 0px (hidden) when closed.
           animate={{
-            width: sidebarOpen ? 288 : (window.innerWidth >= 768 ? 288 : 0),
-            x: sidebarOpen ? 0 : (window.innerWidth < 768 ? -288 : 0),
+            width: window.innerWidth >= 768 ? 288 : (sidebarOpen ? 288 : 0),
+            x: window.innerWidth >= 768 ? 0 : (sidebarOpen ? 0 : -288), // Slides off-screen on mobile when closed
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
           className={`
             flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
             fixed h-screen z-50
-            md:relative md:translate-x-0 // Ensure it's relative on desktop, no translation
-            ${!sidebarOpen && window.innerWidth < 768 ? 'hidden' : 'flex'} // Hide completely on mobile when closed
+            md:relative md:translate-x-0 // Ensure it's relative and visible on desktop/tablet
+            ${!sidebarOpen && window.innerWidth < 768 ? 'hidden' : 'flex'} // Hide completely on mobile when closed by translation
           `}
         >
           {/* Header (Logo) */}
           <div className="flex items-center justify-between px-6 py-6 border-b border-gray-100 h-20 flex-shrink-0">
             <Link to="/" className="flex items-center gap-2 overflow-hidden min-w-0" aria-label="VidyaPaalam Home">
               <span className="text-3xl font-extrabold text-orange-600 whitespace-nowrap flex-shrink-0">
-                VidyaPaalam
+                {/* Always show "VidyaPaalam" when sidebar is open or on desktop/tablet */}
+                {(sidebarOpen || window.innerWidth >= 768) ? "VidyaPaalam" : "VP"} 
               </span>
             </Link>
-            {/* Removed toggle button from here as it's now only in main header for mobile */}
           </div>
 
           {/* User Info (Avatar and Name) */}
           <div className="flex flex-col items-center px-6 py-6 border-b border-gray-100 pb-8 flex-shrink-0">
-            {/* User Avatar */}
+            {/* User Avatar - Dynamically sized */}
             <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md flex-shrink-0
-              h-20 w-20 text-3xl`}> {/* Always large on sidebar */}
+              ${(sidebarOpen || window.innerWidth >= 768) ? "h-20 w-20 text-3xl" : "h-10 w-10 text-lg"}`}>
               {avatarInitials}
               <span className="absolute bottom-0 right-0 h-4 w-4 bg-green-500 rounded-full border-2 border-white"></span>
             </div>
             
-            {/* User Name and Role - Always visible in open sidebar */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
-              className="mt-4 text-center overflow-hidden"
-            >
-              <div className="text-xl font-bold text-gray-900 truncate">{displayedUserName}</div>
-              <div className="text-sm text-gray-500">Student</div>
-            </motion.div>
+            {/* User Name and Role - Conditionally rendered: show if sidebar is open OR on desktop/tablet */}
+            {(sidebarOpen || window.innerWidth >= 768) && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.2 }}
+                className="mt-4 text-center overflow-hidden"
+              >
+                <div className="text-xl font-bold text-gray-900 truncate">{displayedUserName}</div>
+                <div className="text-sm text-gray-500">Student</div>
+              </motion.div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -400,40 +403,79 @@ export default function StudentLayout() {
             {navItems.map(({ name, to, icon: Icon }) => {
               const active = location.pathname === to;
               return (
-                <Link
-                  key={name}
-                  to={to}
-                  className={`
-                    flex items-center p-3 rounded-xl transition-all duration-200 ease-in-out
-                    ${active ? "bg-orange-50 text-orange-700 font-semibold shadow-sm" : "text-gray-700 hover:bg-gray-100"}
-                    hover:text-orange-600 group relative gap-4 // Always gap-4 as sidebar is always open
-                  `}
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => window.innerWidth < 768 && setSidebarOpen(false)} // Close sidebar on mobile after clicking a link
-                >
-                  <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
-                  <span className="text-lg whitespace-nowrap">
-                    {name}
-                  </span>
-                </Link>
+                <Tooltip key={name} placement="right">
+                  <TooltipTrigger asChild>
+                    <Link
+                      to={to}
+                      className={`
+                        flex items-center p-3 rounded-xl transition-all duration-200 ease-in-out
+                        ${active ? "bg-orange-50 text-orange-700 font-semibold shadow-sm" : "text-gray-700 hover:bg-gray-100"}
+                        hover:text-orange-600 group relative
+                        ${(sidebarOpen || window.innerWidth >= 768) ? 'gap-4' : 'justify-center'} // Add gap when name is present, center icon when not
+                      `}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => window.innerWidth < 768 && setSidebarOpen(false)} // Close sidebar on mobile after clicking a link
+                    >
+                      <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
+                      {(sidebarOpen || window.innerWidth >= 768) && ( // Show text only if sidebar is open OR on desktop/tablet
+                        <motion.span
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.1, duration: 0.2 }}
+                          className="text-lg whitespace-nowrap"
+                        >
+                          {name}
+                        </motion.span>
+                      )}
+                      {!(sidebarOpen || window.innerWidth >= 768) && ( // SR only for accessibility when text is hidden
+                        <span className="sr-only">{name}</span>
+                      )}
+                    </Link>
+                  </TooltipTrigger>
+                  {!(sidebarOpen || window.innerWidth >= 768) && ( // Show tooltip only when text is hidden (i.e., mobile-closed state)
+                    <TooltipContent side="right" className="bg-gray-800 text-white text-sm px-3 py-1.5 rounded-md shadow-lg">
+                      <span>{name}</span>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
               );
             })}
           </nav>
 
           {/* Logout Section */}
           <div className="px-6 py-4 border-t border-gray-100 flex-shrink-0">
-            <button
-              onClick={handleLogout}
-              className={`
-                flex items-center w-full p-3 rounded-xl text-gray-700
-                hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200 gap-4 // Always gap-4 as sidebar is always open
-              `}
-            >
-              <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
-              <span className="text-lg whitespace-nowrap">
-                Logout
-              </span>
-            </button>
+            <Tooltip placement="right">
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleLogout}
+                  className={`
+                    flex items-center w-full p-3 rounded-xl text-gray-700
+                    hover:text-orange-600 hover:bg-orange-50 font-medium transition-colors duration-200
+                    ${(sidebarOpen || window.innerWidth >= 768) ? 'gap-4' : 'justify-center'} // Add gap when text is present, center icon when not
+                  `}
+                >
+                  <LogOut className="h-6 w-6 text-gray-500 group-hover:text-orange-500" />
+                  {(sidebarOpen || window.innerWidth >= 768) && ( // Show text only if sidebar is open OR on desktop/tablet
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.1, duration: 0.2 }}
+                      className="text-lg whitespace-nowrap"
+                    >
+                      Logout
+                    </motion.span>
+                  )}
+                  {!(sidebarOpen || window.innerWidth >= 768) && ( // SR only for accessibility when text is hidden
+                    <span className="sr-only">Logout</span>
+                  )}
+                </button>
+              </TooltipTrigger>
+              {!(sidebarOpen || window.innerWidth >= 768) && ( // Show tooltip only when text is hidden
+                <TooltipContent side="right" className="bg-gray-800 text-white text-sm px-3 py-1.5 rounded-md shadow-lg">
+                  <span>Logout</span>
+                </TooltipContent>
+              )}
+            </Tooltip>
           </div>
         </motion.aside>
 
@@ -441,7 +483,7 @@ export default function StudentLayout() {
         <div className="flex-1 flex flex-col relative md:static">
           {/* Header for main content */}
           <header className="flex items-center gap-4 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30 h-20">
-            {/* Mobile menu button: Only appears on mobile (md breakpoint and below) */}
+            {/* Mobile menu button: Only appears on screens LESS than md (768px) */}
             {window.innerWidth < 768 && (
               <button
                 onClick={() => setSidebarOpen(true)}
