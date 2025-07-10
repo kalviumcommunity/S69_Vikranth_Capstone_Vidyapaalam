@@ -270,6 +270,10 @@ const StudentLayout = ({ children }) => {
   // Sync sidebar open state with screen size changes (for initial load and resize)
   useEffect(() => {
     setIsSidebarOpen(window.innerWidth >= 1024);
+    // On mobile, if window resizes to desktop, ensure sidebar is not collapsed
+    if (!isMobile && isSidebarCollapsed) {
+      setIsSidebarCollapsed(false);
+    }
   }, [isMobile]);
 
   // User profile display states
@@ -303,11 +307,10 @@ const StudentLayout = ({ children }) => {
       setIsSidebarCollapsed(!isSidebarCollapsed);
     } else {
       // On mobile, this button should close the sidebar if it's open
-      setIsSidebarOpen(false);
+      setIsSidebarOpen(false); // Close mobile sidebar
     }
   };
 
-  // Corrected: Changed 'name' to 'label' for consistency with navItems array structure
   const navItems = [
     { icon: Home, label: 'Overview', to: '/student/overview' },
     { icon: Search, label: 'Find Teachers', to: '/student/find-teacher' },
@@ -325,7 +328,7 @@ const StudentLayout = ({ children }) => {
     }
   };
 
-  const getPageTitle = () => {
+  const getPageTitle = useCallback(() => {
     const path = location.pathname;
     if (path === "/student" || path === "/student/overview") return "Overview";
     if (path.startsWith("/student/find-teacher")) return "Find Teacher";
@@ -335,7 +338,7 @@ const StudentLayout = ({ children }) => {
     if (path.match(/^\/student\/teacher-profile\/.+/) || path.match(/^\/student\/teacher\/.+/)) return "Teacher Profile";
     if (path.match(/^\/student\/book-session\/.+/)) return "Book Session";
     return "Dashboard"; // Default title
-  };
+  }, [location.pathname]); // Memoize based on location.pathname
 
   // Show loading state if authUser is still loading
   if (authLoading) {
@@ -367,19 +370,18 @@ const StudentLayout = ({ children }) => {
       <motion.aside
         initial={false} // Disable initial animation on mount
         animate={{
-          x: isMobile ? (isSidebarOpen ? 0 : -300) : 0, // 300px is a reasonable sidebar width for mobile slide-out
-          width: isSidebarCollapsed && !isMobile ? 80 : 288, // 80px collapsed, 288px (72 units) expanded
+          x: isMobile && !isSidebarOpen ? -300 : 0, // Animate X for mobile slide-in/out
+          width: isSidebarCollapsed && !isMobile ? 80 : 288, // Desktop width control
           minWidth: isSidebarCollapsed && !isMobile ? 80 : 288,
           maxWidth: isSidebarCollapsed && !isMobile ? 80 : 288,
         }}
         transition={{ duration: 0.25, ease: "easeInOut" }}
-        className="
+        className={`
           flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
           h-screen fixed z-50 top-0 left-0 lg:relative lg:z-10 lg:static
           transition-all
-        "
-        // Hide completely on mobile if closed to prevent interaction issues
-        style={isMobile && !isSidebarOpen ? { display: "none" } : {}}
+          ${isMobile && !isSidebarOpen ? 'opacity-0 pointer-events-none' : 'opacity-100 pointer-events-auto'}
+        `}
       >
         {/* Brand & Toggle Button */}
         <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100 h-20">
@@ -415,7 +417,7 @@ const StudentLayout = ({ children }) => {
 
         {/* Navigation */}
         <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
-          {navItems.map(({ label, to, icon: Icon }) => { // Corrected: destructured 'label' instead of 'name'
+          {navItems.map(({ label, to, icon: Icon }) => {
             const active = location.pathname === to;
             return (
               <div key={label} className="group relative"> {/* Using 'label' for key and tooltip */}
@@ -432,14 +434,14 @@ const StudentLayout = ({ children }) => {
                   <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
                   {!isSidebarCollapsed && (
                     <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.09, duration: 0.2 }} className="text-base">
-                      {label} {/* Corrected: Displaying 'label' */}
+                      {label}
                     </motion.span>
                   )}
-                  {isSidebarCollapsed && <span className="sr-only">{label}</span>} {/* Corrected: Using 'label' */}
+                  {isSidebarCollapsed && <span className="sr-only">{label}</span>}
                 </Link>
                 {isSidebarCollapsed && (
                   <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
-                    <span>{label}</span> {/* Corrected: Displaying 'label' in tooltip */}
+                    <span>{label}</span>
                   </div>
                 )}
               </div>
