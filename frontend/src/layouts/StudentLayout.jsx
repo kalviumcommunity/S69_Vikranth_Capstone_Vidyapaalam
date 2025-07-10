@@ -255,7 +255,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "../contexts/AuthContext";
 
-// Utility hook for screen size
+// Responsive screen size hook
 function useScreenSize() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   useEffect(() => {
@@ -332,8 +332,8 @@ export default function StudentLayout() {
   };
 
   // Sidebar width
-  const sidebarWidth = isMobile ? 260 : 300;
-  const sidebarCollapsed = 64;
+  const sidebarWidth = 300;
+  const sidebarCollapsed = 72;
 
   return (
     <TooltipProvider>
@@ -371,8 +371,6 @@ export default function StudentLayout() {
             flex flex-col bg-white border-r border-gray-200 shadow-xl overflow-hidden
             h-screen fixed z-50 top-0 left-0
             transition-all
-            ${!sidebarOpen && isMobile ? "pointer-events-none select-none" : ""}
-            ${sidebarOpen ? "visible" : ""}
             md:relative md:z-10 md:static
           `}
           style={{
@@ -420,8 +418,8 @@ export default function StudentLayout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex flex-col gap-1 px-2 py-3 flex-1">
-            {navItems.map(({ name, to, icon: Icon }, i) => {
+          <nav className="flex flex-col gap-0.5 px-2 py-3 flex-1">
+            {navItems.map(({ name, to, icon: Icon }) => {
               const active = location.pathname === to;
               return (
                 <Tooltip key={name} placement="right">
@@ -429,11 +427,11 @@ export default function StudentLayout() {
                     <Link
                       to={to}
                       className={`
-                        flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200 ease-in-out
-                        ${active ? "bg-orange-50 text-orange-700 font-semibold shadow-sm" : "text-gray-700 hover:bg-gray-100"}
-                        hover:text-orange-600 group relative
-                        ${sidebarOpen ? "flex-row items-center gap-2" : ""}
+                        flex flex-col items-center justify-center p-0.5 rounded-xl transition-all duration-200 ease-in-out
                         w-full
+                        ${active ? "bg-orange-50 text-orange-700 font-semibold" : "text-gray-700 hover:bg-gray-100"}
+                        hover:text-orange-600 group relative
+                        ${sidebarOpen ? "flex-row items-center gap-3 px-3 py-2 my-1" : "py-3"}
                       `}
                       aria-current={active ? "page" : undefined}
                       onClick={() => isMobile && setSidebarOpen(false)}
@@ -503,12 +501,13 @@ export default function StudentLayout() {
           className="flex-1 flex flex-col relative md:static"
           style={{
             marginLeft:
-              !isMobile && sidebarOpen
-                ? sidebarWidth
-                : !isMobile && !sidebarOpen
-                ? sidebarCollapsed
+              !isMobile
+                ? sidebarOpen
+                  ? sidebarWidth
+                  : sidebarCollapsed
                 : 0,
-            transition: "margin-left 0.25s",
+            transition: "margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
+            background: "transparent", // ensure no gap color
           }}
         >
           {/* Top navbar/header */}
