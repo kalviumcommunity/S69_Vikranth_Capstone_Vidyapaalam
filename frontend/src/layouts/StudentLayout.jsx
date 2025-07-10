@@ -437,7 +437,7 @@ export default function StudentLayout() {
                       aria-current={active ? "page" : undefined}
                       onClick={() => isMobile && setSidebarOpen(false)}
                     >
-                      <Icon className={h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}} />
+                      <Icon className={`h-6 w-6 ${active ? "text-orange-600" : "text-gray-500 group-hover:text-orange-500"}`} />
                       {sidebarOpen && (
                         <motion.span
                           initial={{ opacity: 0 }}
