@@ -238,12 +238,15 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 import { api } from '../api/axios';
 
+// Create the context
 const TeacherProfileContext = createContext(null);
 
+// Export the context
 export { TeacherProfileContext };
 
 const TEACHER_PROFILE_API_PATH = "/api/teacher-profiles";
 
+// Provider Component
 export const TeacherProfileProvider = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [teacherProfile, setTeacherProfile] = useState(null);
@@ -286,7 +289,7 @@ export const TeacherProfileProvider = ({ children }) => {
           variant: "destructive",
         });
       }
-      throw err; 
+      throw err;
     } finally {
       if (isMountedRef.current) setIsLoading(false);
     }
@@ -309,12 +312,18 @@ export const TeacherProfileProvider = ({ children }) => {
 
     for (const key in profileDataUpdates) {
       if (Array.isArray(profileDataUpdates[key])) {
-        
         if (key === 'galleryPhotos') {
+          // FIX: Correctly append each property of the gallery photo objects
           profileDataUpdates[key].forEach((item, index) => {
-            formData.append(`${key}[${index}]`, JSON.stringify(item));
+            // Ensure item is an object before iterating its keys
+            if (typeof item === 'object' && item !== null) {
+              Object.keys(item).forEach(prop => {
+                formData.append(`${key}[${index}][${prop}]`, item[prop]);
+              });
+            }
           });
         } else {
+          // For other arrays (skills, qualifications), just append items
           profileDataUpdates[key].forEach((item) => formData.append(key, item));
         }
       } else if (profileDataUpdates[key] !== null && profileDataUpdates[key] !== undefined) {
@@ -322,20 +331,21 @@ export const TeacherProfileProvider = ({ children }) => {
       }
     }
 
+    // Append files from local state (avatarFile, videoFile, galleryFiles)
     if (avatarFile) {
       formData.append("avatar", avatarFile);
-    } else if (profileDataUpdates.avatar === '') { 
+    } else if (profileDataUpdates.avatar === '') { // Explicitly clear avatar
       formData.append("avatar", '');
     }
 
     if (videoFile) {
       formData.append("video", videoFile);
-    } else if (profileDataUpdates.videoUrl === '') { 
+    } else if (profileDataUpdates.videoUrl === '') { // Explicitly clear video
       formData.append("videoUrl", '');
     }
 
     galleryFiles.forEach((file) => {
-      formData.append("galleryPhotos", file); 
+      formData.append("galleryPhotos", file); // These are new File objects
     });
 
     try {
@@ -390,8 +400,13 @@ export const TeacherProfileProvider = ({ children }) => {
     for (const key in profileData) {
       if (Array.isArray(profileData[key])) {
         if (key === 'galleryPhotos') {
+          // FIX: Correctly append each property of the gallery photo objects for creation
           profileData[key].forEach((item, index) => {
-            formData.append(`${key}[${index}]`, JSON.stringify(item));
+            if (typeof item === 'object' && item !== null) {
+              Object.keys(item).forEach(prop => {
+                formData.append(`${key}[${index}][${prop}]`, item[prop]);
+              });
+            }
           });
         } else {
           profileData[key].forEach((item) => formData.append(key, item));
