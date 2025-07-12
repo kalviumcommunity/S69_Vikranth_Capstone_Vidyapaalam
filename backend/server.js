@@ -13,7 +13,6 @@ app.use(express.json());
 app.use(cors({
   origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', 
   credentials : true
-
 }));
 
 app.use(cookieParser());
