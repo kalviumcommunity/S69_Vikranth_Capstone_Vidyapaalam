@@ -440,7 +440,7 @@ exports.updateTeacherProfile = async (req, res) => {
     finalGalleryPhotos = (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
         .filter(p => p && p.url && p.publicId); // Ensure they have necessary fields
 
-    const newUploadedGalleryPhotos = await processFileUploads(req.files);
+    const newUploadedGalleryPhotos = await processFileUploads({ galleryPhotos: req.files?.galleryPhotos });
     if (newUploadedGalleryPhotos.galleryPhotos && newUploadedGalleryPhotos.galleryPhotos.length > 0) {
         finalGalleryPhotos = [...finalGalleryPhotos, ...newUploadedGalleryPhotos.galleryPhotos];
     }
