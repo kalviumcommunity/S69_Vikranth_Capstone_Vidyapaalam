@@ -37,7 +37,7 @@ const {
   getAuthenticatedTeacherProfile,
   updateTeacherProfile,
   deleteTeacherProfile,
-} = require('../controllers/teacherProfileController');
+} = require('../controller/teacherController');
 
 const upload = require('../middleware/uploadMiddleware');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware'); // Import your actual middleware
