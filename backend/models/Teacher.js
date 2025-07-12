@@ -78,22 +78,22 @@ const mongoose = require('mongoose');
 
 const teacherProfileSchema = new mongoose.Schema(
   {
-    userId: { // Link to the user who owns this profile
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User', // Assumes you have a 'User' model
+      ref: 'User',
       required: true,
-      unique: true // A user can only have one teacher profile
+      unique: true
     },
     avatar: {
-      url: { type: String, default: '' }, // Store URL
-      publicId: { type: String, default: '' } // Store Cloudinary public ID for deletion
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' }
     },
     name: {
       type: String,
       required: [true, 'Name is required for the profile'],
       trim: true
     },
-    title: { // Corresponds to 'Professional Title' on frontend
+    title: {
       type: String,
       trim: true,
       default: ''
@@ -101,7 +101,7 @@ const teacherProfileSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, 'Email is required for the profile'],
-      unique: true, // Ensure unique email for profiles
+      unique: true,
       trim: true,
       lowercase: true
     },
@@ -110,18 +110,18 @@ const teacherProfileSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
-    aboutMe: { // Corresponds to 'About Me' on frontend
+    aboutMe: {
       type: String,
       trim: true,
       default: ''
     },
 
-    skills: { // Storing skill names directly as strings, as requested
+    skills: {
       type: [String],
       default: []
     },
-    experience: { // Corresponds to 'Years of Experience'
-      type: String, // Keep as string as per frontend ("5+ years")
+    experience: {
+      type: String,
       trim: true,
       default: ''
     },
@@ -131,20 +131,20 @@ const teacherProfileSchema = new mongoose.Schema(
       min: [0, 'Hourly rate cannot be negative'],
       default: 0
     },
-    qualifications: { // Array of strings for multiple qualifications
+    qualifications: {
       type: [String],
       default: []
     },
 
-    videoUrl: { // Corresponds to 'Introduction Video' on frontend
-      url: { type: String, default: '' }, // Store URL
-      publicId: { type: String, default: '' } // Store Cloudinary public ID for deletion
+    videoUrl: {
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' }
     },
-    galleryPhotos: { // Corresponds to 'Teaching Gallery' on frontend
+    galleryPhotos: {
       type: [{
-        url: { type: String, trim: true }, // Store URL of the image
-        publicId: { type: String, trim: true }, // Store Cloudinary public ID for deletion
-        name: { type: String, trim: true } // Optional: store original file name
+        url: { type: String, trim: true },
+        publicId: { type: String, trim: true },
+        name: { type: String, trim: true }
       }],
       default: []
     },
@@ -155,12 +155,12 @@ const teacherProfileSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true // Adds createdAt and updatedAt fields automatically
+    timestamps: true
   }
 );
 
 teacherProfileSchema.pre('save', function(next) {
- 
+  
   if (this.name && this.email && this.hourlyRate > 0 && this.experience && this.skills.length > 0) {
     this.isProfileComplete = true;
   } else {
@@ -170,4 +170,3 @@ teacherProfileSchema.pre('save', function(next) {
 });
 
 module.exports = mongoose.model('TeacherProfile', teacherProfileSchema);
-
