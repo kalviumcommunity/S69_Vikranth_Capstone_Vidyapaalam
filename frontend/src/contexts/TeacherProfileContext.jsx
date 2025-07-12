@@ -238,15 +238,12 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 import { api } from '../api/axios';
 
-// Create the context
 const TeacherProfileContext = createContext(null);
 
-// Export the context
 export { TeacherProfileContext };
 
 const TEACHER_PROFILE_API_PATH = "/api/teacher-profiles";
 
-// Provider Component
 export const TeacherProfileProvider = ({ children }) => {
   const { user, loading: authLoading } = useAuth();
   const [teacherProfile, setTeacherProfile] = useState(null);
@@ -289,7 +286,6 @@ export const TeacherProfileProvider = ({ children }) => {
           variant: "destructive",
         });
       }
-      // Re-throw the error to allow calling components to handle it if necessary
       throw err; 
     } finally {
       if (isMountedRef.current) setIsLoading(false);
@@ -313,12 +309,9 @@ export const TeacherProfileProvider = ({ children }) => {
 
     for (const key in profileDataUpdates) {
       if (Array.isArray(profileDataUpdates[key])) {
-        // For galleryPhotos, we need to ensure the backend receives the objects with url/publicId
-        // The frontend sends `localProfileData.galleryPhotos` which already has this structure.
-        // For other arrays (skills, qualifications), just append items.
+        
         if (key === 'galleryPhotos') {
           profileDataUpdates[key].forEach((item, index) => {
-            // Append each object as a JSON string for the backend to parse
             formData.append(`${key}[${index}]`, JSON.stringify(item));
           });
         } else {
@@ -329,21 +322,20 @@ export const TeacherProfileProvider = ({ children }) => {
       }
     }
 
-    // Append files from local state (avatarFile, videoFile, galleryFiles)
     if (avatarFile) {
       formData.append("avatar", avatarFile);
-    } else if (profileDataUpdates.avatar === '') { // Explicitly clear avatar
+    } else if (profileDataUpdates.avatar === '') { 
       formData.append("avatar", '');
     }
 
     if (videoFile) {
       formData.append("video", videoFile);
-    } else if (profileDataUpdates.videoUrl === '') { // Explicitly clear video
+    } else if (profileDataUpdates.videoUrl === '') { 
       formData.append("videoUrl", '');
     }
 
     galleryFiles.forEach((file) => {
-      formData.append("galleryPhotos", file); // These are new File objects
+      formData.append("galleryPhotos", file); 
     });
 
     try {
@@ -374,7 +366,6 @@ export const TeacherProfileProvider = ({ children }) => {
           variant: "destructive",
         });
       }
-      // Re-throw the error
       throw err;
     } finally {
       if (isMountedRef.current) {
@@ -448,7 +439,6 @@ export const TeacherProfileProvider = ({ children }) => {
           variant: "destructive",
         });
       }
-      // Re-throw the error
       throw err;
     } finally {
       if (isMountedRef.current) {
@@ -488,5 +478,3 @@ export const useTeacherProfile = () => {
   }
   return context;
 };
-
-
