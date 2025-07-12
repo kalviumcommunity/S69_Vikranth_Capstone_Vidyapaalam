@@ -196,13 +196,11 @@ const TeacherProfile = require('../models/Teacher');
 const User = require('../models/User');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
-
 const processFileUploads = async (files) => {
   const uploadedMedia = {};
 
   if (!files) return uploadedMedia;
 
-  
   if (files.avatar && files.avatar[0]) {
     try {
       const result = await uploadToCloudinary(files.avatar[0], 'avatars');
@@ -212,7 +210,6 @@ const processFileUploads = async (files) => {
     }
   }
 
-  
   if (files.video && files.video[0]) {
     try {
       const result = await uploadToCloudinary(files.video[0], 'videos');
@@ -228,7 +225,7 @@ const processFileUploads = async (files) => {
         .then(result => ({ url: result.secure_url, publicId: result.public_id, name: file.originalname }))
         .catch(uploadError => {
           console.error(`Failed to upload gallery photo ${file.originalname}:`, uploadError);
-          return null; // Return null for failed uploads
+          return null;
         })
     );
 
@@ -241,12 +238,10 @@ const processFileUploads = async (files) => {
   return uploadedMedia;
 };
 
-
 async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, resourceType, clearExplicitly) {
-  let updatedMediaInfo = { ...profile[mediaField] }; // Start with current DB value
+  let updatedMediaInfo = { ...profile[mediaField] };
 
   if (newFile) {
-    
     try {
       const uploadResult = await uploadToCloudinary(newFile, resourceType === 'image' ? 'avatars' : 'videos');
       
@@ -255,13 +250,12 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
           await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
         } catch (deleteError) {
           console.warn(`Failed to delete old ${mediaField} from Cloudinary:`, deleteError);
-          
         }
       }
       updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
     } catch (uploadError) {
       console.error(`Failed to upload new ${mediaField}:`, uploadError);
-      throw uploadError; // Re-throw to indicate overall update failure if critical
+      throw uploadError;
     }
   } else if (clearExplicitly) {
     if (profile[mediaField] && profile[mediaField].publicId) {
@@ -277,8 +271,8 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
 }
 
 
-
-exports.createTeacherProfile = async (req, res) => {
+// Changed from exports.createTeacherProfile to const createTeacherProfile
+const createTeacherProfile = async (req, res) => {
   const {
     name, title, email, phone, aboutMe,
     skills, experience, hourlyRate, qualifications
@@ -334,8 +328,8 @@ exports.createTeacherProfile = async (req, res) => {
   }
 };
 
-
-exports.getTeacherProfiles = async (req, res) => {
+// Changed from exports.getTeacherProfiles to const getTeacherProfiles
+const getTeacherProfiles = async (req, res) => {
   try {
     const profiles = await TeacherProfile.find()
       .populate('userId', 'name email');
@@ -347,8 +341,8 @@ exports.getTeacherProfiles = async (req, res) => {
   }
 };
 
-
-exports.getTeacherProfileByUserId = async (req, res) => {
+// Changed from exports.getTeacherProfileByUserId to const getTeacherProfileByUserId
+const getTeacherProfileByUserId = async (req, res) => {
   try {
     const userIdInParam = req.params.userId;
 
@@ -365,7 +359,8 @@ exports.getTeacherProfileByUserId = async (req, res) => {
   }
 };
 
-exports.getAuthenticatedTeacherProfile = async (req, res) => {
+// Changed from exports.getAuthenticatedTeacherProfile to const getAuthenticatedTeacherProfile
+const getAuthenticatedTeacherProfile = async (req, res) => {
   try {
     const teacherProfile = await TeacherProfile.findOne({ userId: req.user.id })
       .populate('userId', 'name email role');
@@ -381,12 +376,12 @@ exports.getAuthenticatedTeacherProfile = async (req, res) => {
 };
 
 
-
-exports.updateTeacherProfile = async (req, res) => {
+// Changed from exports.updateTeacherProfile to const updateTeacherProfile
+const updateTeacherProfile = async (req, res) => {
   const {
     name, title, email, phone, aboutMe,
     skills, experience, hourlyRate, qualifications,
-    galleryPhotos: incomingGalleryPhotos // Renamed to avoid conflict with req.files.galleryPhotos
+    galleryPhotos: incomingGalleryPhotos
   } = req.body;
   const authenticatedUserId = req.user.id;
   const authenticatedUserRole = req.user.role;
@@ -418,10 +413,8 @@ exports.updateTeacherProfile = async (req, res) => {
       req.body.videoUrl === ''
     );
 
+    let finalGalleryPhotos = teacherProfile.galleryPhotos || [];
 
-    let finalGalleryPhotos = teacherProfile.galleryPhotos || []; // Start with existing photos from DB
-
-    
     const incomingPublicIds = new Set(
         (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
         .filter(p => p && p.publicId)
@@ -434,11 +427,10 @@ exports.updateTeacherProfile = async (req, res) => {
             photosToDeletePromises.push(deleteFromCloudinary(existingPhoto.publicId, 'image'));
         }
     }
-    await Promise.allSettled(photosToDeletePromises); // Use allSettled to log individual failures but not stop the whole process
-
+    await Promise.allSettled(photosToDeletePromises);
 
     finalGalleryPhotos = (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
-        .filter(p => p && p.url && p.publicId); // Ensure they have necessary fields
+        .filter(p => p && p.url && p.publicId);
 
     const newUploadedGalleryPhotos = await processFileUploads({ galleryPhotos: req.files?.galleryPhotos });
     if (newUploadedGalleryPhotos.galleryPhotos && newUploadedGalleryPhotos.galleryPhotos.length > 0) {
@@ -446,7 +438,6 @@ exports.updateTeacherProfile = async (req, res) => {
     }
     
     teacherProfile.galleryPhotos = finalGalleryPhotos;
-
 
     teacherProfile.name = name !== undefined ? name : teacherProfile.name;
     teacherProfile.title = title !== undefined ? title : teacherProfile.title;
@@ -474,8 +465,8 @@ exports.updateTeacherProfile = async (req, res) => {
   }
 };
 
-
-exports.deleteTeacherProfile = async (req, res) => {
+// Changed from exports.deleteTeacherProfile to const deleteTeacherProfile
+const deleteTeacherProfile = async (req, res) => {
   const authenticatedUserId = req.user.id;
   const authenticatedUserRole = req.user.role;
 
@@ -506,9 +497,6 @@ exports.deleteTeacherProfile = async (req, res) => {
     }
 
     await Promise.allSettled(deletionPromises);
-    deletionPromises.forEach((promise, index) => {
-        promise.catch(error => console.warn(`Failed to delete media item ${index} from Cloudinary:`, error));
-    });
 
 
     await TeacherProfile.deleteOne({ _id: req.params.id });
