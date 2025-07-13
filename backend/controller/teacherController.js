@@ -707,11 +707,11 @@ exports.deleteTeacherProfile = async (req, res) => {
   }
 };
 
-module.exports = {
-  createTeacherProfile,
-  getTeacherProfiles,
-  getTeacherProfileByUserId,
-  getAuthenticatedTeacherProfile,
-  updateTeacherProfile,
-  deleteTeacherProfile,
-};
+// module.exports = {
+//   createTeacherProfile,
+//   getTeacherProfiles,
+//   getTeacherProfileByUserId,
+//   getAuthenticatedTeacherProfile,
+//   updateTeacherProfile,
+//   deleteTeacherProfile,
+// };
