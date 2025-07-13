@@ -1472,13 +1472,14 @@ const TeacherProfileEdit = () => {
         galleryPhotos: teacherProfile.galleryPhotos || []
       });
     } else if (user && !authLoading && !isLoading) {
+      // This block runs when no teacherProfile exists, and user data is available
       setLocalProfileData(prev => ({
         ...prev,
         name: user.name || prev.name,
         email: user.email || prev.email,
         phone: user.phoneNumber || prev.phone,
         aboutMe: user.bio || prev.aboutMe,
-        skills: user.skills || prev.skills // Pre-fill skills from AuthContext user
+        skills: user.skills || prev.skills // <-- This line populates skills from user object
       }));
     }
   }, [teacherProfile, user, authLoading, isLoading]);
