@@ -328,35 +328,24 @@
 
 
 
-// controllers/teacherProfileController.js
-
-const TeacherProfile = require('../models/Teacher');
+const TeacherProfile = require('../models/TeacherProfile');
 const User = require('../models/User');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
-/**
- * Helper function to process new file uploads and return Cloudinary URLs/public_ids.
- * Uses Promise.allSettled for parallel uploads and robust error handling for each file.
- * @param {Object} files - The req.files object from multer.
- * @returns {Object} An object containing uploaded media details.
- */
 const processFileUploads = async (files) => {
   const uploadedMedia = {};
 
   if (!files) return uploadedMedia;
 
-  // Handle avatar upload
   if (files.avatar && files.avatar[0]) {
     try {
       const result = await uploadToCloudinary(files.avatar[0], 'avatars');
       uploadedMedia.avatar = { url: result.secure_url, publicId: result.public_id };
     } catch (uploadError) {
       console.error('Failed to upload avatar to Cloudinary:', uploadError);
-      // Decide how to handle: skip this file, or throw. For now, we'll just log and not include it.
     }
   }
 
-  // Handle video upload
   if (files.video && files.video[0]) {
     try {
       const result = await uploadToCloudinary(files.video[0], 'videos');
@@ -366,14 +355,13 @@ const processFileUploads = async (files) => {
     }
   }
 
-  // Handle gallery photos upload in parallel using Promise.allSettled
   if (files.galleryPhotos && files.galleryPhotos.length > 0) {
     const uploadPromises = files.galleryPhotos.map(file =>
       uploadToCloudinary(file, 'gallery')
         .then(result => ({ url: result.secure_url, publicId: result.public_id, name: file.originalname }))
         .catch(uploadError => {
           console.error(`Failed to upload gallery photo ${file.originalname}:`, uploadError);
-          return null; // Return null for failed uploads
+          return null;
         })
     );
 
@@ -386,41 +374,26 @@ const processFileUploads = async (files) => {
   return uploadedMedia;
 };
 
-/**
- * Helper function to handle updating a single media field (avatar or video).
- * Ensures new file is uploaded before old one is deleted to prevent data loss (race condition).
- * @param {Object} profile - The Mongoose teacherProfile document.
- * @param {string} mediaField - The field name (e.g., 'avatar', 'videoUrl').
- * @param {Object} newFile - The new file object from multer (e.g., req.files.avatar[0]).
- * @param {string} resourceType - 'image' or 'video'.
- * @param {boolean} clearExplicitly - True if frontend sent a signal to clear this field.
- */
 async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, resourceType, clearExplicitly) {
-  let updatedMediaInfo = { ...profile[mediaField] }; // Start with current DB value
+  let updatedMediaInfo = { ...profile[mediaField] };
 
   if (newFile) {
-    // Phase 1: Upload new file
     try {
       const uploadResult = await uploadToCloudinary(newFile, resourceType === 'image' ? 'avatars' : 'videos');
       
-      // Phase 2: If upload successful, delete old file and update DB record
       if (profile[mediaField] && profile[mediaField].publicId) {
         try {
           await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
         } catch (deleteError) {
           console.warn(`Failed to delete old ${mediaField} from Cloudinary:`, deleteError);
-          // Log but don't prevent update if deletion fails (old file might be orphaned)
         }
       }
       updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
     } catch (uploadError) {
       console.error(`Failed to upload new ${mediaField}:`, uploadError);
-      // If new upload fails, keep the old media info and log the error.
-      // Do NOT delete the old file.
-      throw uploadError; // Re-throw to indicate overall update failure if critical
+      throw uploadError;
     }
   } else if (clearExplicitly) {
-    // Frontend explicitly requested to clear this media field
     if (profile[mediaField] && profile[mediaField].publicId) {
       try {
         await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
@@ -430,20 +403,41 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
     }
     updatedMediaInfo = { url: '', publicId: '' };
   }
-  // If no new file and not explicitly cleared, updatedMediaInfo remains the old value from DB
   profile[mediaField] = updatedMediaInfo;
 }
 
+const parseIncomingGalleryPhotos = (body) => {
+  const galleryPhotos = [];
+  for (const key in body) {
+    if (key.startsWith('galleryPhotos[') && key.endsWith(']')) {
+      const match = key.match(/galleryPhotos\[(\d+)\]/);
+      if (match) {
+        try {
+          const photoObject = JSON.parse(body[key]);
+          if (typeof photoObject === 'object' && photoObject !== null && photoObject.url && photoObject.publicId) {
+            galleryPhotos.push(photoObject);
+          } else {
+            console.warn(`Invalid gallery photo object parsed from key ${key}:`, photoObject);
+          }
+        } catch (e) {
+          console.error(`Failed to parse JSON for gallery photo key ${key}:`, e);
+        }
+      }
+    }
+  }
+  return galleryPhotos;
+};
 
-// @desc    Create a new teacher profile
-// @route   POST /api/teacher-profiles
-// @access  Private (Teacher only - requires auth middleware)
 exports.createTeacherProfile = async (req, res) => {
-  const {
+  let {
     name, title, email, phone, aboutMe,
     skills, experience, hourlyRate, qualifications
   } = req.body;
   const userId = req.user.id;
+
+  if (!userId) {
+    return res.status(401).json({ message: 'User not authenticated. Cannot create profile.' });
+  }
 
   try {
     let teacherProfile = await TeacherProfile.findOne({ userId: userId });
@@ -456,8 +450,9 @@ exports.createTeacherProfile = async (req, res) => {
       return res.status(403).json({ message: 'Only users with a "teacher" role can create a teacher profile.' });
     }
 
-    // Process file uploads
     const uploadedMedia = await processFileUploads(req.files);
+    
+    const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
 
     const newTeacherProfile = new TeacherProfile({
       userId: userId,
@@ -472,7 +467,7 @@ exports.createTeacherProfile = async (req, res) => {
       hourlyRate,
       qualifications: Array.isArray(qualifications) ? qualifications : [],
       videoUrl: uploadedMedia.videoUrl || { url: '', publicId: '' },
-      galleryPhotos: uploadedMedia.galleryPhotos || []
+      galleryPhotos: [...incomingGalleryPhotos, ...(uploadedMedia.galleryPhotos || [])]
     });
 
     const savedProfile = await newTeacherProfile.save();
@@ -495,9 +490,6 @@ exports.createTeacherProfile = async (req, res) => {
   }
 };
 
-// @desc    Get all teacher profiles
-// @route   GET /api/teacher-profiles
-// @access  Public
 exports.getTeacherProfiles = async (req, res) => {
   try {
     const profiles = await TeacherProfile.find()
@@ -510,9 +502,6 @@ exports.getTeacherProfiles = async (req, res) => {
   }
 };
 
-// @desc    Get a single teacher profile by its associated User ID
-// @route   GET /api/teacher-profiles/user/:userId
-// @access  Public
 exports.getTeacherProfileByUserId = async (req, res) => {
   try {
     const userIdInParam = req.params.userId;
@@ -530,9 +519,6 @@ exports.getTeacherProfileByUserId = async (req, res) => {
   }
 };
 
-// @desc    Get the authenticated teacher's own profile
-// @route   GET /api/teacher-profiles/me
-// @access  Private (Teacher only - requires auth middleware)
 exports.getAuthenticatedTeacherProfile = async (req, res) => {
   try {
     const teacherProfile = await TeacherProfile.findOne({ userId: req.user.id })
@@ -548,15 +534,10 @@ exports.getAuthenticatedTeacherProfile = async (req, res) => {
   }
 };
 
-
-// @desc    Update a teacher profile
-// @route   PUT /api/teacher-profiles/:id (where :id is the TeacherProfile _id)
-// @access  Private (Teacher who owns it, or Admin - requires auth middleware)
 exports.updateTeacherProfile = async (req, res) => {
   const {
     name, title, email, phone, aboutMe,
     skills, experience, hourlyRate, qualifications,
-    galleryPhotos: incomingGalleryPhotos // Renamed to avoid conflict with req.files.galleryPhotos
   } = req.body;
   const authenticatedUserId = req.user.id;
   const authenticatedUserRole = req.user.role;
@@ -572,65 +553,53 @@ exports.updateTeacherProfile = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this profile.' });
     }
 
-    // --- Handle Avatar Update (using new helper for race condition prevention) ---
-    // req.body.avatar === '' indicates explicit clear from frontend
-    await handleSingleMediaUploadAndReplace(
-      teacherProfile,
-      'avatar',
-      req.files?.avatar?.[0],
-      'image',
-      req.body.avatar === ''
-    );
+    const uploadedMedia = await processFileUploads(req.files);
 
-    // --- Handle Video Update (using new helper for race condition prevention) ---
-    // req.body.videoUrl === '' indicates explicit clear from frontend
-    await handleSingleMediaUploadAndReplace(
-      teacherProfile,
-      'videoUrl',
-      req.files?.video?.[0],
-      'video',
-      req.body.videoUrl === ''
-    );
+    if (uploadedMedia.avatar) {
+      if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
+        await deleteFromCloudinary(teacherProfile.avatar.publicId, 'image');
+      }
+      teacherProfile.avatar = uploadedMedia.avatar;
+    } else if (req.body.avatar === '') {
+        if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
+            await deleteFromCloudinary(teacherProfile.avatar.publicId, 'image');
+        }
+        teacherProfile.avatar = { url: '', publicId: '' };
+    }
 
+    if (uploadedMedia.videoUrl) {
+      if (teacherProfile.videoUrl && teacherProfile.videoUrl.publicId) {
+        await deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video');
+      }
+      teacherProfile.videoUrl = uploadedMedia.videoUrl;
+    } else if (req.body.videoUrl === '') {
+        if (teacherProfile.videoUrl && teacherProfile.videoUrl.publicId) {
+            await deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video');
+        }
+        teacherProfile.videoUrl = { url: '', publicId: '' };
+    }
 
-    // --- Handle Gallery Photos Update ---
-    let finalGalleryPhotos = teacherProfile.galleryPhotos || []; // Start with existing photos from DB
+    const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
+    let finalGalleryPhotos = [];
 
-    // 1. Identify photos to remove from Cloudinary (those present in DB but not in incoming array)
-    // incomingGalleryPhotos from req.body will be an array of { url, publicId, name } for existing photos
-    // that the frontend wants to keep.
-    const incomingPublicIds = new Set(
-        (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
+    finalGalleryPhotos = [...incomingGalleryPhotos, ...(uploadedMedia.galleryPhotos || [])];
+
+    const finalPublicIds = new Set(
+        finalGalleryPhotos
         .filter(p => p && p.publicId)
         .map(p => p.publicId)
     );
 
     const photosToDeletePromises = [];
-    for (const existingPhoto of finalGalleryPhotos) {
-        if (existingPhoto.publicId && !incomingPublicIds.has(existingPhoto.publicId)) {
-            // This photo was in the DB but is not in the incoming list -> delete it
+    for (const existingPhoto of teacherProfile.galleryPhotos || []) {
+        if (existingPhoto.publicId && !finalPublicIds.has(existingPhoto.publicId)) {
             photosToDeletePromises.push(deleteFromCloudinary(existingPhoto.publicId, 'image'));
         }
     }
-    // Execute deletions in parallel
-    await Promise.allSettled(photosToDeletePromises); // Use allSettled to log individual failures but not stop the whole process
+    await Promise.allSettled(photosToDeletePromises);
 
-
-    // 2. Filter out removed photos and keep only those still desired by the frontend
-    // This assumes incomingGalleryPhotos contains the *full* list of existing photos the frontend wants to keep.
-    finalGalleryPhotos = (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
-        .filter(p => p && p.url && p.publicId); // Ensure they have necessary fields
-
-    // 3. Add newly uploaded gallery photos
-    const newUploadedGalleryPhotos = await processFileUploads(req.files);
-    if (newUploadedGalleryPhotos.galleryPhotos && newUploadedGalleryPhotos.galleryPhotos.length > 0) {
-        finalGalleryPhotos = [...finalGalleryPhotos, ...newUploadedGalleryPhotos.galleryPhotos];
-    }
-    
     teacherProfile.galleryPhotos = finalGalleryPhotos;
 
-
-    // --- Update other text fields ---
     teacherProfile.name = name !== undefined ? name : teacherProfile.name;
     teacherProfile.title = title !== undefined ? title : teacherProfile.title;
     teacherProfile.email = email !== undefined ? email : teacherProfile.email;
@@ -657,9 +626,6 @@ exports.updateTeacherProfile = async (req, res) => {
   }
 };
 
-// @desc    Delete a teacher profile
-// @route   DELETE /api/teacher-profiles/:id (where :id is the TeacherProfile _id)
-// @access  Private (Teacher who owns it, or Admin - requires auth middleware)
 exports.deleteTeacherProfile = async (req, res) => {
   const authenticatedUserId = req.user.id;
   const authenticatedUserRole = req.user.role;
@@ -675,7 +641,6 @@ exports.deleteTeacherProfile = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this profile.' });
     }
 
-    // Delete associated media from Cloudinary in parallel
     const deletionPromises = [];
     if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
       deletionPromises.push(deleteFromCloudinary(teacherProfile.avatar.publicId, 'image'));
@@ -691,13 +656,7 @@ exports.deleteTeacherProfile = async (req, res) => {
       });
     }
 
-    // Wait for all deletions to settle (resolve or reject)
     await Promise.allSettled(deletionPromises);
-    // Log any failures from Promise.allSettled if needed
-    deletionPromises.forEach((promise, index) => {
-        promise.catch(error => console.warn(`Failed to delete media item ${index} from Cloudinary:`, error));
-    });
-
 
     await TeacherProfile.deleteOne({ _id: req.params.id });
     res.status(200).json({ message: 'Teacher profile removed successfully.' });
@@ -707,11 +666,3 @@ exports.deleteTeacherProfile = async (req, res) => {
   }
 };
 
-// module.exports = {
-//   createTeacherProfile,
-//   getTeacherProfiles,
-//   getTeacherProfileByUserId,
-//   getAuthenticatedTeacherProfile,
-//   updateTeacherProfile,
-//   deleteTeacherProfile,
-// };
