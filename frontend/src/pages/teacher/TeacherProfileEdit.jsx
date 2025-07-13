@@ -1436,7 +1436,6 @@ const TeacherProfileEdit = () => {
 
   const { user, loading: authLoading } = useAuth();
 
-  const { theme, setTheme } = useTheme();
   const [currentTab, setCurrentTab] = useState("basic");
   const [newSkill, setNewSkill] = useState("");
   const [newQualification, setNewQualification] = useState("");
@@ -1451,7 +1450,7 @@ const TeacherProfileEdit = () => {
     email: "",
     phone: "",
     aboutMe: "",
-    skills: [],
+    skills: [], // Keep as array for input
     experience: "",
     hourlyRate: "", // Keep as string for input
     qualifications: [],
@@ -1478,7 +1477,8 @@ const TeacherProfileEdit = () => {
         name: user.name || prev.name,
         email: user.email || prev.email,
         phone: user.phoneNumber || prev.phone,
-        aboutMe: user.bio || prev.aboutMe
+        aboutMe: user.bio || prev.aboutMe,
+        skills: user.skills || prev.skills // Pre-fill skills from AuthContext user
       }));
     }
   }, [teacherProfile, user, authLoading, isLoading]);
@@ -1567,30 +1567,24 @@ const TeacherProfileEdit = () => {
   const handleSaveAllProfileData = async (e) => {
     e.preventDefault();
 
-    // Create a copy to modify before sending
     const dataToSend = { ...localProfileData };
 
-    // --- Fix for hourlyRate ---
-    // If hourlyRate is an empty string, set it to undefined so backend's default (0) applies.
-    // Otherwise, convert it to a number.
     if (dataToSend.hourlyRate === "") {
-        dataToSend.hourlyRate = undefined; // Let backend default handle it
+        dataToSend.hourlyRate = undefined;
     } else {
         dataToSend.hourlyRate = Number(dataToSend.hourlyRate);
         if (isNaN(dataToSend.hourlyRate)) {
-            // Handle case where user types non-numeric characters, though input type="number" helps prevent this
             toast({
                 title: "Validation Error",
                 description: "Hourly Rate must be a valid number.",
                 variant: "destructive",
             });
-            return; // Prevent saving if invalid
+            return;
         }
     }
-    // --- End Fix for hourlyRate ---
 
     const payload = {
-      ...dataToSend, // Use the processed dataToSend
+      ...dataToSend,
       avatar: avatarFile ? undefined : (localProfileData.avatar === '' ? '' : undefined),
       videoUrl: videoFile ? undefined : (localProfileData.videoUrl === '' ? '' : undefined),
     };
@@ -2143,7 +2137,3 @@ const TeacherProfileEdit = () => {
 };
 
 export default TeacherProfileEdit;
-
-
-// export default TeacherProfileEdit;
-
