@@ -52,27 +52,26 @@ const cookieParser = require('cookie-parser');
 const app = express();
 const port = process.env.PORT || 5000;
 
+// Connect to database
+connectDB();
+
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // CORS configuration
 const allowedOrigin = 'https://gregarious-sprinkles-9e14c9.netlify.app';
 
 app.use(cors({
   origin: allowedOrigin,
-  credentials: true
+  credentials: true,
 }));
 
-// Handle preflight requests (IMPORTANT for cookies to work)
+// Handle CORS preflight only for OPTIONS requests — this is the correct way:
 app.options('*', cors({
   origin: allowedOrigin,
-  credentials: true
+  credentials: true,
 }));
-
-app.use(cookieParser());
-
-// Connect to database
-connectDB();
 
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
@@ -93,5 +92,5 @@ app.get('/', (req, res) => {
 
 // Start server
 app.listen(port, () => {
-  console.log(`Server running on port: ${port}`);
+  console.log("Server running on port: " + port);
 });
