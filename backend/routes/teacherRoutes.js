@@ -57,4 +57,3 @@ router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTe
 router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
 
 module.exports = router;
-
