@@ -580,6 +580,7 @@ const generateRefreshToken = (user) => {
     );
 };
 
+
 exports.registerUser = async (req, res) => {
     const { name, email, password } = req.body;
 
@@ -603,6 +604,10 @@ exports.registerUser = async (req, res) => {
     if (user) {
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
+
+        user.activeToken = refreshToken; // Setting the activeToken
+        await user.save(); // <--- THIS IS THE CRUCIAL LINE TO ADD/ENSURE IS PRESENT ---
+                           // This saves the user object with the new activeToken to the database.
 
         res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
         res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
