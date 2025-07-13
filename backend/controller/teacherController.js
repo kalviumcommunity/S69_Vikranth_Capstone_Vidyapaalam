@@ -330,7 +330,7 @@
 
 // controllers/teacherProfileController.js
 
-const TeacherProfile = require('../models/TeacherProfile');
+const TeacherProfile = require('../models/Teacher');
 const User = require('../models/User');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary'); // Import Cloudinary utility
 
