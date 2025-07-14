@@ -141,6 +141,9 @@ import TeacherAvailability from "./pages/teacher/TeacherAvailability";
 import TeacherProfileEdit from "./pages/teacher/TeacherProfileEdit";
 import TeacherSettings from "./pages/teacher/TeacherSettings";
 
+import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
+
+
 // Authorization feedback
 import NotAuthorized from "./pages/NotAuthorized";
 
@@ -150,6 +153,26 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
+
+   const { user, loading } = useAuth();
+  const navigate = useNavigate(); // Hook for programmatic navigation
+
+  // This useEffect will run when user or loading state changes
+  useEffect(() => {
+    if (!loading && user) {
+      // If user is loaded and logged in, redirect them from the root if they land there
+      if (location.pathname === '/') { // Check if they are on the root path
+        if (user.role === 'student') {
+          navigate('/student/overview', { replace: true });
+        } else if (user.role === 'teacher') {
+          navigate('/teacher/overview', { replace: true });
+        }
+      }
+    }
+  }, [user, loading, navigate, location.pathname]);
+
+
+  
   <QueryClientProvider client={queryClient}>
     <Toaster />
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
