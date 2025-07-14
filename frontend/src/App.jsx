@@ -114,7 +114,7 @@ import TeacherLayout from "./layouts/TeacherLayout";
 import PrivateRoute from "./components/ui/PrivateRoute";
 
 // Contexts
-import { AuthProvider } from "./contexts/AuthContext"; // Import your AuthProvider
+import { AuthProvider, useAuth } from "./contexts/AuthContext"; // Import your AuthProvider
 import { TeacherProfileProvider } from "./contexts/TeacherProfileContext"; // Import your TeacherProfileProvider
 
 // Public pages
@@ -140,9 +140,6 @@ import TeacherRatings from "./pages/teacher/TeacherRatings";
 import TeacherAvailability from "./pages/teacher/TeacherAvailability";
 import TeacherProfileEdit from "./pages/teacher/TeacherProfileEdit";
 import TeacherSettings from "./pages/teacher/TeacherSettings";
-
-import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
-
 
 // Authorization feedback
 import NotAuthorized from "./pages/NotAuthorized";
