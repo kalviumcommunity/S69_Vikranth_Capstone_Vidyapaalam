@@ -218,9 +218,9 @@
 
 
 
-import React, { useEffect } from "react"; // Import useEffect
+import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom"; // Import useNavigate, useLocation
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 
 import AppLayout from "./components/layout/AppLayout";
@@ -257,10 +257,10 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => { // Changed to curly braces for function body
+const AppContent = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation(); // Added useLocation import
+  const location = useLocation();
 
   useEffect(() => {
     if (!loading && user) {
@@ -274,51 +274,57 @@ const App = () => { // Changed to curly braces for function body
     }
   }, [user, loading, navigate, location.pathname]);
 
-  return ( // Explicit return for JSX
+  return (
+    <Routes>
+      <Route element={<AppLayout />}>
+        <Route path="/" element={<Index />} />
+        <Route path="/skills" element={<SkillsPage />} />
+        <Route path="/skills/:id" element={<SkillDetailPage />} />
+        <Route path="/teachers" element={<MentorsPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+      </Route>
+
+      <Route element={<PrivateRoute roles={["student"]} />}>
+        <Route path="/student" element={<StudentLayout />}>
+          <Route index element={<StudentOverview />} />
+          <Route path="overview" element={<StudentOverview />} />
+          <Route path="find-teacher" element={<FindTeacher />} />
+          <Route path="teacher-profile/:id" element={<TeacherProfile />} />
+          <Route path="teacher/:id" element={<TeacherProfile />} />
+          <Route path="book-session/:teacherId" element={<BookSession />} />
+          <Route path="favorites" element={<Favorites />} />
+          <Route path="settings" element={<StudentSettings />} />
+          <Route path="chat/:teacherId" element={<ChatPage />} />
+        </Route>
+      </Route>
+
+      <Route element={<PrivateRoute roles={["teacher"]} />}>
+        <Route path="/teacher" element={<TeacherLayout />}>
+          <Route index element={<TeacherOverview />} />
+          <Route path="overview" element={<TeacherOverview />} />
+          <Route path="ratings" element={<TeacherRatings />} />
+          <Route path="availability" element={<TeacherAvailability />} />
+          <Route path="profile" element={<TeacherProfileEdit />} />
+          <Route path="profile/edit" element={<TeacherProfileEdit />} />
+          <Route path="settings" element={<TeacherSettings />} />
+        </Route>
+      </Route>
+
+      <Route path="/not-authorized" element={<NotAuthorized />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
+const App = () => {
+  return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <BrowserRouter >
         <AuthProvider>
           <TeacherProfileProvider>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/skills" element={<SkillsPage />} />
-                <Route path="/skills/:id" element={<SkillDetailPage />} />
-                <Route path="/teachers" element={<MentorsPage />} />
-                <Route path="/about" element={<AboutPage />} />
-                <Route path="/onboarding" element={<OnboardingPage />} />
-              </Route>
-
-              <Route element={<PrivateRoute roles={["student"]} />}>
-                <Route path="/student" element={<StudentLayout />}>
-                  <Route index element={<StudentOverview />} />
-                  <Route path="overview" element={<StudentOverview />} />
-                  <Route path="find-teacher" element={<FindTeacher />} />
-                  <Route path="teacher-profile/:id" element={<TeacherProfile />} />
-                  <Route path="teacher/:id" element={<TeacherProfile />} />
-                  <Route path="book-session/:teacherId" element={<BookSession />} />
-                  <Route path="favorites" element={<Favorites />} />
-                  <Route path="settings" element={<StudentSettings />} />
-                  <Route path="chat/:teacherId" element={<ChatPage />} />
-                </Route>
-              </Route>
-
-              <Route element={<PrivateRoute roles={["teacher"]} />}>
-                <Route path="/teacher" element={<TeacherLayout />}>
-                  <Route index element={<TeacherOverview />} />
-                  <Route path="overview" element={<TeacherOverview />} />
-                  <Route path="ratings" element={<TeacherRatings />} />
-                  <Route path="availability" element={<TeacherAvailability />} />
-                  <Route path="profile" element={<TeacherProfileEdit />} />
-                  <Route path="profile/edit" element={<TeacherProfileEdit />} />
-                  <Route path="settings" element={<TeacherSettings />} />
-                </Route>
-              </Route>
-
-              <Route path="/not-authorized" element={<NotAuthorized />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppContent /> 
           </TeacherProfileProvider>
         </AuthProvider>
       </BrowserRouter>
@@ -327,4 +333,3 @@ const App = () => { // Changed to curly braces for function body
 };
 
 export default App;
-
