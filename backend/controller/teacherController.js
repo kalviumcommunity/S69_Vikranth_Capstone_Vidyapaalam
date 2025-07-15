@@ -1,5 +1,3 @@
-// // controllers/teacherProfileController.js
-
 // const TeacherProfile = require('../models/Teacher');
 // const User = require('../models/User');
 // const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
@@ -51,18 +49,19 @@
 
 //   if (newFile) {
 //     try {
-//       const uploadResult = await uploadToCloudinary(newFile, resourceType === 'image' ? 'avatars' : 'videos');
-      
+//       const folder = resourceType === 'image' ? 'avatars' : 'videos';
+//       const uploadResult = await uploadToCloudinary(newFile, folder);
+
 //       if (profile[mediaField] && profile[mediaField].publicId) {
 //         try {
 //           await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
 //         } catch (deleteError) {
-//           console.warn(`Failed to delete old ${mediaField} from Cloudinary:`, deleteError);
+//           console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${profile[mediaField].publicId}) from Cloudinary:`, deleteError);
 //         }
 //       }
 //       updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
 //     } catch (uploadError) {
-//       console.error(`Failed to upload new ${mediaField}:`, uploadError);
+//       console.error(`Error: Failed to upload new ${mediaField}:`, uploadError);
 //       throw uploadError;
 //     }
 //   } else if (clearExplicitly) {
@@ -70,335 +69,7 @@
 //       try {
 //         await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
 //       } catch (deleteError) {
-//         console.warn(`Failed to delete old ${mediaField} on explicit clear:`, deleteError);
-//       }
-//     }
-//     updatedMediaInfo = { url: '', publicId: '' };
-//   }
-//   profile[mediaField] = updatedMediaInfo;
-// }
-
-
-// // Changed from exports.createTeacherProfile to const createTeacherProfile
-// const createTeacherProfile = async (req, res) => {
-//   const {
-//     name, title, email, phone, aboutMe,
-//     skills, experience, hourlyRate, qualifications
-//   } = req.body;
-//   const userId = req.user.id;
-
-//   try {
-//     let teacherProfile = await TeacherProfile.findOne({ userId: userId });
-//     if (teacherProfile) {
-//       return res.status(409).json({ message: 'Teacher profile already exists for this user.' });
-//     }
-
-//     const user = await User.findById(userId);
-//     if (!user || user.role !== 'teacher') {
-//       return res.status(403).json({ message: 'Only users with a "teacher" role can create a teacher profile.' });
-//     }
-
-//     const uploadedMedia = await processFileUploads(req.files);
-
-//     const newTeacherProfile = new TeacherProfile({
-//       userId: userId,
-//       avatar: uploadedMedia.avatar || { url: '', publicId: '' },
-//       name,
-//       title,
-//       email,
-//       phone,
-//       aboutMe,
-//       skills: Array.isArray(skills) ? skills : [],
-//       experience,
-//       hourlyRate,
-//       qualifications: Array.isArray(qualifications) ? qualifications : [],
-//       videoUrl: uploadedMedia.videoUrl || { url: '', publicId: '' },
-//       galleryPhotos: uploadedMedia.galleryPhotos || []
-//     });
-
-//     const savedProfile = await newTeacherProfile.save();
-
-//     const populatedProfile = await TeacherProfile.findById(savedProfile._id)
-//       .populate('userId', 'name email role');
-
-//     res.status(201).json(populatedProfile);
-//   } catch (error) {
-//     console.error('Error creating teacher profile:', error);
-//     if (error.code === 11000) {
-//         if (error.keyPattern && error.keyPattern.email) {
-//             return res.status(400).json({ message: 'A profile with this email already exists.' });
-//         }
-//         if (error.keyPattern && error.keyPattern.userId) {
-//             return res.status(400).json({ message: 'A profile already exists for this user.' });
-//         }
-//     }
-//     res.status(500).json({ message: 'Server error while creating teacher profile', error: error.message });
-//   }
-// };
-
-// // Changed from exports.getTeacherProfiles to const getTeacherProfiles
-// const getTeacherProfiles = async (req, res) => {
-//   try {
-//     const profiles = await TeacherProfile.find()
-//       .populate('userId', 'name email');
-
-//     res.status(200).json(profiles);
-//   } catch (error) {
-//     console.error('Error fetching all teacher profiles:', error);
-//     res.status(500).json({ message: 'Server error while fetching teacher profiles', error: error.message });
-//   }
-// };
-
-// // Changed from exports.getTeacherProfileByUserId to const getTeacherProfileByUserId
-// const getTeacherProfileByUserId = async (req, res) => {
-//   try {
-//     const userIdInParam = req.params.userId;
-
-//     const teacherProfile = await TeacherProfile.findOne({ userId: userIdInParam })
-//       .populate('userId', 'name email');
-
-//     if (!teacherProfile) {
-//       return res.status(404).json({ message: 'Teacher profile not found for this user ID.' });
-//     }
-//     res.status(200).json(teacherProfile);
-//   } catch (error) {
-//     console.error('Error fetching teacher profile by user ID:', error);
-//     res.status(500).json({ message: 'Server error while fetching teacher profile by user ID', error: error.message });
-//   }
-// };
-
-// // Changed from exports.getAuthenticatedTeacherProfile to const getAuthenticatedTeacherProfile
-// const getAuthenticatedTeacherProfile = async (req, res) => {
-//   try {
-//     const teacherProfile = await TeacherProfile.findOne({ userId: req.user.id })
-//       .populate('userId', 'name email role');
-
-//     if (!teacherProfile) {
-//       return res.status(404).json({ message: 'Your teacher profile does not exist. Please create one.' });
-//     }
-//     res.status(200).json(teacherProfile);
-//   } catch (error) {
-//     console.error('Error fetching authenticated teacher profile:', error);
-//     res.status(500).json({ message: 'Server error while fetching your teacher profile', error: error.message });
-//   }
-// };
-
-
-// // Changed from exports.updateTeacherProfile to const updateTeacherProfile
-// const updateTeacherProfile = async (req, res) => {
-//   const {
-//     name, title, email, phone, aboutMe,
-//     skills, experience, hourlyRate, qualifications,
-//     galleryPhotos: incomingGalleryPhotos
-//   } = req.body;
-//   const authenticatedUserId = req.user.id;
-//   const authenticatedUserRole = req.user.role;
-
-//   try {
-//     let teacherProfile = await TeacherProfile.findById(req.params.id);
-
-//     if (!teacherProfile) {
-//       return res.status(404).json({ message: 'Teacher profile not found.' });
-//     }
-
-//     if (teacherProfile.userId.toString() !== authenticatedUserId.toString() && authenticatedUserRole !== 'admin') {
-//       return res.status(403).json({ message: 'Not authorized to update this profile.' });
-//     }
-
-//     await handleSingleMediaUploadAndReplace(
-//       teacherProfile,
-//       'avatar',
-//       req.files?.avatar?.[0],
-//       'image',
-//       req.body.avatar === ''
-//     );
-
-//     await handleSingleMediaUploadAndReplace(
-//       teacherProfile,
-//       'videoUrl',
-//       req.files?.video?.[0],
-//       'video',
-//       req.body.videoUrl === ''
-//     );
-
-//     let finalGalleryPhotos = teacherProfile.galleryPhotos || [];
-
-//     const incomingPublicIds = new Set(
-//         (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
-//         .filter(p => p && p.publicId)
-//         .map(p => p.publicId)
-//     );
-
-//     const photosToDeletePromises = [];
-//     for (const existingPhoto of finalGalleryPhotos) {
-//         if (existingPhoto.publicId && !incomingPublicIds.has(existingPhoto.publicId)) {
-//             photosToDeletePromises.push(deleteFromCloudinary(existingPhoto.publicId, 'image'));
-//         }
-//     }
-//     await Promise.allSettled(photosToDeletePromises);
-
-//     finalGalleryPhotos = (Array.isArray(incomingGalleryPhotos) ? incomingGalleryPhotos : [])
-//         .filter(p => p && p.url && p.publicId);
-
-//     const newUploadedGalleryPhotos = await processFileUploads({ galleryPhotos: req.files?.galleryPhotos });
-//     if (newUploadedGalleryPhotos.galleryPhotos && newUploadedGalleryPhotos.galleryPhotos.length > 0) {
-//         finalGalleryPhotos = [...finalGalleryPhotos, ...newUploadedGalleryPhotos.galleryPhotos];
-//     }
-    
-//     teacherProfile.galleryPhotos = finalGalleryPhotos;
-
-//     teacherProfile.name = name !== undefined ? name : teacherProfile.name;
-//     teacherProfile.title = title !== undefined ? title : teacherProfile.title;
-//     teacherProfile.email = email !== undefined ? email : teacherProfile.email;
-//     teacherProfile.phone = phone !== undefined ? phone : teacherProfile.phone;
-//     teacherProfile.aboutMe = aboutMe !== undefined ? aboutMe : teacherProfile.aboutMe;
-    
-//     teacherProfile.skills = Array.isArray(skills) ? skills : teacherProfile.skills;
-//     teacherProfile.experience = experience !== undefined ? experience : teacherProfile.experience;
-//     teacherProfile.hourlyRate = hourlyRate !== undefined ? hourlyRate : teacherProfile.hourlyRate;
-//     teacherProfile.qualifications = Array.isArray(qualifications) ? qualifications : teacherProfile.qualifications;
-    
-//     const updatedProfile = await teacherProfile.save();
-
-//     const populatedProfile = await TeacherProfile.findById(updatedProfile._id)
-//       .populate('userId', 'name email role');
-
-//     res.status(200).json(populatedProfile);
-//   } catch (error) {
-//     console.error('Error updating teacher profile:', error);
-//     if (error.code === 11000) {
-//         return res.status(400).json({ message: 'The email address provided is already in use by another profile.' });
-//     }
-//     res.status(500).json({ message: 'Server error while updating teacher profile', error: error.message });
-//   }
-// };
-
-// // Changed from exports.deleteTeacherProfile to const deleteTeacherProfile
-// const deleteTeacherProfile = async (req, res) => {
-//   const authenticatedUserId = req.user.id;
-//   const authenticatedUserRole = req.user.role;
-
-//   try {
-//     const teacherProfile = await TeacherProfile.findById(req.params.id);
-
-//     if (!teacherProfile) {
-//       return res.status(404).json({ message: 'Teacher profile not found.' });
-//     }
-
-//     if (teacherProfile.userId.toString() !== authenticatedUserId.toString() && authenticatedUserRole !== 'admin') {
-//       return res.status(403).json({ message: 'Not authorized to delete this profile.' });
-//     }
-
-//     const deletionPromises = [];
-//     if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
-//       deletionPromises.push(deleteFromCloudinary(teacherProfile.avatar.publicId, 'image'));
-//     }
-//     if (teacherProfile.videoUrl && teacherProfile.videoUrl.publicId) {
-//       deletionPromises.push(deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video'));
-//     }
-//     if (teacherProfile.galleryPhotos && teacherProfile.galleryPhotos.length > 0) {
-//       teacherProfile.galleryPhotos.forEach(photo => {
-//         if (photo.publicId) {
-//           deletionPromises.push(deleteFromCloudinary(photo.publicId, 'image'));
-//         }
-//       });
-//     }
-
-//     await Promise.allSettled(deletionPromises);
-
-
-//     await TeacherProfile.deleteOne({ _id: req.params.id });
-//     res.status(200).json({ message: 'Teacher profile removed successfully.' });
-//   } catch (error) {
-//     console.error('Error deleting teacher profile:', error);
-//     res.status(500).json({ message: 'Server error while deleting teacher profile', error: error.message });
-//   }
-// };
-
-// module.exports = {
-//   createTeacherProfile,
-//   getTeacherProfiles,
-//   getTeacherProfileByUserId,
-//   getAuthenticatedTeacherProfile,
-//   updateTeacherProfile,
-//   deleteTeacherProfile,
-// };
-
-
-
-
-
-// const TeacherProfile = require('../models/Teacher');
-// const User = require('../models/User');
-// const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
-
-// const processFileUploads = async (files) => {
-//   const uploadedMedia = {};
-
-//   if (!files) return uploadedMedia;
-
-//   if (files.avatar && files.avatar[0]) {
-//     try {
-//       const result = await uploadToCloudinary(files.avatar[0], 'avatars');
-//       uploadedMedia.avatar = { url: result.secure_url, publicId: result.public_id };
-//     } catch (uploadError) {
-//       console.error('Failed to upload avatar to Cloudinary:', uploadError);
-//     }
-//   }
-
-//   if (files.video && files.video[0]) {
-//     try {
-//       const result = await uploadToCloudinary(files.video[0], 'videos');
-//       uploadedMedia.videoUrl = { url: result.secure_url, publicId: result.public_id };
-//     } catch (uploadError) {
-//       console.error('Failed to upload video to Cloudinary:', uploadError);
-//     }
-//   }
-
-//   if (files.galleryPhotos && files.galleryPhotos.length > 0) {
-//     const uploadPromises = files.galleryPhotos.map(file =>
-//       uploadToCloudinary(file, 'gallery')
-//         .then(result => ({ url: result.secure_url, publicId: result.public_id, name: file.originalname }))
-//         .catch(uploadError => {
-//           console.error(`Failed to upload gallery photo ${file.originalname}:`, uploadError);
-//           return null;
-//         })
-//     );
-
-//     const results = await Promise.allSettled(uploadPromises);
-//     uploadedMedia.galleryPhotos = results
-//       .filter(res => res.status === 'fulfilled' && res.value !== null)
-//       .map(res => res.value);
-//   }
-
-//   return uploadedMedia;
-// };
-
-// async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, resourceType, clearExplicitly) {
-//   let updatedMediaInfo = { ...profile[mediaField] };
-
-//   if (newFile) {
-//     try {
-//       const uploadResult = await uploadToCloudinary(newFile, resourceType === 'image' ? 'avatars' : 'videos');
-      
-//       if (profile[mediaField] && profile[mediaField].publicId) {
-//         try {
-//           await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
-//         } catch (deleteError) {
-//           console.warn(`Failed to delete old ${mediaField} from Cloudinary:`, deleteError);
-//         }
-//       }
-//       updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
-//     } catch (uploadError) {
-//       console.error(`Failed to upload new ${mediaField}:`, uploadError);
-//       throw uploadError;
-//     }
-//   } else if (clearExplicitly) {
-//     if (profile[mediaField] && profile[mediaField].publicId) {
-//       try {
-//         await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
-//       } catch (deleteError) {
-//         console.warn(`Failed to delete old ${mediaField} on explicit clear:`, deleteError);
+//         console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${profile[mediaField].publicId}) on explicit clear:`, deleteError);
 //       }
 //     }
 //     updatedMediaInfo = { url: '', publicId: '' };
@@ -451,7 +122,6 @@
 //     }
 
 //     const uploadedMedia = await processFileUploads(req.files);
-    
 //     const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
 
 //     const newTeacherProfile = new TeacherProfile({
@@ -479,12 +149,12 @@
 //   } catch (error) {
 //     console.error('Error creating teacher profile:', error);
 //     if (error.code === 11000) {
-//         if (error.keyPattern && error.keyPattern.email) {
-//             return res.status(400).json({ message: 'A profile with this email already exists.' });
-//         }
-//         if (error.keyPattern && error.keyPattern.userId) {
-//             return res.status(400).json({ message: 'A profile already exists for this user.' });
-//         }
+//       if (error.keyPattern && error.keyPattern.email) {
+//         return res.status(400).json({ message: 'A profile with this email already exists.' });
+//       }
+//       if (error.keyPattern && error.keyPattern.userId) {
+//         return res.status(400).json({ message: 'A profile already exists for this user.' });
+//       }
 //     }
 //     res.status(500).json({ message: 'Server error while creating teacher profile', error: error.message });
 //   }
@@ -553,48 +223,41 @@
 //       return res.status(403).json({ message: 'Not authorized to update this profile.' });
 //     }
 
+//     await handleSingleMediaUploadAndReplace(
+//       teacherProfile,
+//       'avatar',
+//       req.files.avatar ? req.files.avatar[0] : undefined,
+//       'image',
+//       req.body.avatar === ''
+//     );
+
+//     await handleSingleMediaUploadAndReplace(
+//       teacherProfile,
+//       'videoUrl',
+//       req.files.video ? req.files.video[0] : undefined,
+//       'video',
+//       req.body.videoUrl === ''
+//     );
+
 //     const uploadedMedia = await processFileUploads(req.files);
-
-//     if (uploadedMedia.avatar) {
-//       if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
-//         await deleteFromCloudinary(teacherProfile.avatar.publicId, 'image');
-//       }
-//       teacherProfile.avatar = uploadedMedia.avatar;
-//     } else if (req.body.avatar === '') {
-//         if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
-//             await deleteFromCloudinary(teacherProfile.avatar.publicId, 'image');
-//         }
-//         teacherProfile.avatar = { url: '', publicId: '' };
-//     }
-
-//     if (uploadedMedia.videoUrl) {
-//       if (teacherProfile.videoUrl && teacherProfile.videoUrl.publicId) {
-//         await deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video');
-//       }
-//       teacherProfile.videoUrl = uploadedMedia.videoUrl;
-//     } else if (req.body.videoUrl === '') {
-//         if (teacherProfile.videoUrl && teacherProfile.videoUrl.publicId) {
-//             await deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video');
-//         }
-//         teacherProfile.videoUrl = { url: '', publicId: '' };
-//     }
-
 //     const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
-//     let finalGalleryPhotos = [];
 
-//     finalGalleryPhotos = [...incomingGalleryPhotos, ...(uploadedMedia.galleryPhotos || [])];
+//     let finalGalleryPhotos = [
+//       ...incomingGalleryPhotos,
+//       ...(uploadedMedia.galleryPhotos || [])
+//     ];
 
 //     const finalPublicIds = new Set(
-//         finalGalleryPhotos
+//       finalGalleryPhotos
 //         .filter(p => p && p.publicId)
 //         .map(p => p.publicId)
 //     );
 
 //     const photosToDeletePromises = [];
 //     for (const existingPhoto of teacherProfile.galleryPhotos || []) {
-//         if (existingPhoto.publicId && !finalPublicIds.has(existingPhoto.publicId)) {
-//             photosToDeletePromises.push(deleteFromCloudinary(existingPhoto.publicId, 'image'));
-//         }
+//       if (existingPhoto.publicId && !finalPublicIds.has(existingPhoto.publicId)) {
+//         photosToDeletePromises.push(deleteFromCloudinary(existingPhoto.publicId, 'image'));
+//       }
 //     }
 //     await Promise.allSettled(photosToDeletePromises);
 
@@ -605,12 +268,12 @@
 //     teacherProfile.email = email !== undefined ? email : teacherProfile.email;
 //     teacherProfile.phone = phone !== undefined ? phone : teacherProfile.phone;
 //     teacherProfile.aboutMe = aboutMe !== undefined ? aboutMe : teacherProfile.aboutMe;
-    
+
 //     teacherProfile.skills = Array.isArray(skills) ? skills : teacherProfile.skills;
 //     teacherProfile.experience = experience !== undefined ? experience : teacherProfile.experience;
 //     teacherProfile.hourlyRate = hourlyRate !== undefined ? hourlyRate : teacherProfile.hourlyRate;
 //     teacherProfile.qualifications = Array.isArray(qualifications) ? qualifications : teacherProfile.qualifications;
-    
+
 //     const updatedProfile = await teacherProfile.save();
 
 //     const populatedProfile = await TeacherProfile.findById(updatedProfile._id)
@@ -620,7 +283,7 @@
 //   } catch (error) {
 //     console.error('Error updating teacher profile:', error);
 //     if (error.code === 11000) {
-//         return res.status(400).json({ message: 'The email address provided is already in use by another profile.' });
+//       return res.status(400).json({ message: 'The email address provided is already in use by another profile.' });
 //     }
 //     res.status(500).json({ message: 'Server error while updating teacher profile', error: error.message });
 //   }
@@ -659,6 +322,7 @@
 //     await Promise.allSettled(deletionPromises);
 
 //     await TeacherProfile.deleteOne({ _id: req.params.id });
+
 //     res.status(200).json({ message: 'Teacher profile removed successfully.' });
 //   } catch (error) {
 //     console.error('Error deleting teacher profile:', error);
@@ -718,35 +382,39 @@ const processFileUploads = async (files) => {
 };
 
 async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, resourceType, clearExplicitly) {
-  let updatedMediaInfo = { ...profile[mediaField] };
+  const oldPublicId = profile[mediaField] ? profile[mediaField].publicId : null;
+  let updatedMediaInfo = { url: '', publicId: '' };
 
   if (newFile) {
     try {
       const folder = resourceType === 'image' ? 'avatars' : 'videos';
       const uploadResult = await uploadToCloudinary(newFile, folder);
+      updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
 
-      if (profile[mediaField] && profile[mediaField].publicId) {
+      if (oldPublicId) {
         try {
-          await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
+          await deleteFromCloudinary(oldPublicId, resourceType);
         } catch (deleteError) {
-          console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${profile[mediaField].publicId}) from Cloudinary:`, deleteError);
+          console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) from Cloudinary:`, deleteError);
         }
       }
-      updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
     } catch (uploadError) {
       console.error(`Error: Failed to upload new ${mediaField}:`, uploadError);
       throw uploadError;
     }
   } else if (clearExplicitly) {
-    if (profile[mediaField] && profile[mediaField].publicId) {
+    if (oldPublicId) {
       try {
-        await deleteFromCloudinary(profile[mediaField].publicId, resourceType);
+        await deleteFromCloudinary(oldPublicId, resourceType);
       } catch (deleteError) {
-        console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${profile[mediaField].publicId}) on explicit clear:`, deleteError);
+        console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) on explicit clear:`, deleteError);
       }
     }
     updatedMediaInfo = { url: '', publicId: '' };
+  } else {
+    updatedMediaInfo = { ...profile[mediaField] };
   }
+
   profile[mediaField] = updatedMediaInfo;
 }
 
