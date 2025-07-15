@@ -381,15 +381,14 @@ const processFileUploads = async (files) => {
   return uploadedMedia;
 };
 
-
 async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, resourceType, clearExplicitly) {
   console.log(`\n--- DEBUG: handleSingleMediaUploadAndReplace for ${mediaField} ---`);
-  console.log(`DEBUG: Initial profile[${mediaField}]:`, JSON.stringify(profile[mediaField])); // What's in DB
-  console.log(`DEBUG: newFile provided:`, !!newFile); // Is a new file being uploaded?
-  console.log(`DEBUG: clearExplicitly requested:`, clearExplicitly); // Is a clear requested?
+  console.log(`DEBUG: Initial profile[${mediaField}]:`, JSON.stringify(profile[mediaField]));
+  console.log(`DEBUG: newFile provided:`, !!newFile);
+  console.log(`DEBUG: clearExplicitly requested:`, clearExplicitly);
 
   const oldPublicId = profile[mediaField] ? profile[mediaField].publicId : null;
-  console.log(`DEBUG: oldPublicId captured:`, oldPublicId); // What publicId are we *trying* to delete?
+  console.log(`DEBUG: oldPublicId captured:`, oldPublicId);
 
   let updatedMediaInfo = { url: '', publicId: '' };
 
@@ -441,6 +440,27 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
   console.log(`--- DEBUG: End handleSingleMediaUploadAndReplace for ${mediaField} ---\n`);
 }
 
+const parseIncomingGalleryPhotos = (body) => {
+  const galleryPhotos = [];
+  for (const key in body) {
+    if (key.startsWith('galleryPhotos[') && key.endsWith(']')) {
+      const match = key.match(/galleryPhotos\[(\d+)\]/);
+      if (match) {
+        try {
+          const photoObject = JSON.parse(body[key]);
+          if (typeof photoObject === 'object' && photoObject !== null && photoObject.url && photoObject.publicId) {
+            galleryPhotos.push(photoObject);
+          } else {
+            console.warn(`Invalid gallery photo object parsed from key ${key}:`, photoObject);
+          }
+        } catch (e) {
+          console.error(`Failed to parse JSON for gallery photo key ${key}:`, e);
+        }
+      }
+    }
+  }
+  return galleryPhotos;
+};
 
 exports.createTeacherProfile = async (req, res) => {
   let {
