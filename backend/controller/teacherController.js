@@ -381,64 +381,66 @@ const processFileUploads = async (files) => {
   return uploadedMedia;
 };
 
+
 async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, resourceType, clearExplicitly) {
+  console.log(`\n--- DEBUG: handleSingleMediaUploadAndReplace for ${mediaField} ---`);
+  console.log(`DEBUG: Initial profile[${mediaField}]:`, JSON.stringify(profile[mediaField])); // What's in DB
+  console.log(`DEBUG: newFile provided:`, !!newFile); // Is a new file being uploaded?
+  console.log(`DEBUG: clearExplicitly requested:`, clearExplicitly); // Is a clear requested?
+
   const oldPublicId = profile[mediaField] ? profile[mediaField].publicId : null;
+  console.log(`DEBUG: oldPublicId captured:`, oldPublicId); // What publicId are we *trying* to delete?
+
   let updatedMediaInfo = { url: '', publicId: '' };
 
   if (newFile) {
+    console.log(`DEBUG: Entering 'newFile' branch for ${mediaField}.`);
     try {
       const folder = resourceType === 'image' ? 'avatars' : 'videos';
+      console.log(`DEBUG: Uploading new file to folder: ${folder}`);
       const uploadResult = await uploadToCloudinary(newFile, folder);
       updatedMediaInfo = { url: uploadResult.secure_url, publicId: uploadResult.public_id };
+      console.log(`DEBUG: New file uploaded. New publicId: ${uploadResult.public_id}`);
 
       if (oldPublicId) {
+        console.log(`DEBUG: Attempting to delete old media: ${oldPublicId} (resourceType: ${resourceType})`);
         try {
           await deleteFromCloudinary(oldPublicId, resourceType);
+          console.log(`DEBUG: Old media ${oldPublicId} DELETED successfully.`);
         } catch (deleteError) {
-          console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) from Cloudinary:`, deleteError);
+          console.warn(`DEBUG: WARNING: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) from Cloudinary:`, deleteError.message);
         }
+      } else {
+        console.log(`DEBUG: No old publicId to delete for ${mediaField}.`);
       }
     } catch (uploadError) {
-      console.error(`Error: Failed to upload new ${mediaField}:`, uploadError);
+      console.error(`DEBUG: ERROR: Failed to upload new ${mediaField}:`, uploadError.message);
       throw uploadError;
     }
   } else if (clearExplicitly) {
+    console.log(`DEBUG: Entering 'clearExplicitly' branch for ${mediaField}.`);
     if (oldPublicId) {
+      console.log(`DEBUG: Attempting to delete old media on explicit clear: ${oldPublicId} (resourceType: ${resourceType})`);
       try {
         await deleteFromCloudinary(oldPublicId, resourceType);
+        console.log(`DEBUG: Old media ${oldPublicId} DELETED successfully on explicit clear.`);
       } catch (deleteError) {
-        console.warn(`Warning: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) on explicit clear:`, deleteError);
+        console.warn(`DEBUG: WARNING: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) on explicit clear:`, deleteError.message);
       }
+    } else {
+      console.log(`DEBUG: No old publicId to delete on explicit clear for ${mediaField}.`);
     }
     updatedMediaInfo = { url: '', publicId: '' };
   } else {
+    console.log(`DEBUG: No new file or explicit clear. Retaining existing media for ${mediaField}.`);
     updatedMediaInfo = { ...profile[mediaField] };
   }
 
   profile[mediaField] = updatedMediaInfo;
+  console.log(`DEBUG: Final profile[${mediaField}] set to:`, JSON.stringify(profile[mediaField]));
+  console.log(`--- DEBUG: End handleSingleMediaUploadAndReplace for ${mediaField} ---\n`);
 }
 
-const parseIncomingGalleryPhotos = (body) => {
-  const galleryPhotos = [];
-  for (const key in body) {
-    if (key.startsWith('galleryPhotos[') && key.endsWith(']')) {
-      const match = key.match(/galleryPhotos\[(\d+)\]/);
-      if (match) {
-        try {
-          const photoObject = JSON.parse(body[key]);
-          if (typeof photoObject === 'object' && photoObject !== null && photoObject.url && photoObject.publicId) {
-            galleryPhotos.push(photoObject);
-          } else {
-            console.warn(`Invalid gallery photo object parsed from key ${key}:`, photoObject);
-          }
-        } catch (e) {
-          console.error(`Failed to parse JSON for gallery photo key ${key}:`, e);
-        }
-      }
-    }
-  }
-  return galleryPhotos;
-};
 
 exports.createTeacherProfile = async (req, res) => {
   let {
