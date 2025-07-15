@@ -39,14 +39,23 @@
       }
     };
 
-    const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
-      try {
-        const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-        console.log(`Deleted ${publicId} from Cloudinary. Result:`, result);
-        return result;
-      } catch (error) {
-        console.error('Cloudinary deletion error:', error);
-      }
-    };
+
+const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+  console.log(`DEBUG: Cloudinary deletion request for Public ID: ${publicId}, Resource Type: ${resourceType}`);
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+    console.log(`DEBUG: Cloudinary deletion result for ${publicId}:`, result);
+    if (result.result === 'ok') {
+      return true;
+    } else {
+      console.error(`DEBUG: ERROR: Cloudinary deletion failed for ${publicId}. Result:`, result);
+      throw new Error(`Cloudinary deletion failed for ${publicId}: ${result.result}`);
+    }
+  } catch (error) {
+    console.error(`DEBUG: ERROR: Exception during Cloudinary deletion for ${publicId}:`, error.message);
+    throw error;
+  }
+};
+
 
     module.exports = { uploadToCloudinary, deleteFromCloudinary };
