@@ -1440,6 +1440,8 @@
 
 
 
+
+
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Upload, Video, X, Loader2 } from "lucide-react";
@@ -1472,7 +1474,6 @@ const TeacherProfileEdit = () => {
   const videoInputRef = useRef(null);
   const photoInputRef = useRef(null);
 
-  // localProfileData will hold non-file inputs and references (URLs) to existing files
   const [localProfileData, setLocalProfileData] = useState({
     name: "",
     title: "",
@@ -1483,7 +1484,9 @@ const TeacherProfileEdit = () => {
     experience: "",
     hourlyRate: "",
     qualifications: [],
-    galleryPhotos: [] // This will store URLs/metadata of *existing* gallery photos
+    galleryPhotos: [],
+    deleteAvatar: false, // Explicit flag for avatar deletion
+    deleteVideo: false // Explicit flag for video deletion
   });
 
   useEffect(() => {
@@ -1498,19 +1501,10 @@ const TeacherProfileEdit = () => {
         experience: teacherProfile.experience || "",
         hourlyRate: teacherProfile.hourlyRate !== undefined && teacherProfile.hourlyRate !== null ? String(teacherProfile.hourlyRate) : "",
         qualifications: teacherProfile.qualifications || [],
-        // Ensure galleryPhotos are correctly mapped to include at least 'url'
-        galleryPhotos: teacherProfile.galleryPhotos?.map(p => ({ url: p.url, _id: p._id })) || []
+        galleryPhotos: teacherProfile.galleryPhotos?.map(p => ({ url: p.url, _id: p._id })) || [],
+        deleteAvatar: false,
+        deleteVideo: false
       });
-      // Important: When loading existing profile, ensure avatar/videoUrl are also reflected
-      // in localProfileData if they exist, so getDisplay... functions work initially.
-      // This part is crucial for initial display and subsequent removal logic.
-      if (teacherProfile.avatar) {
-        setLocalProfileData(prev => ({ ...prev, avatar: teacherProfile.avatar }));
-      }
-      if (teacherProfile.videoUrl) {
-        setLocalProfileData(prev => ({ ...prev, videoUrl: teacherProfile.videoUrl }));
-      }
-
     } else if (user && !authLoading && !isLoading) {
       setLocalProfileData(prev => ({
         ...prev,
@@ -1518,7 +1512,9 @@ const TeacherProfileEdit = () => {
         email: user.email || prev.email,
         phone: user.phoneNumber || prev.phone,
         aboutMe: user.bio || prev.aboutMe,
-        skills: user.skills || prev.skills
+        skills: user.skills || prev.skills,
+        deleteAvatar: false,
+        deleteVideo: false
       }));
     }
   }, [teacherProfile, user, authLoading, isLoading]);
@@ -1530,40 +1526,38 @@ const TeacherProfileEdit = () => {
 
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
-    setAvatarFile(file); // Set the file in context state for upload
-    // 🚀 REMOVED: setLocalProfileData(prev => ({ ...prev, avatar: file ? '' : '' }));
-    // If a new file is selected, the getDisplayAvatarUrl will prioritize 'avatarFile'.
-    // If the user replaces an existing photo, the old one will be cleared from context.
-    // If they then remove the new one without saving, it reverts to the original.
-    // The explicit setting to '' in the remove button is for signaling deletion.
+    setAvatarFile(file);
+    setLocalProfileData(prev => ({
+      ...prev,
+      deleteAvatar: false // Reset deletion flag when a new file is selected
+    }));
   };
 
   const handleVideoUpload = (e) => {
     const file = e.target.files[0];
-    setVideoFile(file); // Set the file in context state for upload
-    // 🚀 REMOVED: setLocalProfileData(prev => ({ ...prev, videoUrl: file ? '' : '' }));
+    setVideoFile(file);
+    setLocalProfileData(prev => ({
+      ...prev,
+      deleteVideo: false // Reset deletion flag when a new file is selected
+    }));
   };
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
     const currentTotalPhotos = (localProfileData.galleryPhotos?.length || 0) + galleryFiles.length;
     const newFilesToAdd = files.slice(0, 10 - currentTotalPhotos);
-
-    setGalleryFiles((prev) => [...prev, ...newFilesToAdd]); // Add to context's galleryFiles state
+    setGalleryFiles((prev) => [...prev, ...newFilesToAdd]);
   };
 
   const handleRemoveGalleryPhoto = (indexToRemove) => {
     const savedPhotosCount = localProfileData.galleryPhotos?.length || 0;
-
     if (indexToRemove < savedPhotosCount) {
-      // This is an existing photo URL
       const updatedSavedPhotos = localProfileData.galleryPhotos.filter((_, i) => i !== indexToRemove);
       setLocalProfileData(prev => ({
         ...prev,
         galleryPhotos: updatedSavedPhotos
       }));
     } else {
-      // This is a newly selected file (not yet uploaded/saved)
       const newFileIndex = indexToRemove - savedPhotosCount;
       setGalleryFiles((prev) => prev.filter((_, i) => i !== newFileIndex));
     }
@@ -1573,7 +1567,7 @@ const TeacherProfileEdit = () => {
     if (newSkill.trim() && !localProfileData.skills.includes(newSkill.trim())) {
       setLocalProfileData((prev) => ({
         ...prev,
-        skills: [...prev.skills, newSkill.trim()],
+        skills: [...prev.skills, newSkill.trim()]
       }));
       setNewSkill("");
     }
@@ -1582,7 +1576,7 @@ const TeacherProfileEdit = () => {
   const handleRemoveSkill = (skillToRemove) => {
     setLocalProfileData((prev) => ({
       ...prev,
-      skills: prev.skills.filter((skill) => skill !== skillToRemove),
+      skills: prev.skills.filter((skill) => skill !== skillToRemove)
     }));
   };
 
@@ -1593,7 +1587,7 @@ const TeacherProfileEdit = () => {
     ) {
       setLocalProfileData((prev) => ({
         ...prev,
-        qualifications: [...prev.qualifications, newQualification.trim()],
+        qualifications: [...prev.qualifications, newQualification.trim()]
       }));
       setNewQualification("");
     }
@@ -1602,74 +1596,49 @@ const TeacherProfileEdit = () => {
   const handleRemoveQualification = (qualToRemove) => {
     setLocalProfileData((prev) => ({
       ...prev,
-      qualifications: prev.qualifications.filter((qual) => qual !== qualToRemove),
+      qualifications: prev.qualifications.filter((qual) => qual !== qualToRemove)
     }));
   };
 
   const handleSaveAllProfileData = async (e) => {
     e.preventDefault();
 
-    const formData = new FormData();
+    const formData = {
+      name: localProfileData.name,
+      title: localProfileData.title,
+      email: localProfileData.email,
+      phone: localProfileData.phone,
+      aboutMe: localProfileData.aboutMe,
+      skills: localProfileData.skills,
+      experience: localProfileData.experience,
+      hourlyRate: localProfileData.hourlyRate === "" ? undefined : Number(localProfileData.hourlyRate),
+      qualifications: localProfileData.qualifications,
+      galleryPhotos: localProfileData.galleryPhotos
+    };
 
-    // 1. Append non-file basic data
-    for (const key in localProfileData) {
-      if (key !== 'galleryPhotos' && key !== 'avatar' && key !== 'videoUrl') { // Exclude specific media fields here
-        if (Array.isArray(localProfileData[key])) {
-          localProfileData[key].forEach(item => formData.append(`${key}[]`, item));
-        } else if (localProfileData[key] !== null && localProfileData[key] !== undefined) {
-          if (key === 'hourlyRate') {
-            const rate = localProfileData[key] === "" ? undefined : Number(localProfileData[key]);
-            if (rate !== undefined && isNaN(rate)) {
-              toast({
-                title: "Validation Error",
-                description: "Hourly Rate must be a valid number.",
-                variant: "destructive",
-              });
-              return;
-            }
-            if (rate !== undefined) {
-              formData.append(key, rate);
-            } else {
-              formData.append(key, "");
-            }
-          } else {
-            formData.append(key, localProfileData[key]);
-          }
-        }
-      }
+    // Validate hourlyRate
+    if (formData.hourlyRate !== undefined && isNaN(formData.hourlyRate)) {
+      toast({
+        title: "Validation Error",
+        description: "Hourly Rate must be a valid number.",
+        variant: "destructive"
+      });
+      return;
     }
 
-    // 2. Handle Avatar File
-    if (avatarFile) {
-      formData.append('avatar', avatarFile);
-    } else if (teacherProfile?.avatar?.url && getDisplayAvatarUrl() === '') {
-      // 🚀 Send an empty string for avatar if it was removed
-      formData.append('avatar', '');
+    // Handle Avatar Deletion
+    if (localProfileData.deleteAvatar) {
+      formData.avatar = ''; // Signal deletion to context
+    } else if (teacherProfile?.avatar?.url && !avatarFile) {
+      formData.avatar = teacherProfile.avatar.url; // Preserve existing avatar
     }
 
-    // 3. Handle Video File
-    if (videoFile) {
-      formData.append('video', videoFile); // Assuming backend expects 'video' for video file
-    } else if (teacherProfile?.videoUrl?.url && getDisplayVideoUrl() === '') {
-      // 🚀 Send an empty string for videoUrl if it was removed
-      formData.append('videoUrl', ''); // This sends `videoUrl: ""` to req.body
+    // Handle Video Deletion
+    if (localProfileData.deleteVideo) {
+      formData.videoUrl = ''; // Signal deletion to context
+    } else if (teacherProfile?.videoUrl?.url && !videoFile) {
+      formData.videoUrl = teacherProfile.videoUrl.url; // Preserve existing video
     }
-
-    // 4. Handle Gallery Photos
-    // Append newly selected gallery files
-    galleryFiles.forEach((file, index) => {
-      // 🚀 CORRECTED: Match Multer's 'galleryPhotos' field name
-      formData.append(`galleryPhotos[]`, file);
-    });
-
-    // Append URLs/metadata of *existing* gallery photos that were NOT removed
-    const existingPhotosToKeep = localProfileData.galleryPhotos.filter(photo => photo.url);
-    existingPhotosToKeep.forEach((photo, index) => {
-      formData.append(`existingGalleryPhotos[${index}][url]`, photo.url);
-      if (photo._id) {
-        formData.append(`existingGalleryPhotos[${index}][_id]`, photo._id);
-      }
-    });
 
     try {
       if (teacherProfile) {
@@ -1682,24 +1651,22 @@ const TeacherProfileEdit = () => {
       toast({
         title: "Save Error",
         description: err.message || "An unexpected error occurred while saving your profile.",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
 
   const getDisplayAvatarUrl = () => {
     if (avatarFile) return URL.createObjectURL(avatarFile);
-    if (localProfileData.avatar === '') return ""; // Explicitly removed
-    // Make sure localProfileData.avatar can hold the full object initially
-    if (localProfileData.avatar && localProfileData.avatar.url) return localProfileData.avatar.url;
+    if (localProfileData.deleteAvatar) return "";
+    if (teacherProfile?.avatar?.url) return teacherProfile.avatar.url;
     return "";
   };
 
   const getDisplayVideoUrl = () => {
     if (videoFile) return URL.createObjectURL(videoFile);
-    if (localProfileData.videoUrl === '') return ""; // Explicitly removed
-    // Make sure localProfileData.videoUrl can hold the full object initially
-    if (localProfileData.videoUrl && localProfileData.videoUrl.url) return localProfileData.videoUrl.url;
+    if (localProfileData.deleteVideo) return "";
+    if (teacherProfile?.videoUrl?.url) return teacherProfile.videoUrl.url;
     return "";
   };
 
@@ -1721,7 +1688,6 @@ const TeacherProfileEdit = () => {
   const isCreatingNewProfile = !teacherProfile;
 
   return (
-    // ... (rest of your JSX remains the same) ...
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -1823,9 +1789,11 @@ const TeacherProfileEdit = () => {
                         <button
                           type="button"
                           onClick={() => {
-                            setAvatarFile(null); // Clear the file in context
-                            // Signal removal of existing avatar to backend
-                            setLocalProfileData(prev => ({ ...prev, avatar: '' }));
+                            setAvatarFile(null);
+                            setLocalProfileData(prev => ({
+                              ...prev,
+                              deleteAvatar: true
+                            }));
                           }}
                           className="text-red-500 hover:underline text-sm mt-1"
                         >
@@ -2113,8 +2081,10 @@ const TeacherProfileEdit = () => {
                             className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm"
                             onClick={() => {
                               setVideoFile(null);
-                              // Signal removal of existing video URL to backend
-                              setLocalProfileData(prev => ({ ...prev, videoUrl: '' }));
+                              setLocalProfileData(prev => ({
+                                ...prev,
+                                deleteVideo: true
+                              }));
                             }}
                           >
                             Remove
