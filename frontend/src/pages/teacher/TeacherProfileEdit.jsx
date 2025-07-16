@@ -1445,14 +1445,13 @@ import { motion } from "framer-motion";
 import { Upload, Video, X, Loader2 } from "lucide-react";
 import { useTeacherProfile } from "@/hooks/useTeacherProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from '@/components/ui/use-toast'; // Assuming you have shadcn/ui toast
+import { toast } from '@/components/ui/use-toast';
 
 const TeacherProfileEdit = () => {
   const {
     teacherProfile,
     isLoading,
     isSaving,
-    // error, // Error handling can be added with toasts from context
     updateTeacherProfile,
     createTeacherProfile,
     setAvatarFile,
@@ -1502,6 +1501,16 @@ const TeacherProfileEdit = () => {
         // Ensure galleryPhotos are correctly mapped to include at least 'url'
         galleryPhotos: teacherProfile.galleryPhotos?.map(p => ({ url: p.url, _id: p._id })) || []
       });
+      // Important: When loading existing profile, ensure avatar/videoUrl are also reflected
+      // in localProfileData if they exist, so getDisplay... functions work initially.
+      // This part is crucial for initial display and subsequent removal logic.
+      if (teacherProfile.avatar) {
+        setLocalProfileData(prev => ({ ...prev, avatar: teacherProfile.avatar }));
+      }
+      if (teacherProfile.videoUrl) {
+        setLocalProfileData(prev => ({ ...prev, videoUrl: teacherProfile.videoUrl }));
+      }
+
     } else if (user && !authLoading && !isLoading) {
       setLocalProfileData(prev => ({
         ...prev,
@@ -1522,18 +1531,17 @@ const TeacherProfileEdit = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     setAvatarFile(file); // Set the file in context state for upload
-
-    // If a new file is selected, effectively "clear" the old URL from local state
-    // This tells the backend to replace it. If no file, it signals removal.
-    setLocalProfileData(prev => ({ ...prev, avatar: file ? '' : '' }));
+    // 🚀 REMOVED: setLocalProfileData(prev => ({ ...prev, avatar: file ? '' : '' }));
+    // If a new file is selected, the getDisplayAvatarUrl will prioritize 'avatarFile'.
+    // If the user replaces an existing photo, the old one will be cleared from context.
+    // If they then remove the new one without saving, it reverts to the original.
+    // The explicit setting to '' in the remove button is for signaling deletion.
   };
 
   const handleVideoUpload = (e) => {
     const file = e.target.files[0];
     setVideoFile(file); // Set the file in context state for upload
-
-    // If a new file is selected, effectively "clear" the old URL from local state
-    setLocalProfileData(prev => ({ ...prev, videoUrl: file ? '' : '' }));
+    // 🚀 REMOVED: setLocalProfileData(prev => ({ ...prev, videoUrl: file ? '' : '' }));
   };
 
   const handlePhotoUpload = (e) => {
@@ -1605,9 +1613,8 @@ const TeacherProfileEdit = () => {
 
     // 1. Append non-file basic data
     for (const key in localProfileData) {
-      if (key !== 'galleryPhotos') { // galleryPhotos are handled separately
+      if (key !== 'galleryPhotos' && key !== 'avatar' && key !== 'videoUrl') { // Exclude specific media fields here
         if (Array.isArray(localProfileData[key])) {
-          // For arrays like skills, qualifications, append each item
           localProfileData[key].forEach(item => formData.append(`${key}[]`, item));
         } else if (localProfileData[key] !== null && localProfileData[key] !== undefined) {
           if (key === 'hourlyRate') {
@@ -1623,7 +1630,6 @@ const TeacherProfileEdit = () => {
             if (rate !== undefined) {
               formData.append(key, rate);
             } else {
-              // If hourlyRate is intentionally empty, send an empty string or a specific marker
               formData.append(key, "");
             }
           } else {
@@ -1636,31 +1642,29 @@ const TeacherProfileEdit = () => {
     // 2. Handle Avatar File
     if (avatarFile) {
       formData.append('avatar', avatarFile);
-    } else if (teacherProfile?.avatar?.url && !getDisplayAvatarUrl()) {
-      // If there was an avatar, but now there isn't (user removed it),
-      // signal its removal to the backend by sending a specific string.
-      // Your backend should interpret this as 'delete existing avatar'.
-      formData.append('avatar', 'REMOVE_EXISTING_FILE');
+    } else if (teacherProfile?.avatar?.url && getDisplayAvatarUrl() === '') {
+      // 🚀 Send an empty string for avatar if it was removed
+      formData.append('avatar', '');
     }
 
     // 3. Handle Video File
     if (videoFile) {
       formData.append('video', videoFile); // Assuming backend expects 'video' for video file
-    } else if (teacherProfile?.videoUrl?.url && !getDisplayVideoUrl()) {
-      formData.append('videoUrl', 'REMOVE_EXISTING_FILE');
+    } else if (teacherProfile?.videoUrl?.url && getDisplayVideoUrl() === '') {
+      // 🚀 Send an empty string for videoUrl if it was removed
+      formData.append('videoUrl', ''); // This sends `videoUrl: ""` to req.body
     }
 
     // 4. Handle Gallery Photos
     // Append newly selected gallery files
     galleryFiles.forEach((file, index) => {
-      formData.append(`gallery[]`, file); // Append as 'gallery[]' for array of files
+      // 🚀 CORRECTED: Match Multer's 'galleryPhotos' field name
+      formData.append(`galleryPhotos[]`, file);
     });
 
     // Append URLs/metadata of *existing* gallery photos that were NOT removed
     const existingPhotosToKeep = localProfileData.galleryPhotos.filter(photo => photo.url);
     existingPhotosToKeep.forEach((photo, index) => {
-      // You might need to adjust this depending on how your backend expects existing photo data.
-      // For now, let's assume it expects an array of objects with 'url' and possibly '_id'.
       formData.append(`existingGalleryPhotos[${index}][url]`, photo.url);
       if (photo._id) {
         formData.append(`existingGalleryPhotos[${index}][_id]`, photo._id);
@@ -1673,7 +1677,6 @@ const TeacherProfileEdit = () => {
       } else {
         await createTeacherProfile(formData);
       }
-      // Success/error toasts should ideally be handled within useTeacherProfile hook
     } catch (err) {
       console.error("Failed to save profile:", err);
       toast({
@@ -1687,14 +1690,16 @@ const TeacherProfileEdit = () => {
   const getDisplayAvatarUrl = () => {
     if (avatarFile) return URL.createObjectURL(avatarFile);
     if (localProfileData.avatar === '') return ""; // Explicitly removed
-    if (teacherProfile?.avatar?.url) return teacherProfile.avatar.url; // Existing saved
+    // Make sure localProfileData.avatar can hold the full object initially
+    if (localProfileData.avatar && localProfileData.avatar.url) return localProfileData.avatar.url;
     return "";
   };
 
   const getDisplayVideoUrl = () => {
     if (videoFile) return URL.createObjectURL(videoFile);
     if (localProfileData.videoUrl === '') return ""; // Explicitly removed
-    if (teacherProfile?.videoUrl?.url) return teacherProfile.videoUrl.url; // Existing saved
+    // Make sure localProfileData.videoUrl can hold the full object initially
+    if (localProfileData.videoUrl && localProfileData.videoUrl.url) return localProfileData.videoUrl.url;
     return "";
   };
 
@@ -1716,6 +1721,7 @@ const TeacherProfileEdit = () => {
   const isCreatingNewProfile = !teacherProfile;
 
   return (
+    // ... (rest of your JSX remains the same) ...
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -2184,34 +2190,44 @@ const TeacherProfileEdit = () => {
                             </button>
                           </div>
                         )}
+                        <input
+                          type="file"
+                          ref={photoInputRef}
+                          onChange={handlePhotoUpload}
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                        />
                       </div>
                     ) : (
-                      <div className="border-2 border-dashed rounded-md p-8 text-center border-gray-300">
+                      <div className="border-2 border-dashed rounded-md p-8 text-center space-y-3 border-gray-300">
                         <Upload className="h-12 w-12 mx-auto text-gray-500" />
-                        <p className="mt-3 text-base font-medium text-gray-700">
-                          Drag photos here or click to upload
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Upload up to 10 photos (max 10MB each)
-                        </p>
+                        <div>
+                          <p className="text-base font-medium text-gray-700">
+                            No photos uploaded
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Upload photos to create an engaging gallery for your profile.
+                          </p>
+                        </div>
                         <button
                           type="button"
-                          className="mt-4 border border-orange-500 text-orange-500 px-6 py-3 rounded hover:bg-orange-50 text-base flex items-center justify-center"
+                          className="border border-orange-500 text-orange-500 px-6 py-3 rounded hover:bg-orange-50 text-base flex items-center justify-center"
                           onClick={() => photoInputRef.current.click()}
                         >
                           <Upload className="h-5 w-5 mr-2 text-orange-500" />
-                          Select Photos
+                          Upload Photos
                         </button>
+                        <input
+                          type="file"
+                          ref={photoInputRef}
+                          onChange={handlePhotoUpload}
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                        />
                       </div>
                     )}
-                    <input
-                      type="file"
-                      ref={photoInputRef}
-                      onChange={handlePhotoUpload}
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                    />
                   </div>
 
                   <div className="flex justify-end">
@@ -2221,7 +2237,7 @@ const TeacherProfileEdit = () => {
                       disabled={isSaving}
                     >
                       {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save Media
+                      Save Media & Videos
                     </button>
                   </div>
                 </form>
