@@ -350,6 +350,7 @@ const processFileUploads = async (files) => {
       uploadedMedia.avatar = { url: result.secure_url, publicId: result.public_id };
     } catch (uploadError) {
       console.error('Failed to upload avatar to Cloudinary:', uploadError);
+      throw new Error(`Avatar upload failed: ${uploadError.message}`);
     }
   }
 
@@ -359,6 +360,7 @@ const processFileUploads = async (files) => {
       uploadedMedia.videoUrl = { url: result.secure_url, publicId: result.public_id };
     } catch (uploadError) {
       console.error('Failed to upload video to Cloudinary:', uploadError);
+      throw new Error(`Video upload failed: ${uploadError.message}`);
     }
   }
 
@@ -368,7 +370,7 @@ const processFileUploads = async (files) => {
         .then(result => ({ url: result.secure_url, publicId: result.public_id, name: file.originalname }))
         .catch(uploadError => {
           console.error(`Failed to upload gallery photo ${file.originalname}:`, uploadError);
-          return null;
+          throw new Error(`Gallery photo upload failed: ${uploadError.message}`);
         })
     );
 
@@ -387,7 +389,7 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
   console.log(`DEBUG: newFile provided:`, !!newFile);
   console.log(`DEBUG: clearExplicitly requested:`, clearExplicitly);
 
-  const oldPublicId = profile[mediaField] ? profile[mediaField].publicId : null;
+  const oldPublicId = profile[mediaField]?.publicId || null;
   console.log(`DEBUG: oldPublicId captured:`, oldPublicId);
 
   let updatedMediaInfo = { url: '', publicId: '' };
@@ -403,36 +405,28 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
 
       if (oldPublicId) {
         console.log(`DEBUG: Attempting to delete old media: ${oldPublicId} (resourceType: ${resourceType})`);
-        try {
-          await deleteFromCloudinary(oldPublicId, resourceType);
-          console.log(`DEBUG: Old media ${oldPublicId} DELETED successfully.`);
-        } catch (deleteError) {
-          console.warn(`DEBUG: WARNING: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) from Cloudinary:`, deleteError.message);
-        }
+        await deleteFromCloudinary(oldPublicId, resourceType);
+        console.log(`DEBUG: Old media ${oldPublicId} DELETED successfully.`);
       } else {
         console.log(`DEBUG: No old publicId to delete for ${mediaField}.`);
       }
     } catch (uploadError) {
       console.error(`DEBUG: ERROR: Failed to upload new ${mediaField}:`, uploadError.message);
-      throw uploadError;
+      throw new Error(`Failed to upload ${mediaField}: ${uploadError.message}`);
     }
   } else if (clearExplicitly) {
     console.log(`DEBUG: Entering 'clearExplicitly' branch for ${mediaField}.`);
     if (oldPublicId) {
       console.log(`DEBUG: Attempting to delete old media on explicit clear: ${oldPublicId} (resourceType: ${resourceType})`);
-      try {
-        await deleteFromCloudinary(oldPublicId, resourceType);
-        console.log(`DEBUG: Old media ${oldPublicId} DELETED successfully on explicit clear.`);
-      } catch (deleteError) {
-        console.warn(`DEBUG: WARNING: Failed to delete old ${mediaField} (publicId: ${oldPublicId}) on explicit clear:`, deleteError.message);
-      }
+      await deleteFromCloudinary(oldPublicId, resourceType);
+      console.log(`DEBUG: Old media ${oldPublicId} DELETED successfully on explicit clear.`);
     } else {
       console.log(`DEBUG: No old publicId to delete on explicit clear for ${mediaField}.`);
     }
-    updatedMediaInfo = { url: '', publicId: '' };
+    updatedMediaInfo = { url: '', publicId: '' }; // Align with schema
   } else {
     console.log(`DEBUG: No new file or explicit clear. Retaining existing media for ${mediaField}.`);
-    updatedMediaInfo = { ...profile[mediaField] };
+    updatedMediaInfo = profile[mediaField] || { url: '', publicId: '' };
   }
 
   profile[mediaField] = updatedMediaInfo;
@@ -442,24 +436,28 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
 
 const parseIncomingGalleryPhotos = (body) => {
   const galleryPhotos = [];
+  const indices = new Set();
+
+  // Collect all indices from keys like galleryPhotos[0][url], galleryPhotos[0][publicId], etc.
   for (const key in body) {
-    if (key.startsWith('galleryPhotos[') && key.endsWith(']')) {
-      const match = key.match(/galleryPhotos\[(\d+)\]/);
-      if (match) {
-        try {
-          const photoObject = JSON.parse(body[key]);
-          if (typeof photoObject === 'object' && photoObject !== null && photoObject.url && photoObject.publicId) {
-            galleryPhotos.push(photoObject);
-          } else {
-            console.warn(`Invalid gallery photo object parsed from key ${key}:`, photoObject);
-          }
-        } catch (e) {
-          console.error(`Failed to parse JSON for gallery photo key ${key}:`, e);
-        }
-      }
+    const match = key.match(/galleryPhotos\[(\d+)\]\[(\w+)\]/);
+    if (match) {
+      const index = match[1];
+      indices.add(index);
     }
   }
-  return galleryPhotos;
+
+  // Build gallery photo objects for each index
+  for (const index of indices) {
+    const url = body[`galleryPhotos[${index}][url]`];
+    const publicId = body[`galleryPhotos[${index}][publicId]`];
+    const name = body[`galleryPhotos[${index}][name]`] || '';
+    if (url && publicId) {
+      galleryPhotos[index] = { url, publicId, name };
+    }
+  }
+
+  return galleryPhotos.filter(photo => photo && photo.url && photo.publicId);
 };
 
 exports.createTeacherProfile = async (req, res) => {
@@ -474,7 +472,7 @@ exports.createTeacherProfile = async (req, res) => {
   }
 
   try {
-    let teacherProfile = await TeacherProfile.findOne({ userId: userId });
+    let teacherProfile = await TeacherProfile.findOne({ userId });
     if (teacherProfile) {
       return res.status(409).json({ message: 'Teacher profile already exists for this user.' });
     }
@@ -488,7 +486,7 @@ exports.createTeacherProfile = async (req, res) => {
     const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
 
     const newTeacherProfile = new TeacherProfile({
-      userId: userId,
+      userId,
       avatar: uploadedMedia.avatar || { url: '', publicId: '' },
       name,
       title,
@@ -497,7 +495,7 @@ exports.createTeacherProfile = async (req, res) => {
       aboutMe,
       skills: Array.isArray(skills) ? skills : [],
       experience,
-      hourlyRate,
+      hourlyRate: hourlyRate ? Number(hourlyRate) : 0,
       qualifications: Array.isArray(qualifications) ? qualifications : [],
       videoUrl: uploadedMedia.videoUrl || { url: '', publicId: '' },
       galleryPhotos: [...incomingGalleryPhotos, ...(uploadedMedia.galleryPhotos || [])]
@@ -570,7 +568,7 @@ exports.getAuthenticatedTeacherProfile = async (req, res) => {
 exports.updateTeacherProfile = async (req, res) => {
   const {
     name, title, email, phone, aboutMe,
-    skills, experience, hourlyRate, qualifications,
+    skills, experience, hourlyRate, qualifications
   } = req.body;
   const authenticatedUserId = req.user.id;
   const authenticatedUserRole = req.user.role;
@@ -589,7 +587,7 @@ exports.updateTeacherProfile = async (req, res) => {
     await handleSingleMediaUploadAndReplace(
       teacherProfile,
       'avatar',
-      req.files.avatar ? req.files.avatar[0] : undefined,
+      req.files && req.files.avatar ? req.files.avatar[0] : undefined,
       'image',
       req.body.avatar === ''
     );
@@ -597,7 +595,7 @@ exports.updateTeacherProfile = async (req, res) => {
     await handleSingleMediaUploadAndReplace(
       teacherProfile,
       'videoUrl',
-      req.files.video ? req.files.video[0] : undefined,
+      req.files && req.files.video ? req.files.video[0] : undefined,
       'video',
       req.body.videoUrl === ''
     );
@@ -619,10 +617,16 @@ exports.updateTeacherProfile = async (req, res) => {
     const photosToDeletePromises = [];
     for (const existingPhoto of teacherProfile.galleryPhotos || []) {
       if (existingPhoto.publicId && !finalPublicIds.has(existingPhoto.publicId)) {
-        photosToDeletePromises.push(deleteFromCloudinary(existingPhoto.publicId, 'image'));
+        photosToDeletePromises.push(
+          deleteFromCloudinary(existingPhoto.publicId, 'image')
+            .catch(err => {
+              console.error(`Failed to delete gallery photo ${existingPhoto.publicId}:`, err.message);
+              throw new Error(`Failed to delete gallery photo ${existingPhoto.publicId}: ${err.message}`);
+            })
+        );
       }
     }
-    await Promise.allSettled(photosToDeletePromises);
+    await Promise.all(photosToDeletePromises);
 
     teacherProfile.galleryPhotos = finalGalleryPhotos;
 
@@ -631,10 +635,9 @@ exports.updateTeacherProfile = async (req, res) => {
     teacherProfile.email = email !== undefined ? email : teacherProfile.email;
     teacherProfile.phone = phone !== undefined ? phone : teacherProfile.phone;
     teacherProfile.aboutMe = aboutMe !== undefined ? aboutMe : teacherProfile.aboutMe;
-
     teacherProfile.skills = Array.isArray(skills) ? skills : teacherProfile.skills;
     teacherProfile.experience = experience !== undefined ? experience : teacherProfile.experience;
-    teacherProfile.hourlyRate = hourlyRate !== undefined ? hourlyRate : teacherProfile.hourlyRate;
+    teacherProfile.hourlyRate = hourlyRate !== undefined ? Number(hourlyRate) : teacherProfile.hourlyRate;
     teacherProfile.qualifications = Array.isArray(qualifications) ? qualifications : teacherProfile.qualifications;
 
     const updatedProfile = await teacherProfile.save();
@@ -669,20 +672,38 @@ exports.deleteTeacherProfile = async (req, res) => {
 
     const deletionPromises = [];
     if (teacherProfile.avatar && teacherProfile.avatar.publicId) {
-      deletionPromises.push(deleteFromCloudinary(teacherProfile.avatar.publicId, 'image'));
+      deletionPromises.push(
+        deleteFromCloudinary(teacherProfile.avatar.publicId, 'image')
+          .catch(err => {
+            console.error(`Failed to delete avatar ${teacherProfile.avatar.publicId}:`, err.message);
+            throw new Error(`Failed to delete avatar: ${err.message}`);
+          })
+      );
     }
     if (teacherProfile.videoUrl && teacherProfile.videoUrl.publicId) {
-      deletionPromises.push(deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video'));
+      deletionPromises.push(
+        deleteFromCloudinary(teacherProfile.videoUrl.publicId, 'video')
+          .catch(err => {
+            console.error(`Failed to delete video ${teacherProfile.videoUrl.publicId}:`, err.message);
+            throw new Error(`Failed to delete video: ${err.message}`);
+          })
+      );
     }
     if (teacherProfile.galleryPhotos && teacherProfile.galleryPhotos.length > 0) {
       teacherProfile.galleryPhotos.forEach(photo => {
         if (photo.publicId) {
-          deletionPromises.push(deleteFromCloudinary(photo.publicId, 'image'));
+          deletionPromises.push(
+            deleteFromCloudinary(photo.publicId, 'image')
+              .catch(err => {
+                console.error(`Failed to delete gallery photo ${photo.publicId}:`, err.message);
+                throw new Error(`Failed to delete gallery photo ${photo.publicId}: ${err.message}`);
+              })
+          );
         }
       });
     }
 
-    await Promise.allSettled(deletionPromises);
+    await Promise.all(deletionPromises);
 
     await TeacherProfile.deleteOne({ _id: req.params.id });
 
