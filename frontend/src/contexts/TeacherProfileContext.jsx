@@ -277,7 +277,7 @@
 
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { api } from './api';
+import { api } from '../api/axios';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from './AuthContext';
 
