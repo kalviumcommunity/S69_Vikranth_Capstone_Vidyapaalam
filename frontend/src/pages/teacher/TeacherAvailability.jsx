@@ -376,7 +376,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { format, addDays, startOfDay } from "date-fns";
+import { format, addDays, startOfDay, parseISO } from "date-fns";
 import { Clock, Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -391,23 +391,11 @@ const timeOptionsIST = [
 const TeacherAvailability = () => {
   const { api, updateAvailability } = useAuth();
   const [availability, setAvailability] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
   const [newStartTime, setNewStartTime] = useState("");
   const [newEndTime, setNewEndTime] = useState("");
   const [activeTab, setActiveTab] = useState("slots");
   const [loading, setLoading] = useState(true);
-
-  // Convert IST date to UTC for backend
-  const toUTCDate = (date) => {
-    const istDate = startOfDay(date); // Start of day in IST
-    return new Date(istDate.getTime() - 5.5 * 60 * 60 * 1000); // Subtract 5:30 hours for UTC
-  };
-
-  // Convert UTC date from backend to IST for display
-  const toISTDate = (date) => {
-    const utcDate = new Date(date);
-    return startOfDay(new Date(utcDate.getTime() + 5.5 * 60 * 60 * 1000)); // Add 5:30 hours for IST
-  };
 
   // Fetch initial availability from /auth/profile
   useEffect(() => {
@@ -416,7 +404,7 @@ const TeacherAvailability = () => {
         const { data } = await api.get("/auth/profile");
         if (data.availability) {
           const mappedAvailability = data.availability.map(day => ({
-            date: toISTDate(day.date), // Convert UTC to IST
+            date: startOfDay(parseISO(day.date)), // Parse UTC date string to IST
             timeSlots: day.slots.map(slot => ({
               id: `slot-${Date.now()}-${Math.random()}`,
               startTime: slot.startTime,
@@ -503,17 +491,17 @@ const TeacherAvailability = () => {
       });
     }
 
-    // Prepare backend payload
+    // Prepare backend payload with date strings
     const backendAvailability = updatedAvailability.map(day => ({
-      date: toUTCDate(day.date), // Convert IST to UTC
+      date: format(day.date, 'yyyy-MM-dd'), // Send as yyyy-MM-dd string
       slots: day.timeSlots.map(slot => ({
         startTime: slot.startTime,
         endTime: slot.endTime,
       })),
     }));
 
-    console.log("Sending add time slot payload (UTC):", JSON.stringify(backendAvailability, null, 2));
-    console.log("Selected date (IST):", format(selectedDate, 'yyyy-MM-dd'));
+    console.log("Selected date (IST):", formattedSelectedDate);
+    console.log("Sending add time slot payload:", JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
@@ -547,15 +535,15 @@ const TeacherAvailability = () => {
 
     // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => ({
-      date: toUTCDate(day.date), // Convert IST to UTC
+      date: format(day.date, 'yyyy-MM-dd'), // Send as yyyy-MM-dd string
       slots: day.timeSlots.map(slot => ({
         startTime: slot.startTime,
         endTime: slot.endTime,
       })),
     }));
 
-    console.log("Sending remove time slot payload (UTC):", JSON.stringify(backendAvailability, null, 2));
     console.log("Date to remove (IST):", format(dateToRemove, 'yyyy-MM-dd'));
+    console.log("Sending remove time slot payload:",(handlerRemoveTimeSlot):", JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
@@ -576,6 +564,7 @@ const TeacherAvailability = () => {
     const today = startOfDay(new Date()); // Start of today in IST
     const newWeeklySlots = [];
     const updatedDates = [];
+    const skippedDates = [];
 
     // Generate slots for the next 7 days
     for (let i = 0; i < 7; i++) {
@@ -590,11 +579,23 @@ const TeacherAvailability = () => {
         { id: `weekly-${i}-2`, startTime: '14:00', endTime: '15:00' },
       ];
 
-      newWeeklySlots.push({
-        date: startOfDay(date),
-        timeSlots: existingDay ? [...existingDay.timeSlots, ...newSlots] : newSlots,
-      });
-      updatedDates.push(formattedDate);
+      // Check for duplicate slots
+      const existingSlots = existingDay ? existingDay.timeSlots : [];
+      const slotsToAdd = newSlots.filter(newSlot => 
+        !existingSlots.some(existingSlot => 
+          existingSlot.startTime === newSlot.startTime && existingSlot.endTime === newSlot.endTime
+        )
+      );
+
+      if (slotsToAdd.length > 0) {
+        newWeeklySlots.push({
+          date: startOfDay(date),
+          timeSlots: existingDay ? [...existingDay.timeSlots, ...slotsToAdd] : slotsToAdd,
+        });
+        updatedDates.push(formattedDate);
+      } else {
+        skippedDates.push(formattedDate);
+      }
     }
 
     // Merge with existing availability for other dates
@@ -610,24 +611,29 @@ const TeacherAvailability = () => {
 
     // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => ({
-      date: toUTCDate(day.date), // Convert IST to UTC
+      date: format(day.date, 'yyyy-MM-dd'), // Send as yyyy-MM-dd string
       slots: day.timeSlots.map(slot => ({
         startTime: slot.startTime,
         endTime: slot.endTime,
       })),
     }));
 
-    console.log("Sending weekly slots payload (UTC):", JSON.stringify(backendAvailability, null, 2));
     console.log("Updated dates (IST):", updatedDates);
+    console.log("Skipped dates (IST):", skippedDates);
+    console.log("Sending weekly slots payload:", JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
       setAvailability(updatedAvailability);
-      setSelectedDate(newWeeklySlots[0].date); // Show first day's slots
+      setSelectedDate(newWeeklySlots[0]?.date || today); // Show first updated day or today
       setActiveTab("slots");
+      const toastMessage = updatedDates.length > 0 
+        ? `Added slots for ${updatedDates.length} day(s): ${updatedDates.join(", ")}` + 
+          (skippedDates.length > 0 ? `. Skipped ${skippedDates.length} day(s) with existing slots: ${skippedDates.join(", ")}` : "")
+        : `No new slots added; all days have existing slots: ${skippedDates.join(", ")}`;
       toast({
         title: "Weekly schedule updated",
-        description: `Added or updated slots for: ${updatedDates.join(", ")}`,
+        description: toastMessage,
       });
     } catch (err) {
       toast({
