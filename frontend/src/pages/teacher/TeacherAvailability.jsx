@@ -376,7 +376,8 @@
 
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { format, addDays } from "date-fns";
+import { format, addDays, startOfDay } from "date-fns";
+import { utcToZonedTime, zonedTimeToUtc } from "date-fns-tz";
 import { Clock, Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Calendar } from "@/components/ui/calendar";
@@ -403,14 +404,19 @@ const TeacherAvailability = () => {
       try {
         const { data } = await api.get("/auth/profile");
         if (data.availability) {
-          const mappedAvailability = data.availability.map(day => ({
-            date: new Date(day.date),
-            timeSlots: day.slots.map(slot => ({
-              id: `slot-${Date.now()}-${Math.random()}`,
-              startTime: slot.startTime,
-              endTime: slot.endTime,
-            })),
-          }));
+          const mappedAvailability = data.availability.map(day => {
+            // Convert UTC date from backend to local IST date
+            const utcDate = new Date(day.date);
+            const istDate = utcToZonedTime(utcDate, "Asia/Kolkata");
+            return {
+              date: startOfDay(istDate), // Ensure start of day in IST
+              timeSlots: day.slots.map(slot => ({
+                id: `slot-${Date.now()}-${Math.random()}`,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+              })),
+            };
+          });
           setAvailability(mappedAvailability);
           console.log("Fetched availability:", JSON.stringify(mappedAvailability, null, 2));
         }
@@ -474,8 +480,9 @@ const TeacherAvailability = () => {
 
     // Update local state
     let updatedAvailability = [...availability];
+    const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     const existingDayIndex = availability.findIndex(
-      (a) => format(a.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
+      (a) => format(a.date, 'yyyy-MM-dd') === formattedSelectedDate
     );
 
     if (existingDayIndex !== -1) {
@@ -485,15 +492,15 @@ const TeacherAvailability = () => {
       };
     } else {
       updatedAvailability.push({
-        date: new Date(selectedDate),
+        date: startOfDay(selectedDate), // Ensure start of day in local timezone
         timeSlots: [newSlot],
       });
     }
 
-    // Prepare backend payload
+    // Prepare backend payload (convert to UTC)
     const backendAvailability = updatedAvailability.map(day => {
-      const utcDate = new Date(day.date);
-      utcDate.setUTCHours(0, 0, 0, 0);
+      const istDate = startOfDay(day.date); // Start of day in IST
+      const utcDate = zonedTimeToUtc(istDate, "Asia/Kolkata"); // Convert to UTC
       return {
         date: utcDate,
         slots: day.timeSlots.map(slot => ({
@@ -533,12 +540,12 @@ const TeacherAvailability = () => {
         };
       }
       return day;
-    }).filter(day => day.timeSlots.length > 0); // Remove days with no slots
+    }).filter(day => day.timeSlots.length > 0);
 
     // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => {
-      const utcDate = new Date(day.date);
-      utcDate.setUTCHours(0, 0, 0, 0);
+      const istDate = startOfDay(day.date);
+      const utcDate = zonedTimeToUtc(istDate, "Asia/Kolkata");
       return {
         date: utcDate,
         slots: day.timeSlots.map(slot => ({
@@ -566,10 +573,11 @@ const TeacherAvailability = () => {
   };
 
   const createWeeklySlots = async () => {
-    const today = new Date();
+    const today = startOfDay(new Date()); // Start of today in local timezone
     const newWeeklySlots = [];
+    const updatedDates = [];
 
-    // Generate new slots for the next 7 days
+    // Generate slots for the next 7 days
     for (let i = 0; i < 7; i++) {
       const date = addDays(today, i);
       const formattedDate = format(date, 'yyyy-MM-dd');
@@ -577,32 +585,28 @@ const TeacherAvailability = () => {
         a => format(a.date, 'yyyy-MM-dd') === formattedDate
       );
 
-      const newSlots = [
-        { id: `weekly-${i}-1`, startTime: '10:00', endTime: '11:00' },
-        { id: `weekly-${i}-2`, startTime: '14:00', endTime: '15:00' },
-      ];
-
-      newWeeklySlots.push({
-        date: new Date(date),
-        timeSlots: existingDay ? [...existingDay.timeSlots, ...newSlots] : newSlots,
-      });
+      // Only add new slots if no availability exists for the date
+      if (!existingDay) {
+        newWeeklySlots.push({
+          date: startOfDay(date),
+          timeSlots: [
+            { id: `weekly-${i}-1`, startTime: '10:00', endTime: '11:00' },
+            { id: `weekly-${i}-2`, startTime: '14:00', endTime: '15:00' },
+          ],
+        });
+        updatedDates.push(formattedDate);
+      }
     }
 
-    // Merge with existing availability for dates outside the current week
-    const otherDays = availability.filter(
-      day => !newWeeklySlots.some(
-        newDay => format(newDay.date, 'yyyy-MM-dd') === format(day.date, 'yyyy-MM-dd')
-      )
-    );
-
-    const updatedAvailability = [...otherDays, ...newWeeklySlots].sort(
+    // Merge with existing availability
+    const updatedAvailability = [...availability, ...newWeeklySlots].sort(
       (a, b) => a.date.getTime() - b.date.getTime()
     );
 
     // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => {
-      const utcDate = new Date(day.date);
-      utcDate.setUTCHours(0, 0, 0, 0);
+      const istDate = startOfDay(day.date);
+      const utcDate = zonedTimeToUtc(istDate, "Asia/Kolkata");
       return {
         date: utcDate,
         slots: day.timeSlots.map(slot => ({
@@ -617,13 +621,22 @@ const TeacherAvailability = () => {
     try {
       await updateAvailability(backendAvailability);
       setAvailability(updatedAvailability);
-      toast({
-        title: "Weekly schedule created",
-        description: "Added or updated 2 slots for each day this week",
-      });
+      if (updatedDates.length > 0) {
+        setSelectedDate(newWeeklySlots[0].date); // Show first updated day's slots
+        setActiveTab("slots");
+        toast({
+          title: "Weekly schedule updated",
+          description: `Added slots for ${updatedDates.length} day(s): ${updatedDates.join(", ")}`,
+        });
+      } else {
+        toast({
+          title: "No changes made",
+          description: "All days already have availability set.",
+        });
+      }
     } catch (err) {
       toast({
-        title: "Failed to create weekly schedule",
+        title: "Failed to update weekly schedule",
         description: err.response?.data?.message || "Please try again.",
         variant: "destructive",
       });
@@ -632,7 +645,7 @@ const TeacherAvailability = () => {
 
   const handleDateSelect = (date) => {
     if (date instanceof Date) {
-      setSelectedDate(date);
+      setSelectedDate(startOfDay(date));
       setActiveTab("slots");
     }
   };
@@ -775,7 +788,7 @@ const TeacherAvailability = () => {
                 <h4 className="text-sm font-medium text-gray-800">Add New Time Slot for {format(selectedDate, 'MMMM d')} (IST)</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="start-time" className="block text-sm font-medium text-gray-700 mb-1"><span className="font-semibold">Start attendantTime (IST)</span></label>
+                    <label htmlFor="start-time" className="block text-sm font-medium text-gray-700 mb-1"><span className="font-semibold">Start Time (IST)</span></label>
                     <select
                       id="start-time"
                       value={newStartTime}
