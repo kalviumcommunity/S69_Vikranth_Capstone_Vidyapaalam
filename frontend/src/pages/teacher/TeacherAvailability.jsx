@@ -543,7 +543,7 @@ const TeacherAvailability = () => {
     }));
 
     console.log("Date to remove (IST):", format(dateToRemove, 'yyyy-MM-dd'));
-    console.log("Sending remove time slot payload:",(handlerRemoveTimeSlot):", JSON.stringify(backendAvailability, null, 2));
+    console.log("Sending remove time slot payload:",handlerRemoveTimeSlot, JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
