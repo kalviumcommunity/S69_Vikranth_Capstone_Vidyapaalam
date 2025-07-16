@@ -38,9 +38,8 @@ const {
   updateTeacherProfile,
   deleteTeacherProfile,
 } = require('../controller/teacherController');
-
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
-const { protect, authorizeRoles } = require('../middleware/authMiddleware'); // Import your actual middleware
 
 const router = express.Router();
 
@@ -50,7 +49,25 @@ router.get('/user/:userId', getTeacherProfileByUserId);
 
 router.get('/me', protect, authorizeRoles('teacher'), getAuthenticatedTeacherProfile);
 
-router.post('/', protect, authorizeRoles('teacher'), upload, createTeacherProfile);
+router.post(
+  '/',
+  protect,
+  authorizeRoles('teacher'),
+  upload,
+  createTeacherProfile
+);
+
+router.put(
+  '/:id',
+  protect,
+  authorizeRoles('teacher', 'admin'),
+  upload,
+  updateTeacherProfile
+);
+
+router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
+
+module.exports = router;
 
 router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTeacherProfile);
 
