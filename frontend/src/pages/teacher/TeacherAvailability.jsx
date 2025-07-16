@@ -412,6 +412,7 @@ const TeacherAvailability = () => {
             })),
           }));
           setAvailability(mappedAvailability);
+          console.log("Fetched availability:", JSON.stringify(mappedAvailability, null, 2));
         }
       } catch (err) {
         toast({
@@ -484,7 +485,7 @@ const TeacherAvailability = () => {
       };
     } else {
       updatedAvailability.push({
-        date: new Date(selectedDate), // Ensure new date object
+        date: new Date(selectedDate),
         timeSlots: [newSlot],
       });
     }
@@ -502,7 +503,7 @@ const TeacherAvailability = () => {
       };
     });
 
-    console.log("Sending availability to backend:", JSON.stringify(backendAvailability, null, 2));
+    console.log("Sending add time slot payload:", JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
@@ -523,7 +524,8 @@ const TeacherAvailability = () => {
   };
 
   const handleRemoveTimeSlot = async (dateToRemove, slotId) => {
-    const updatedAvailability = availability.map(day => {
+    // Update local state
+    let updatedAvailability = availability.map(day => {
       if (format(day.date, 'yyyy-MM-dd') === format(dateToRemove, 'yyyy-MM-dd')) {
         return {
           ...day,
@@ -531,8 +533,9 @@ const TeacherAvailability = () => {
         };
       }
       return day;
-    }).filter(day => day.timeSlots.length > 0);
+    }).filter(day => day.timeSlots.length > 0); // Remove days with no slots
 
+    // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => {
       const utcDate = new Date(day.date);
       utcDate.setUTCHours(0, 0, 0, 0);
@@ -544,6 +547,8 @@ const TeacherAvailability = () => {
         })),
       };
     });
+
+    console.log("Sending remove time slot payload:", JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
@@ -562,20 +567,40 @@ const TeacherAvailability = () => {
 
   const createWeeklySlots = async () => {
     const today = new Date();
-    const weeklySlots = [];
+    const newWeeklySlots = [];
 
+    // Generate new slots for the next 7 days
     for (let i = 0; i < 7; i++) {
       const date = addDays(today, i);
-      weeklySlots.push({
-        date,
-        timeSlots: [
-          { id: `weekly-${i}-1`, startTime: '10:00', endTime: '11:00' },
-          { id: `weekly-${i}-2`, startTime: '14:00', endTime: '15:00' },
-        ],
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      const existingDay = availability.find(
+        a => format(a.date, 'yyyy-MM-dd') === formattedDate
+      );
+
+      const newSlots = [
+        { id: `weekly-${i}-1`, startTime: '10:00', endTime: '11:00' },
+        { id: `weekly-${i}-2`, startTime: '14:00', endTime: '15:00' },
+      ];
+
+      newWeeklySlots.push({
+        date: new Date(date),
+        timeSlots: existingDay ? [...existingDay.timeSlots, ...newSlots] : newSlots,
       });
     }
 
-    const backendAvailability = weeklySlots.map(day => {
+    // Merge with existing availability for dates outside the current week
+    const otherDays = availability.filter(
+      day => !newWeeklySlots.some(
+        newDay => format(newDay.date, 'yyyy-MM-dd') === format(day.date, 'yyyy-MM-dd')
+      )
+    );
+
+    const updatedAvailability = [...otherDays, ...newWeeklySlots].sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    );
+
+    // Prepare backend payload
+    const backendAvailability = updatedAvailability.map(day => {
       const utcDate = new Date(day.date);
       utcDate.setUTCHours(0, 0, 0, 0);
       return {
@@ -587,12 +612,14 @@ const TeacherAvailability = () => {
       };
     });
 
+    console.log("Sending weekly slots payload:", JSON.stringify(backendAvailability, null, 2));
+
     try {
       await updateAvailability(backendAvailability);
-      setAvailability(weeklySlots);
+      setAvailability(updatedAvailability);
       toast({
         title: "Weekly schedule created",
-        description: "Added 2 slots for each day this week",
+        description: "Added or updated 2 slots for each day this week",
       });
     } catch (err) {
       toast({
@@ -748,7 +775,7 @@ const TeacherAvailability = () => {
                 <h4 className="text-sm font-medium text-gray-800">Add New Time Slot for {format(selectedDate, 'MMMM d')} (IST)</h4>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="start-time" className="block text-sm font-medium text-gray-700 mb-1"><span className="font-semibold">Start Time (IST)</span></label>
+                    <label htmlFor="start-time" className="block text-sm font-medium text-gray-700 mb-1"><span className="font-semibold">Start attendantTime (IST)</span></label>
                     <select
                       id="start-time"
                       value={newStartTime}
