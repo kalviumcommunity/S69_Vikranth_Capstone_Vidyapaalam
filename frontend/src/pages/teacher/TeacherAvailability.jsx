@@ -379,8 +379,8 @@ import { motion } from "framer-motion";
 import { format, addDays } from "date-fns";
 import { Clock, Plus, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Calendar } from "@/components/ui/calendar"; 
-import { useAuth } from "@/contexts/AuthContext"; // Import AuthContext
+import { Calendar } from "@/components/ui/calendar";
+import { useAuth } from "@/contexts/AuthContext";
 
 const timeOptionsIST = [
   "00:00", "01:00", "02:00", "03:00", "04:00", "05:00", "06:00", "07:00",
@@ -389,7 +389,7 @@ const timeOptionsIST = [
 ];
 
 const TeacherAvailability = () => {
-  const { api, updateAvailability } = useAuth(); // Access api and updateAvailability
+  const { api, updateAvailability } = useAuth();
   const [availability, setAvailability] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [newStartTime, setNewStartTime] = useState("");
@@ -403,11 +403,10 @@ const TeacherAvailability = () => {
       try {
         const { data } = await api.get("/auth/profile");
         if (data.availability) {
-          // Map backend slots to frontend timeSlots with id
           const mappedAvailability = data.availability.map(day => ({
             date: new Date(day.date),
             timeSlots: day.slots.map(slot => ({
-              id: `slot-${Date.now()}-${Math.random()}`, // Generate unique id for frontend
+              id: `slot-${Date.now()}-${Math.random()}`,
               startTime: slot.startTime,
               endTime: slot.endTime,
             })),
@@ -473,7 +472,7 @@ const TeacherAvailability = () => {
     };
 
     // Update local state
-    const updatedAvailability = [...availability];
+    let updatedAvailability = [...availability];
     const existingDayIndex = availability.findIndex(
       (a) => format(a.date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd')
     );
@@ -485,23 +484,29 @@ const TeacherAvailability = () => {
       };
     } else {
       updatedAvailability.push({
-        date: selectedDate,
+        date: new Date(selectedDate), // Ensure new date object
         timeSlots: [newSlot],
       });
     }
 
     // Prepare backend payload
-    const backendAvailability = updatedAvailability.map(day => ({
-      date: new Date(day.date.setUTCHours(0, 0, 0, 0)), // Normalize to UTC
-      slots: day.timeSlots.map(slot => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      })),
-    }));
+    const backendAvailability = updatedAvailability.map(day => {
+      const utcDate = new Date(day.date);
+      utcDate.setUTCHours(0, 0, 0, 0);
+      return {
+        date: utcDate,
+        slots: day.timeSlots.map(slot => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        })),
+      };
+    });
+
+    console.log("Sending availability to backend:", JSON.stringify(backendAvailability, null, 2));
 
     try {
       await updateAvailability(backendAvailability);
-      setAvailability(updatedAvailability); // Update state only on success
+      setAvailability(updatedAvailability);
       setNewStartTime("");
       setNewEndTime("");
       setActiveTab("slots");
@@ -518,7 +523,6 @@ const TeacherAvailability = () => {
   };
 
   const handleRemoveTimeSlot = async (dateToRemove, slotId) => {
-    // Update local state
     const updatedAvailability = availability.map(day => {
       if (format(day.date, 'yyyy-MM-dd') === format(dateToRemove, 'yyyy-MM-dd')) {
         return {
@@ -529,18 +533,21 @@ const TeacherAvailability = () => {
       return day;
     }).filter(day => day.timeSlots.length > 0);
 
-    // Prepare backend payload
-    const backendAvailability = updatedAvailability.map(day => ({
-      date: new Date(day.date.setUTCHours(0, 0, 0, 0)), // Normalize to UTC
-      slots: day.timeSlots.map(slot => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      })),
-    }));
+    const backendAvailability = updatedAvailability.map(day => {
+      const utcDate = new Date(day.date);
+      utcDate.setUTCHours(0, 0, 0, 0);
+      return {
+        date: utcDate,
+        slots: day.timeSlots.map(slot => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        })),
+      };
+    });
 
     try {
       await updateAvailability(backendAvailability);
-      setAvailability(updatedAvailability); // Update state only on success
+      setAvailability(updatedAvailability);
       toast({
         title: "Time slot removed successfully",
       });
@@ -568,18 +575,21 @@ const TeacherAvailability = () => {
       });
     }
 
-    // Prepare backend payload
-    const backendAvailability = weeklySlots.map(day => ({
-      date: new Date(day.date.setUTCHours(0, 0, 0, 0)), // Normalize to UTC
-      slots: day.timeSlots.map(slot => ({
-        startTime: slot.startTime,
-        endTime: slot.endTime,
-      })),
-    }));
+    const backendAvailability = weeklySlots.map(day => {
+      const utcDate = new Date(day.date);
+      utcDate.setUTCHours(0, 0, 0, 0);
+      return {
+        date: utcDate,
+        slots: day.timeSlots.map(slot => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+        })),
+      };
+    });
 
     try {
       await updateAvailability(backendAvailability);
-      setAvailability(weeklySlots); // Update state only on success
+      setAvailability(weeklySlots);
       toast({
         title: "Weekly schedule created",
         description: "Added 2 slots for each day this week",
