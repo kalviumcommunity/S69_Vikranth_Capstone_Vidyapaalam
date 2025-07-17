@@ -895,29 +895,29 @@ const TeacherAvailability = () => {
         const { data } = await api.get("/auth/profile");
         console.log("Raw /auth/profile response:", JSON.stringify(data, null, 2));
         if (data && data.availability && Array.isArray(data.availability)) {
-          const mappedAvailability = data.availability.map(day => {
+          const mappedAvailability = data.availability.map((day, index) => {
             if (!day.date) {
-              console.warn("Missing date in availability:", day);
+              console.warn(`Missing date in availability at index ${index}:`, day);
               return null;
             }
             let parsedDate;
             try {
               parsedDate = parseISO(day.date);
               if (isNaN(parsedDate.getTime())) {
-                console.warn("Invalid date format:", day.date);
+                console.warn(`Invalid date format at index ${index}:`, day.date);
                 return null;
               }
             } catch (err) {
-              console.warn("Failed to parse date:", day.date, err);
+              console.warn(`Failed to parse date at index ${index}:`, day.date, err);
               return null;
             }
             const slots = Array.isArray(day.slots) ? day.slots : [];
             return {
-              date: startOfDay(parsedDate), // Parse to IST
+              date: startOfDay(parsedDate),
               timeSlots: slots
                 .filter(slot => slot && slot.startTime && slot.endTime)
                 .map(slot => ({
-                  id: `slot-${Date.now()}-${Math.random()}`,
+                  id: slot.id || `slot-${parsedDate.getTime()}-${slot.startTime}-${Math.random()}`,
                   startTime: slot.startTime,
                   endTime: slot.endTime,
                 })),
@@ -964,18 +964,27 @@ const TeacherAvailability = () => {
   }, [api]);
 
   const getAvailabilityForDate = (date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn("Invalid date passed to getAvailabilityForDate:", date);
+      return null;
+    }
     return availability.find(
       (a) => format(a.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
     );
   };
 
   const hasAvailability = (date) => {
+    if (!date || isNaN(date.getTime())) {
+      console.warn("Invalid date passed to hasAvailability:", date);
+      return false;
+    }
     return availability.some(
       (a) => format(a.date, 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
     );
   };
 
   const handleSlotToggle = (slot) => {
+    console.log("Toggling slot:", slot);
     if (selectedSlots.includes(slot)) {
       setSelectedSlots(selectedSlots.filter(s => s !== slot));
     } else {
@@ -985,6 +994,7 @@ const TeacherAvailability = () => {
 
   const handleAddTimeSlots = async () => {
     if (!selectedDate || isNaN(selectedDate.getTime())) {
+      console.error("Invalid selectedDate:", selectedDate);
       toast({
         title: "Please select a valid date",
         variant: "destructive",
@@ -1008,7 +1018,6 @@ const TeacherAvailability = () => {
       };
     });
 
-    // Update local state
     let updatedAvailability = [...availability];
     const formattedSelectedDate = format(selectedDate, 'yyyy-MM-dd');
     const existingDayIndex = availability.findIndex(
@@ -1041,7 +1050,6 @@ const TeacherAvailability = () => {
       });
     }
 
-    // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => ({
       date: format(day.date, 'yyyy-MM-dd'),
       slots: day.timeSlots.map(slot => ({
@@ -1074,6 +1082,7 @@ const TeacherAvailability = () => {
   };
 
   const handleRemoveTimeSlot = (dateToRemove, slotId) => {
+    console.log("handleRemoveTimeSlot triggered with date:", format(dateToRemove, 'yyyy-MM-dd'), "slotId:", slotId);
     if (!dateToRemove || isNaN(dateToRemove.getTime())) {
       console.error("Invalid dateToRemove:", dateToRemove);
       toast({
@@ -1084,9 +1093,20 @@ const TeacherAvailability = () => {
       return;
     }
 
-    const slotToRemove = getAvailabilityForDate(dateToRemove)?.timeSlots.find(slot => slot.id === slotId);
+    const dayAvailability = getAvailabilityForDate(dateToRemove);
+    if (!dayAvailability) {
+      console.error("No availability found for date:", format(dateToRemove, 'yyyy-MM-dd'));
+      toast({
+        title: "No availability",
+        description: "No slots found for the selected date.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const slotToRemove = dayAvailability.timeSlots.find(slot => slot.id === slotId);
     if (!slotToRemove) {
-      console.error("Slot not found:", slotId);
+      console.error("Slot not found for ID:", slotId);
       toast({
         title: "Slot not found",
         description: "The slot you are trying to remove does not exist.",
@@ -1101,7 +1121,7 @@ const TeacherAvailability = () => {
       action: (
         <button
           onClick={async () => {
-            // Update local state
+            console.log("Confirm deletion clicked for slot:", slotId);
             let updatedAvailability = availability.map(day => {
               if (format(day.date, 'yyyy-MM-dd') === format(dateToRemove, 'yyyy-MM-dd')) {
                 return {
@@ -1112,7 +1132,6 @@ const TeacherAvailability = () => {
               return day;
             }).filter(day => day.timeSlots.length > 0);
 
-            // Prepare backend payload
             const backendAvailability = updatedAvailability.map(day => ({
               date: format(day.date, 'yyyy-MM-dd'),
               slots: day.timeSlots.map(slot => ({
@@ -1121,8 +1140,6 @@ const TeacherAvailability = () => {
               })),
             }));
 
-            console.log("Date to remove (IST):", format(dateToRemove, 'yyyy-MM-dd'));
-            console.log("Removing slot ID:", slotId);
             console.log("Sending remove time slot payload:", JSON.stringify(backendAvailability, null, 2));
 
             try {
@@ -1161,12 +1178,11 @@ const TeacherAvailability = () => {
       return;
     }
 
-    const today = startOfDay(new Date()); // Start of today in IST (2025-07-18)
+    const today = startOfDay(new Date());
     const newWeeklySlots = [];
     const updatedDates = [];
     const skippedDates = [];
 
-    // Generate slots for the next 7 days
     for (let i = 0; i < 7; i++) {
       const date = addDays(today, i);
       const formattedDate = format(date, 'yyyy-MM-dd');
@@ -1179,7 +1195,6 @@ const TeacherAvailability = () => {
         { id: `weekly-${i}-2`, startTime: '14:00', endTime: '15:00' },
       ];
 
-      // Check for duplicate slots
       const existingSlots = existingDay ? existingDay.timeSlots : [];
       const slotsToAdd = newSlots.filter(newSlot => 
         !existingSlots.some(existingSlot => 
@@ -1198,7 +1213,6 @@ const TeacherAvailability = () => {
       }
     }
 
-    // Merge with existing availability
     const otherDays = availability.filter(
       day => !newWeeklySlots.some(
         newDay => format(newDay.date, 'yyyy-MM-dd') === format(day.date, 'yyyy-MM-dd')
@@ -1209,7 +1223,6 @@ const TeacherAvailability = () => {
       (a, b) => a.date.getTime() - b.date.getTime()
     );
 
-    // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => ({
       date: format(day.date, 'yyyy-MM-dd'),
       slots: day.timeSlots.map(slot => ({
@@ -1247,6 +1260,7 @@ const TeacherAvailability = () => {
   };
 
   const handleDateSelect = (date) => {
+    console.log("Date selected:", date);
     if (date instanceof Date && !isNaN(date.getTime())) {
       setSelectedDate(startOfDay(date));
       setActiveTab("slots");
