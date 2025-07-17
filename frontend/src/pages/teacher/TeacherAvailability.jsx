@@ -732,19 +732,38 @@ const TeacherAvailability = () => {
       )
       .filter((day) => day.timeSlots.length > 0);
 
-    const backendAvailability = async updatedAvailability.map((day) => ({
-      date: format(day.date, "yyyy-MM-dd"),
-      slots: day.timeSlots.map((slot) => ({ startTime: slot.startTime, endTime: slot.endTime })),
-    }));
+  //   const backendAvailability = updatedAvailability.map((day) => ({
+  //     date: format(day.date, "yyyy-MM-dd"),
+  //     slots: day.timeSlots.map((slot) => ({ startTime: slot.startTime, endTime: slot.endTime })),
+  //   }));
 
-    try {
-      await updateAvailability(backendAvailability);
-      setAvailability(updatedAvailability);
-      alert("Time slot removed successfully.");
-    } catch (err) {
-      alert(`Failed to remove time slot: ${err.response?.data?.message || "Please try again."}`);
-    }
-  };
+  //   try {
+  //     await updateAvailability(backendAvailability);
+  //     setAvailability(updatedAvailability);
+  //     alert("Time slot removed successfully.");
+  //   } catch (err) {
+  //     alert(`Failed to remove time slot: ${err.response?.data?.message || "Please try again."}`);
+  //   }
+  // };
+
+  const handleUpdateAvailability = async (updatedAvailability) => {
+  const backendAvailability = updatedAvailability.map((day) => ({
+    date: format(day.date, "yyyy-MM-dd"),
+    slots: day.timeSlots.map((slot) => ({
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    })),
+  }));
+
+  try {
+    await updateAvailability(backendAvailability);
+    setAvailability(updatedAvailability);
+    alert("Time slot updated successfully! 🎉");
+  } catch (error) {
+    console.error("Failed to update time slot:", error);
+    alert(`Failed to update time slot: ${error.response?.data?.message || "Please try again."}`);
+  }
+};
 
   const handleDateSelect = (date) => {
     if (date instanceof Date && !isNaN(date.getTime())) {
