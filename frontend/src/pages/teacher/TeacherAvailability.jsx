@@ -732,7 +732,7 @@ const TeacherAvailability = () => {
       )
       .filter((day) => day.timeSlots.length > 0);
 
-    const backendAvailability = updatedAvailability.map((day) => ({
+    const backendAvailability = async updatedAvailability.map((day) => ({
       date: format(day.date, "yyyy-MM-dd"),
       slots: day.timeSlots.map((slot) => ({ startTime: slot.startTime, endTime: slot.endTime })),
     }));
