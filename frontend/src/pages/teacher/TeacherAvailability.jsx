@@ -888,38 +888,76 @@ const TeacherAvailability = () => {
   const [activeTab, setActiveTab] = useState("slots");
   const [loading, setLoading] = useState(true);
 
-  // Fetch initial availability from /auth/profile
+  // Fetch initial availability from /auth/profile with retry
   useEffect(() => {
-    const fetchAvailability = async () => {
+    const fetchAvailability = async (retryCount = 0, maxRetries = 3) => {
       try {
         const { data } = await api.get("/auth/profile");
-        if (data.availability) {
+        console.log("Raw /auth/profile response:", JSON.stringify(data, null, 2));
+        if (data && data.availability && Array.isArray(data.availability)) {
           const mappedAvailability = data.availability.map(day => {
-            if (!day.date || !/^\d{4}-\d{2}-\d{2}$/.test(day.date)) {
-              console.warn("Invalid date format from backend:", day.date);
+            if (!day.date) {
+              console.warn("Missing date in availability:", day);
               return null;
             }
+            let parsedDate;
+            try {
+              parsedDate = parseISO(day.date);
+              if (isNaN(parsedDate.getTime())) {
+                console.warn("Invalid date format:", day.date);
+                return null;
+              }
+            } catch (err) {
+              console.warn("Failed to parse date:", day.date, err);
+              return null;
+            }
+            const slots = Array.isArray(day.slots) ? day.slots : [];
             return {
-              date: startOfDay(parseISO(day.date)), // Parse UTC date string to IST
-              timeSlots: day.slots.map(slot => ({
-                id: `slot-${Date.now()}-${Math.random()}`,
-                startTime: slot.startTime,
-                endTime: slot.endTime,
-              })),
+              date: startOfDay(parsedDate), // Parse to IST
+              timeSlots: slots
+                .filter(slot => slot && slot.startTime && slot.endTime)
+                .map(slot => ({
+                  id: `slot-${Date.now()}-${Math.random()}`,
+                  startTime: slot.startTime,
+                  endTime: slot.endTime,
+                })),
             };
           }).filter(day => day !== null);
+          console.log("Mapped availability (IST):", JSON.stringify(mappedAvailability, null, 2));
           setAvailability(mappedAvailability);
-          console.log("Fetched availability (IST):", JSON.stringify(mappedAvailability, null, 2));
+          if (mappedAvailability.length === 0 && data.availability.length > 0) {
+            toast({
+              title: "No valid availability data",
+              description: "Availability data was returned but filtered out due to invalid format.",
+              variant: "destructive",
+            });
+          }
+        } else {
+          console.warn("No valid availability data in response:", data);
+          setAvailability([]);
+          toast({
+            title: "No availability data found",
+            description: "No availability data returned from the server.",
+            variant: "destructive",
+          });
         }
       } catch (err) {
         console.error("Fetch error:", err);
-        toast({
-          title: "Failed to fetch availability",
-          description: err.response?.data?.message || "Please try again later.",
-          variant: "destructive",
-        });
+        if (retryCount < maxRetries) {
+          console.log(`Retrying fetch (${retryCount + 1}/${maxRetries})...`);
+          setTimeout(() => fetchAvailability(retryCount + 1, maxRetries), 1000);
+        } else {
+          toast({
+            title: "Failed to fetch availability",
+            description: err.response?.data?.message || "Please try again later.",
+            variant: "destructive",
+          });
+          setAvailability([]);
+        }
       } finally {
-        setLoading(false);
+        if (retryCount === 0 || retryCount === maxRetries) {
+          setLoading(false);
+        }
       }
     };
     fetchAvailability();
@@ -998,14 +1036,14 @@ const TeacherAvailability = () => {
       };
     } else {
       updatedAvailability.push({
-        date: startOfDay(selectedDate), // Start of day in IST
+        date: startOfDay(selectedDate),
         timeSlots: newSlots,
       });
     }
 
-    // Prepare backend payload with date strings
+    // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => ({
-      date: format(day.date, 'yyyy-MM-dd'), // Send as yyyy-MM-dd string
+      date: format(day.date, 'yyyy-MM-dd'),
       slots: day.timeSlots.map(slot => ({
         startTime: slot.startTime,
         endTime: slot.endTime,
@@ -1076,7 +1114,7 @@ const TeacherAvailability = () => {
 
             // Prepare backend payload
             const backendAvailability = updatedAvailability.map(day => ({
-              date: format(day.date, 'yyyy-MM-dd'), // Send as yyyy-MM-dd string
+              date: format(day.date, 'yyyy-MM-dd'),
               slots: day.timeSlots.map(slot => ({
                 startTime: slot.startTime,
                 endTime: slot.endTime,
@@ -1113,7 +1151,7 @@ const TeacherAvailability = () => {
 
   const createWeeklySlots = async () => {
     const confirm = window.confirm(
-      "Add default slots (10:00-11:00, 14:00-15:00 IST) for the next 7 days (July 17–23, 2025)? Existing slots will be preserved."
+      "Add default slots (10:00-11:00, 14:00-15:00 IST) for the next 7 days (July 18–24, 2025)? Existing slots will be preserved."
     );
     if (!confirm) {
       toast({
@@ -1123,7 +1161,7 @@ const TeacherAvailability = () => {
       return;
     }
 
-    const today = startOfDay(new Date()); // Start of today in IST (2025-07-17)
+    const today = startOfDay(new Date()); // Start of today in IST (2025-07-18)
     const newWeeklySlots = [];
     const updatedDates = [];
     const skippedDates = [];
@@ -1160,7 +1198,7 @@ const TeacherAvailability = () => {
       }
     }
 
-    // Merge with existing availability for other dates
+    // Merge with existing availability
     const otherDays = availability.filter(
       day => !newWeeklySlots.some(
         newDay => format(newDay.date, 'yyyy-MM-dd') === format(day.date, 'yyyy-MM-dd')
@@ -1173,7 +1211,7 @@ const TeacherAvailability = () => {
 
     // Prepare backend payload
     const backendAvailability = updatedAvailability.map(day => ({
-      date: format(day.date, 'yyyy-MM-dd'), // Send as yyyy-MM-dd string
+      date: format(day.date, 'yyyy-MM-dd'),
       slots: day.timeSlots.map(slot => ({
         startTime: slot.startTime,
         endTime: slot.endTime,
@@ -1188,7 +1226,7 @@ const TeacherAvailability = () => {
       const response = await updateAvailability(backendAvailability);
       console.log("Weekly slots response:", response.data);
       setAvailability(updatedAvailability);
-      setSelectedDate(newWeeklySlots[0]?.date || today); // Show first updated day or today
+      setSelectedDate(newWeeklySlots[0]?.date || today);
       setActiveTab("slots");
       const toastMessage = updatedDates.length > 0 
         ? `Added slots for ${updatedDates.length} day(s): ${updatedDates.join(", ")}` + 
@@ -1534,20 +1572,24 @@ const TeacherAvailability = () => {
 
             <div className="mt-6">
               <h4 className="text-sm font-medium text-gray-800 mb-3">Upcoming Availability (IST)</h4>
-              <div className="flex flex-wrap gap-2 upcoming-availability">
-                {availability
-                  .filter((day) => day.date >= new Date())
-                  .sort((a, b) => a.date.getTime() - b.date.getTime())
-                  .map((day, index) => (
-                    <button
-                      key={index}
-                      onClick={() => { setSelectedDate(day.date); setActiveTab("slots"); }}
-                      className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none shadow-sm"
-                    >
-                      <span className="font-semibold">{format(day.date, 'MMM d')}</span> ({day.timeSlots.length} slots)
-                    </button>
-                  ))}
-              </div>
+              {availability.length === 0 ? (
+                <p className="text-sm text-gray-500">No upcoming availability set.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 upcoming-availability">
+                  {availability
+                    .filter((day) => day.date >= new Date())
+                    .sort((a, b) => a.date.getTime() - b.date.getTime())
+                    .map((day, index) => (
+                      <button
+                        key={index}
+                        onClick={() => { setSelectedDate(day.date); setActiveTab("slots"); }}
+                        className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-300 focus:outline-none shadow-sm"
+                      >
+                        <span className="font-semibold">{format(day.date, 'MMM d')}</span> ({day.timeSlots.length} slots)
+                      </button>
+                    ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1557,5 +1599,3 @@ const TeacherAvailability = () => {
 };
 
 export default TeacherAvailability;
-
-// export default TeacherAvailability;
