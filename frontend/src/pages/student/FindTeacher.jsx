@@ -273,7 +273,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search, Filter, Tag, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
-import { useAuth } from "../../contexts/AuthContext";
+import { useTeacherProfile } from "../../contexts/TeacherProfileContext";
 
 const priceRanges = [
   { label: "Any Price", min: 0, max: Infinity },
@@ -295,7 +295,7 @@ const cardVariants = {
 };
 
 export default function FindTeacher() {
-  const { api } = useAuth();
+  const { api } = useTeacherProfile();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [priceRange, setPriceRange] = useState(priceRanges[0]);
@@ -307,10 +307,23 @@ export default function FindTeacher() {
     const fetchTeachers = async () => {
       setIsLoading(true);
       try {
-        const response = await api.get("/api/users/teachers");
-        setTeachers(response.data);
+        const response = await api.get("/api/teacher-profiles");
+        // Assuming response.data is an array of teacher profiles
+        // Map to match expected structure: { _id, name, teacherProfile }
+        const formattedTeachers = response.data.map(profile => ({
+          _id: profile._id,
+          name: profile.user?.name || profile.name || "Unknown Teacher",
+          teacherProfile: {
+            teachingSkills: profile.teachingSkills || [],
+            fee: profile.fee || 0,
+            location: profile.location || "N/A",
+            bio: profile.bio || "No bio available",
+            availability: profile.availability || false,
+          }
+        }));
+        setTeachers(formattedTeachers);
       } catch (error) {
-        console.error("Error fetching teachers:", error);
+        console.error("Error fetching teacher profiles:", error);
         setTeachers([]);
       } finally {
         setIsLoading(false);
