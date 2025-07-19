@@ -278,14 +278,19 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 
 const subjects = [
-  "All Subjects",
-  "Mathematics",
-  "Physics",
-  "English",
-  "History",
-  "Chemistry",
-  "Biology",
-  "Geography",
+  "All Skills",
+  "Painting",
+  "Music",
+  "Cooking",
+  "Programming",
+  "Yoga",
+  "Dancing",
+  "Photography",
+  "Creative Writing",
+  "Languages",
+  "Arts & Crafts",
+  "Gardening",
+  "Fitness & Exercise",
 ];
 const ratingOptions = [
   { label: "Any Rating", value: 0 },
