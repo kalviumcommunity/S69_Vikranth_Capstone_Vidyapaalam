@@ -427,14 +427,19 @@ import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 
 const subjects = [
-  "All Subjects",
-  "Mathematics",
-  "Physics",
-  "English",
-  "History",
-  "Chemistry",
-  "Biology",
-  "Geography",
+  "All Skills",
+  "Painting",
+  "Music",
+  "Cooking",
+  "Programming",
+  "Yoga",
+  "Dancing",
+  "Photography",
+  "Creative Writing",
+  "Languages",
+  "Arts & Crafts",
+  "Gardening",
+  "Fitness & Exercise",
 ];
 const ratingOptions = [
   { label: "Any Rating", value: 0 },
@@ -602,7 +607,7 @@ export default function FindTeacher() {
                 setRating(ratingOptions[0].value);
                 setPriceRange(priceRanges[0]);
               }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+              className="px-4 py-2 bg-gray-100 active:bg-orange-500 text-gray-700 rounded-lg hover:bg-gray-200 transition"
             >
               Clear Filters
             </button>
