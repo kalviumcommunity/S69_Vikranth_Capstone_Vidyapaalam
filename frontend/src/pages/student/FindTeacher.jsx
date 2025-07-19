@@ -657,7 +657,7 @@ export default function FindTeacher() {
             <p className="text-xl font-medium text-amber-600 mb-6">
               ₹{t.teacherProfile?.fee || 0}/hr
             </p>
-            <div className="text-gray-700 flex-1 line-clamp-3 break-words mb-6 h-16">
+            <div className="text-gray-700 flex-1 min-h-[5rem] h-20 line-clamp-3 break-words overflow-hidden mb-6">
               {t.teacherProfile?.bio || "No bio available"}
             </div>
             <Link
