@@ -626,11 +626,11 @@ export default function FindTeacher() {
             }}
             className="w-full bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-lg p-6 grid grid-cols-5 gap-4"
           >
-            <div className="col-span-1 h-40 flex items-center">
+            <div className="col-span-1 h-24 flex items-center justify-center">
               <img
                 src={t.teacherProfile.avatarUrl}
                 alt={`${t.name}'s profile`}
-                className="w-full h-auto object-cover rounded-lg border-2 border-orange-200 shadow-md max-h-full"
+                className="w-24 h-24 object-cover rounded-full border-2 border-orange-200 shadow-md"
               />
             </div>
             <div className="col-span-4 space-y-3 text-left">
