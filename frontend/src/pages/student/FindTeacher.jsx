@@ -492,7 +492,7 @@ export default function FindTeacher() {
             teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
             fee: profile.hourlyRate || 0,
             bio: profile.aboutMe || "No bio available",
-            availability: profile.availability || false, // Assume boolean for now
+            availability: profile.availability || false,
           },
         }));
         console.log("DEBUG: Formatted teachers", formattedTeachers);
@@ -516,7 +516,7 @@ export default function FindTeacher() {
     const matchName = t.name.toLowerCase().includes(search.toLowerCase());
     const matchSubject = subject === subjects[0] || 
       (t.teacherProfile?.teachingSkills || []).some(skill => skill === subject);
-    const matchRating = rating === 0 || t.teacherProfile?.rating >= rating; // Assuming rating might be added later
+    const matchRating = rating === 0 || t.teacherProfile?.rating >= rating;
     const matchPrice = priceRange.min <= t.teacherProfile.fee && t.teacherProfile.fee <= priceRange.max;
     const matchAvail = !availableOnly || t.teacherProfile.availability === true;
     return matchName && matchSubject && matchRating && matchPrice && matchAvail;
@@ -640,34 +640,32 @@ export default function FindTeacher() {
           <motion.div
             key={t._id}
             variants={cardVariants}
-            whileHover={{ scale: 1.03 }}
-            className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 flex flex-col"
+            whileHover={{ scale: 1.05, rotateY: 5, boxShadow: "0 15px 30px rgba(0, 0, 0, 0.2)", transition: { duration: 0.4 } }}
+            className="bg-gradient-to-br from-orange-50 to-amber-50 backdrop-blur-sm border-2 border-orange-200 rounded-2xl p-6 flex flex-col items-center text-center shadow-xl hover:shadow-2xl transition-all duration-300"
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-4">
               <img
                 src={t.teacherProfile.avatarUrl}
                 alt={`${t.name}'s profile`}
-                className="w-16 h-16 rounded-full object-cover border-2 border-orange-200 mr-4"
+                className="w-20 h-20 rounded-full object-cover ring-4 ring-orange-100 shadow-lg"
               />
-              <h3 className="text-xl font-bold text-gray-800 flex-1">{t.name}</h3>
+              <h3 className="mt-3 text-xl font-semibold text-orange-800 tracking-wide">{t.name}</h3>
             </div>
-            <p className="mt-2 text-gray-600 flex items-center gap-1">
-              <Tag className="w-4 h-4" /> {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
-            </p>
-            <p className="mt-1 text-lg font-semibold text-orange-600">
+            <div className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full mb-3">
+              {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
+            </div>
+            <p className="text-lg font-medium text-amber-600 mb-4">
               ₹{t.teacherProfile?.fee || 0}/hr
             </p>
-            <p className="mt-4 text-gray-700 flex-1 line-clamp-3 break-words">
+            <div className="text-gray-700 flex-1 line-clamp-3 break-words mb-4 h-12">
               {t.teacherProfile?.bio || "No bio available"}
-            </p>
-            <div className="mt-4 flex justify-end">
-              <Link
-                to={`/student/teacher/${t._id}`}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
-              >
-                View Profile
-              </Link>
             </div>
+            <Link
+              to={`/student/teacher/${t._id}`}
+              className="px-6 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow-md hover:from-orange-600 hover:to-amber-600 transition-all duration-300"
+            >
+              View Profile
+            </Link>
           </motion.div>
         ))}
       </motion.div>
