@@ -282,7 +282,7 @@ const subjects = [
   "Painting",
   "Music",
   "Cooking",
-  "programming",
+  "Programming",
   "Yoga",
   "Dancing",
   "Photography",
@@ -365,7 +365,7 @@ export default function FindTeacher() {
   const filtered = teachers.filter(t => {
     const matchName = t.name.toLowerCase().includes(search.toLowerCase());
     const matchSubject = subject === subjects[0] || 
-      (t.teacherProfile?.teachingSkills || []).some(skill => skill === subject);
+      (t.teacherProfile?.teachingSkills || []).some(skill => skill.toLowerCase() === subject.toLowerCase());
     const matchRating = rating === 0 || t.teacherProfile?.rating >= rating;
     const matchPrice = priceRange.min <= t.teacherProfile.fee && t.teacherProfile.fee <= priceRange.max;
     return matchName && matchSubject && matchRating && matchPrice;
