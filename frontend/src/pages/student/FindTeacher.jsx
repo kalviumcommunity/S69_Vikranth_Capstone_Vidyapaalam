@@ -634,35 +634,35 @@ export default function FindTeacher() {
 
       <motion.div
         variants={containerVariants}
-        className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+        className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
       >
         {filtered.map(t => (
           <motion.div
             key={t._id}
             variants={cardVariants}
             whileHover={{ scale: 1.05, rotateY: 5, boxShadow: "0 15px 30px rgba(0, 0, 0, 0.2)", transition: { duration: 0.4 } }}
-            className="bg-gradient-to-br from-orange-50 to-amber-50 backdrop-blur-sm border-2 border-orange-200 rounded-2xl p-6 flex flex-col items-center text-center shadow-xl hover:shadow-2xl transition-all duration-300"
+            className="max-w-md bg-gradient-to-br from-orange-100 to-amber-100 backdrop-blur-sm border-2 border-orange-200 rounded-2xl p-8 flex flex-col items-center text-center shadow-xl hover:shadow-2xl transition-all duration-300"
           >
-            <div className="mb-4">
+            <div className="mb-6">
               <img
                 src={t.teacherProfile.avatarUrl}
                 alt={`${t.name}'s profile`}
-                className="w-20 h-20 rounded-full object-cover ring-4 ring-orange-100 shadow-lg"
+                className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow-lg"
               />
-              <h3 className="mt-3 text-xl font-semibold text-orange-800 tracking-wide">{t.name}</h3>
+              <h3 className="mt-4 text-2xl font-semibold text-orange-800 tracking-wide">{t.name}</h3>
             </div>
-            <div className="px-2 py-1 bg-amber-100 text-amber-800 text-xs font-medium rounded-full mb-3">
+            <div className="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-medium rounded-full mb-6">
               {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
             </div>
-            <p className="text-lg font-medium text-amber-600 mb-4">
+            <p className="text-xl font-medium text-amber-600 mb-6">
               ₹{t.teacherProfile?.fee || 0}/hr
             </p>
-            <div className="text-gray-700 flex-1 line-clamp-3 break-words mb-4 h-12">
+            <div className="text-gray-700 flex-1 line-clamp-3 break-words mb-6 h-16">
               {t.teacherProfile?.bio || "No bio available"}
             </div>
             <Link
               to={`/student/teacher/${t._id}`}
-              className="px-6 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow-md hover:from-orange-600 hover:to-amber-600 transition-all duration-300"
+              className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow-md hover:from-orange-600 hover:to-amber-600 transition-all duration-300"
             >
               View Profile
             </Link>
