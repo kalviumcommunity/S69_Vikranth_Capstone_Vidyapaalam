@@ -517,179 +517,177 @@ export default function FindTeacher() {
     return matchName && matchSubject && matchRating && matchPrice && matchAvail;
   });
 
-  return (
-    <motion.div
-      className="max-w-6xl mx-auto p-6 space-y-6 bg-orange-50"
-      initial="hidden"
-      animate="show"
-      variants={containerVariants}
-    >
-      <motion.header variants={cardVariants} className="text-center">
-        <h1 className="text-3xl font-bold text-orange-600">
-          Find Your Perfect Teacher
-        </h1>
-        <p className="text-gray-600">
-          Search and filter expert instructors.
-        </p>
-      </motion.header>
+ return (
+  <motion.div
+    className="w-full min-h-screen p-4 md:p-6 bg-white"
+    initial="hidden"
+    animate="show"
+    variants={containerVariants}
+  >
+    <motion.header variants={cardVariants} className="text-center mb-4">
+      <h1 className="text-3xl font-bold text-orange-600">
+        Find Your Perfect Teacher
+      </h1>
+      <p className="text-gray-600">
+        Search and filter expert instructors.
+      </p>
+    </motion.header>
 
-      <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name…"
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-            />
-          </div>
-          <button
-            onClick={() => setOpen(o => !o)}
-            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+    <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4 mb-6 border border-gray-200">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name…"
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+        >
+          <Filter className="w-5 h-5" />
+          {open ? "Hide Filters" : "Show Filters"}
+        </button>
+      </div>
+      <div
+        className={`mt-4 grid grid-cols-1 gap-4 transition-all duration-300 overflow-hidden ${
+          open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="flex items-center gap-2">
+          <Tag className="w-5 h-5 text-gray-500" />
+          <select
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
+            className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
           >
-            <Filter className="w-5 h-5" />
-            {open ? "Hide Filters" : "Show Filters"}
+            {subjects.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <Star className="w-5 h-5 text-gray-500" />
+          <select
+            value={rating}
+            onChange={e => setRating(parseFloat(e.target.value))}
+            className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            {ratingOptions.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-gray-500" />
+          <select
+            value={priceRange.label}
+            onChange={e => {
+              const found = priceRanges.find(r => r.label === e.target.value);
+              if (found) setPriceRange(found);
+            }}
+            className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            {priceRanges.map(r => (
+              <option key={r.label} value={r.label}>{r.label}</option>
+            ))}
+          </select>
+        </div>
+        <label className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={availableOnly}
+            onChange={e => setAvailableOnly(e.target.checked)}
+            className="h-5 w-5 text-orange-600 border rounded focus:ring-2 focus:ring-orange-400"
+          />
+          Available only
+        </label>
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              setSearch("");
+              setSubject(subjects[0]);
+              setRating(ratingOptions[0].value);
+              setPriceRange(priceRanges[0]);
+              setAvailableOnly(false);
+            }}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            Clear Filters
           </button>
         </div>
-        <div
-          className={`mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 transition-all duration-300 ${
-            open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-          }`}
+      </div>
+    </motion.div>
+
+    <motion.h2 variants={cardVariants} className="text-xl font-semibold mb-4">
+      {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
+    </motion.h2>
+
+    <motion.div variants={containerVariants} className="flex flex-col gap-6">
+      {filtered.map(t => (
+        <motion.div
+          key={t._id}
+          variants={cardVariants}
+          whileHover={{
+            scale: 1.01,
+            boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
+            transition: { duration: 0.3 }
+          }}
+          className="w-full bg-white rounded-xl shadow border border-orange-100 hover:border-orange-300 transition-all duration-300"
         >
-          <div className="flex items-center gap-2">
-            <Tag className="w-5 h-5 text-gray-500" />
-            <select
-              value={subject}
-              onChange={e => setSubject(e.target.value)}
-              className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              {subjects.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <Star className="w-5 h-5 text-gray-500" />
-            <select
-              value={rating}
-              onChange={e => setRating(parseFloat(e.target.value))}
-              className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              {ratingOptions.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-gray-500" />
-            <select
-              value={priceRange.label}
-              onChange={e => {
-                const found = priceRanges.find(r => r.label === e.target.value);
-                if (found) setPriceRange(found);
-              }}
-              className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-            >
-              {priceRanges.map(r => (
-                <option key={r.label} value={r.label}>{r.label}</option>
-              ))}
-            </select>
-          </div>
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={availableOnly}
-              onChange={e => setAvailableOnly(e.target.checked)}
-              className="h-5 w-5 text-orange-600 border rounded focus:ring-2 focus:ring-orange-400"
+          <div className="p-6 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
+            <img
+              src={t.teacherProfile.avatarUrl}
+              alt={`${t.name}'s profile`}
+              className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow"
             />
-            Available only
-          </label>
-          <div className="md:col-span-4 flex justify-end">
-            <button
-              onClick={() => {
-                setSearch("");
-                setSubject(subjects[0]);
-                setRating(ratingOptions[0].value);
-                setPriceRange(priceRanges[0]);
-                setAvailableOnly(false);
-              }}
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.h2 variants={cardVariants} className="text-xl font-semibold">
-        {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
-      </motion.h2>
-
-      <motion.div
-        variants={containerVariants}
-        className="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
-      >
-        {filtered.map(t => (
-          <motion.div
-            key={t._id}
-            variants={cardVariants}
-            whileHover={{
-              scale: 1.03,
-              boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
-              transition: { duration: 0.3 }
-            }}
-            className="bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 border border-orange-100 hover:border-orange-300"
-          >
-            <div className="p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
-              <img
-                src={t.teacherProfile.avatarUrl}
-                alt={`${t.name}'s profile`}
-                className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow"
-              />
-              <div className="flex-1 space-y-3 text-center sm:text-left">
+            <div className="flex-1 text-center sm:text-left space-y-2">
+              <div className="flex justify-between items-center">
                 <h3 className="text-2xl font-bold text-orange-700">{t.name}</h3>
-                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                  {(t.teacherProfile?.teachingSkills || []).map((skill, i) => (
-                    <span
-                      key={i}
-                      className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-gray-600 line-clamp-3">{t.teacherProfile.bio}</p>
-                <div className="flex items-center justify-between sm:justify-start gap-6 mt-2">
-                  <p className="text-lg font-semibold text-amber-600">
-                    ₹{t.teacherProfile?.fee || 0}/hr
-                  </p>
-                  {t.teacherProfile.availability && (
-                    <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                      Available
-                    </span>
-                  )}
-                </div>
-                <div className="mt-4">
-                  <Link
-                    to={`/student/teacher/${t._id}`}
-                    className="inline-block px-6 py-2 text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow transition"
+                {t.teacherProfile.availability && (
+                  <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full hidden sm:inline">
+                    Available
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
+                  <span
+                    key={i}
+                    className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full"
                   >
-                    View Profile
-                  </Link>
-                </div>
+                    {skill}
+                  </span>
+                ))}
+              </div>
+              <p className="text-gray-600 line-clamp-3">{t.teacherProfile.bio}</p>
+              <div className="flex items-center justify-center sm:justify-start gap-4">
+                <span className="text-lg font-semibold text-amber-600">
+                  ₹{t.teacherProfile.fee}/hr
+                </span>
+              </div>
+              <div>
+                <Link
+                  to={`/student/teacher/${t._id}`}
+                  className="inline-block mt-3 px-6 py-2 text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow transition"
+                >
+                  View Profile
+                </Link>
               </div>
             </div>
-          </motion.div>
-        ))}
-      </motion.div>
-
-      {!isLoading && filtered.length === 0 && (
-        <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
-          No teachers found.
-        </motion.p>
-      )}
+          </div>
+        </motion.div>
+      ))}
     </motion.div>
-  );
-}
+
+    {!isLoading && filtered.length === 0 && (
+      <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
+        No teachers found.
+      </motion.p>
+    )}
+  </motion.div>
+);
