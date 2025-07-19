@@ -911,10 +911,24 @@ exports.createTeacherProfile = async (req, res) => {
   }
 };
 
+// exports.getTeacherProfiles = async (req, res) => {
+//   try {
+//     const profiles = await TeacherProfile.find()
+//       .populate('userId', 'name email');
+
+//     res.status(200).json(profiles);
+//   } catch (error) {
+//     console.error('Error fetching all teacher profiles:', error);
+//     res.status(500).json({ message: 'Server error while fetching teacher profiles', error: error.message });
+//   }
+// };
+
+
+
 exports.getTeacherProfiles = async (req, res) => {
   try {
     const profiles = await TeacherProfile.find()
-      .populate('userId', 'name email');
+      .populate('userId', 'name email teachingSkills');
 
     res.status(200).json(profiles);
   } catch (error) {
@@ -922,6 +936,8 @@ exports.getTeacherProfiles = async (req, res) => {
     res.status(500).json({ message: 'Server error while fetching teacher profiles', error: error.message });
   }
 };
+
+
 
 exports.getTeacherProfileByUserId = async (req, res) => {
   try {
