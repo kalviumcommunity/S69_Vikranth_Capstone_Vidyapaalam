@@ -282,7 +282,7 @@ const subjects = [
   "Painting",
   "Music",
   "Cooking",
-  "Programming",
+  "programming",
   "Yoga",
   "Dancing",
   "Photography",
