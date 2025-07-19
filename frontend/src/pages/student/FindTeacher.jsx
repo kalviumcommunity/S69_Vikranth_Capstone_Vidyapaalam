@@ -422,7 +422,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Filter } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -443,6 +443,9 @@ export default function FindTeacher() {
   const [search, setSearch] = useState("");
   const [teachers, setTeachers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [minPrice, setMinPrice] = useState(0);
+  const [maxPrice, setMaxPrice] = useState(200);
+  const [selectedDays, setSelectedDays] = useState([]);
 
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -460,10 +463,11 @@ export default function FindTeacher() {
           _id: profile._id,
           name: profile.userId?.name || profile.name || "Unknown Teacher",
           teacherProfile: {
-            avatarUrl: profile.avatar?.url || "",
+            avatarUrl: profile.avatar?.url || "https://via.placeholder.com/64",
             teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
             fee: profile.hourlyRate || 0,
             bio: profile.aboutMe || "No bio available",
+            availability: profile.availability || [], // Assume availability is an array of days
           },
         }));
         console.log("DEBUG: Formatted teachers", formattedTeachers);
@@ -483,31 +487,37 @@ export default function FindTeacher() {
     fetchTeachers();
   }, [api]);
 
-  const filtered = teachers.filter(t => 
-    search === "" ||
-    t.name.toLowerCase().includes(search.toLowerCase()) ||
-    (t.teacherProfile?.teachingSkills || []).some(skill =>
-      skill.toLowerCase().includes(search.toLowerCase())
-    )
-  );
+  const filtered = teachers.filter(t => {
+    const matchesSearch = search === "" ||
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      (t.teacherProfile?.teachingSkills || []).some(skill =>
+        skill.toLowerCase().includes(search.toLowerCase())
+      );
+    const matchesPrice = t.teacherProfile.fee >= minPrice && t.teacherProfile.fee <= maxPrice;
+    const matchesAvailability = selectedDays.length === 0 || 
+      selectedDays.every(day => t.teacherProfile.availability.includes(day));
+    return matchesSearch && matchesPrice && matchesAvailability;
+  });
+
+  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   return (
     <motion.div
-      className="max-w-7xl mx-auto p-6 space-y-8"
+      className="max-w-7xl mx-auto p-8 space-y-10"
       initial="hidden"
       animate="show"
       variants={containerVariants}
     >
       <motion.header variants={cardVariants} className="text-center">
-        <h1 className="text-4xl font-extrabold text-orange-600 tracking-tight">
+        <h1 className="text-5xl font-extrabold text-indigo-900 tracking-wide">
           Find Your Perfect Teacher
         </h1>
-        <p className="mt-2 text-lg text-gray-600">
-          Search expert instructors by name or subject.
+        <p className="mt-3 text-xl text-gray-600">
+          Discover expert instructors tailored to your needs.
         </p>
       </motion.header>
 
-      <motion.div variants={cardVariants} className="bg-white shadow-lg rounded-xl p-6">
+      <motion.div variants={cardVariants} className="flex flex-col md:flex-row gap-6">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -515,36 +525,87 @@ export default function FindTeacher() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or subject…"
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
           />
+        </div>
+        <div className="flex-1">
+          <button
+            onClick={() => document.getElementById('filters').classList.toggle('hidden')}
+            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors duration-200 shadow-md"
+          >
+            <Filter /> Filters
+          </button>
+          <div id="filters" className="hidden mt-2 bg-white rounded-xl p-4 shadow-lg">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Price Range (₹)</label>
+                <div className="flex gap-2 mt-1">
+                  <input
+                    type="number"
+                    value={minPrice}
+                    onChange={e => setMinPrice(Math.max(0, Number(e.target.value)))}
+                    className="w-1/2 p-2 border border-gray-300 rounded-md"
+                    min="0"
+                  />
+                  <input
+                    type="number"
+                    value={maxPrice}
+                    onChange={e => setMaxPrice(Math.max(minPrice, Number(e.target.value)))}
+                    className="w-1/2 p-2 border border-gray-300 rounded-md"
+                    min={minPrice}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Availability</label>
+                <div className="grid grid-cols-2 gap-2 mt-1">
+                  {daysOfWeek.map(day => (
+                    <label key={day} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedDays.includes(day)}
+                        onChange={e => {
+                          setSelectedDays(prev =>
+                            e.target.checked ? [...prev, day] : prev.filter(d => d !== day)
+                          );
+                        }}
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                      />
+                      {day}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </motion.div>
 
-      <motion.h2 variants={cardVariants} className="text-2xl font-semibold text-gray-800">
+      <motion.h2 variants={cardVariants} className="text-2xl font-semibold text-indigo-900">
         {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
       </motion.h2>
 
       <motion.div
         variants={containerVariants}
-        className="grid gap-8 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
       >
         {filtered.map(t => (
           <motion.div
             key={t._id}
             variants={cardVariants}
-            whileHover={{ scale: 1.05, transition: { duration: 0.3 } }}
-            className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-xl p-6 flex flex-col items-center text-center hover:shadow-2xl transition-all duration-300"
+            whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.2)", transition: { duration: 0.3 } }}
+            className="bg-gradient-to-br from-indigo-50 to-blue-50 bg-opacity-90 backdrop-blur-md rounded-2xl p-6 flex flex-col items-center text-center border border-indigo-100 shadow-lg hover:shadow-xl transition-all duration-300"
           >
             <img
-              src={t.teacherProfile.avatarUrl || "https://via.placeholder.com/64"}
+              src={t.teacherProfile.avatarUrl}
               alt={`${t.name}'s profile`}
-              className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md mb-4"
+              className="w-24 h-24 rounded-full object-cover border-4 border-white ring-2 ring-indigo-200 shadow-md mb-4"
             />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{t.name}</h3>
+            <h3 className="text-xl font-bold text-indigo-900 mb-2">{t.name}</h3>
             <p className="text-sm text-gray-600 mb-2">
               {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
             </p>
-            <p className="text-lg font-medium text-orange-600 mb-3">
+            <p className="text-lg font-medium text-blue-600 mb-3">
               ₹{t.teacherProfile?.fee || 0}/hr
             </p>
             <p className="text-sm text-gray-700 flex-1 line-clamp-3 mb-4">
@@ -552,7 +613,7 @@ export default function FindTeacher() {
             </p>
             <Link
               to={`/student/teacher/${t._id}`}
-              className="px-5 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors duration-200"
+              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg shadow-md hover:from-indigo-700 hover:to-blue-600 transition-all duration-200"
             >
               View Profile
             </Link>
