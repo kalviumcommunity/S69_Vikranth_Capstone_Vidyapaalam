@@ -422,9 +422,32 @@
 
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, Tag, Star, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "../../contexts/AuthContext";
+
+const subjects = [
+  "All Subjects",
+  "Mathematics",
+  "Physics",
+  "English",
+  "History",
+  "Chemistry",
+  "Biology",
+  "Geography",
+];
+const ratingOptions = [
+  { label: "Any Rating", value: 0 },
+  { label: "3★ & up", value: 3 },
+  { label: "4★ & up", value: 4 },
+  { label: "4.5★ & up", value: 4.5 },
+];
+const priceRanges = [
+  { label: "Any Price", min: 0, max: Infinity },
+  { label: "₹0 – ₹50", min: 0, max: 50 },
+  { label: "₹50 – ₹100", min: 50, max: 100 },
+  { label: "₹100+", min: 100, max: Infinity },
+];
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -441,11 +464,13 @@ const cardVariants = {
 export default function FindTeacher() {
   const { api } = useAuth();
   const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const [subject, setSubject] = useState(subjects[0]);
+  const [rating, setRating] = useState(ratingOptions[0].value);
+  const [priceRange, setPriceRange] = useState(priceRanges[0]);
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [teachers, setTeachers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(200);
-  const [selectedDays, setSelectedDays] = useState([]);
 
   useEffect(() => {
     const fetchTeachers = async () => {
@@ -467,7 +492,7 @@ export default function FindTeacher() {
             teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
             fee: profile.hourlyRate || 0,
             bio: profile.aboutMe || "No bio available",
-            availability: profile.availability || [], // Assume availability is an array of days
+            availability: profile.availability || false, // Assume boolean for now
           },
         }));
         console.log("DEBUG: Formatted teachers", formattedTeachers);
@@ -488,141 +513,167 @@ export default function FindTeacher() {
   }, [api]);
 
   const filtered = teachers.filter(t => {
-    const matchesSearch = search === "" ||
-      t.name.toLowerCase().includes(search.toLowerCase()) ||
-      (t.teacherProfile?.teachingSkills || []).some(skill =>
-        skill.toLowerCase().includes(search.toLowerCase())
-      );
-    const matchesPrice = t.teacherProfile.fee >= minPrice && t.teacherProfile.fee <= maxPrice;
-    const matchesAvailability = selectedDays.length === 0 || 
-      selectedDays.every(day => t.teacherProfile.availability.includes(day));
-    return matchesSearch && matchesPrice && matchesAvailability;
+    const matchName = t.name.toLowerCase().includes(search.toLowerCase());
+    const matchSubject = subject === subjects[0] || 
+      (t.teacherProfile?.teachingSkills || []).some(skill => skill === subject);
+    const matchRating = rating === 0 || t.teacherProfile?.rating >= rating; // Assuming rating might be added later
+    const matchPrice = priceRange.min <= t.teacherProfile.fee && t.teacherProfile.fee <= priceRange.max;
+    const matchAvail = !availableOnly || t.teacherProfile.availability === true;
+    return matchName && matchSubject && matchRating && matchPrice && matchAvail;
   });
-
-  const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
   return (
     <motion.div
-      className="max-w-7xl mx-auto p-8 space-y-10"
+      className="max-w-6xl mx-auto p-6 space-y-6 bg-orange-50"
       initial="hidden"
       animate="show"
       variants={containerVariants}
     >
       <motion.header variants={cardVariants} className="text-center">
-        <h1 className="text-5xl font-extrabold text-indigo-900 tracking-wide">
+        <h1 className="text-3xl font-bold text-orange-600">
           Find Your Perfect Teacher
         </h1>
-        <p className="mt-3 text-xl text-gray-600">
-          Discover expert instructors tailored to your needs.
+        <p className="text-gray-600">
+          Search and filter expert instructors.
         </p>
       </motion.header>
 
-      <motion.div variants={cardVariants} className="flex flex-col md:flex-row gap-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name or subject…"
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
-          />
-        </div>
-        <div className="flex-1">
+      <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name…"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
           <button
-            onClick={() => document.getElementById('filters').classList.toggle('hidden')}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors duration-200 shadow-md"
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
           >
-            <Filter /> Filters
+            <Filter className="w-5 h-5" />
+            {open ? "Hide Filters" : "Show Filters"}
           </button>
-          <div id="filters" className="hidden mt-2 bg-white rounded-xl p-4 shadow-lg">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Price Range (₹)</label>
-                <div className="flex gap-2 mt-1">
-                  <input
-                    type="number"
-                    value={minPrice}
-                    onChange={e => setMinPrice(Math.max(0, Number(e.target.value)))}
-                    className="w-1/2 p-2 border border-gray-300 rounded-md"
-                    min="0"
-                  />
-                  <input
-                    type="number"
-                    value={maxPrice}
-                    onChange={e => setMaxPrice(Math.max(minPrice, Number(e.target.value)))}
-                    className="w-1/2 p-2 border border-gray-300 rounded-md"
-                    min={minPrice}
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Availability</label>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  {daysOfWeek.map(day => (
-                    <label key={day} className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedDays.includes(day)}
-                        onChange={e => {
-                          setSelectedDays(prev =>
-                            e.target.checked ? [...prev, day] : prev.filter(d => d !== day)
-                          );
-                        }}
-                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      />
-                      {day}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
+        </div>
+        <div
+          className={`mt-4 grid grid-cols-1 md:grid-cols-4 gap-4 transition-all duration-300 ${
+            open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Tag className="w-5 h-5 text-gray-500" />
+            <select
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {subjects.map(s => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-gray-500" />
+            <select
+              value={rating}
+              onChange={e => setRating(parseFloat(e.target.value))}
+              className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {ratingOptions.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-gray-500" />
+            <select
+              value={priceRange.label}
+              onChange={e => {
+                const found = priceRanges.find(r => r.label === e.target.value);
+                if (found) setPriceRange(found);
+              }}
+              className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {priceRanges.map(r => (
+                <option key={r.label} value={r.label}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={availableOnly}
+              onChange={e => setAvailableOnly(e.target.checked)}
+              className="h-5 w-5 text-orange-600 border rounded focus:ring-2 focus:ring-orange-400"
+            />
+            Available only
+          </label>
+          <div className="md:col-span-4 flex justify-end">
+            <button
+              onClick={() => {
+                setSearch("");
+                setSubject(subjects[0]);
+                setRating(ratingOptions[0].value);
+                setPriceRange(priceRanges[0]);
+                setAvailableOnly(false);
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+            >
+              Clear Filters
+            </button>
           </div>
         </div>
       </motion.div>
 
-      <motion.h2 variants={cardVariants} className="text-2xl font-semibold text-indigo-900">
+      <motion.h2 variants={cardVariants} className="text-xl font-semibold">
         {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
       </motion.h2>
 
       <motion.div
         variants={containerVariants}
-        className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+        className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
       >
         {filtered.map(t => (
           <motion.div
             key={t._id}
             variants={cardVariants}
-            whileHover={{ scale: 1.05, boxShadow: "0 10px 20px rgba(0, 0, 0, 0.2)", transition: { duration: 0.3 } }}
-            className="bg-gradient-to-br from-indigo-50 to-blue-50 bg-opacity-90 backdrop-blur-md rounded-2xl p-6 flex flex-col items-center text-center border border-indigo-100 shadow-lg hover:shadow-xl transition-all duration-300"
+            whileHover={{ scale: 1.03 }}
+            className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 p-6 flex flex-col"
           >
-            <img
-              src={t.teacherProfile.avatarUrl}
-              alt={`${t.name}'s profile`}
-              className="w-24 h-24 rounded-full object-cover border-4 border-white ring-2 ring-indigo-200 shadow-md mb-4"
-            />
-            <h3 className="text-xl font-bold text-indigo-900 mb-2">{t.name}</h3>
-            <p className="text-sm text-gray-600 mb-2">
-              {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
+            <div className="flex items-center justify-between mb-2">
+              <img
+                src={t.teacherProfile.avatarUrl}
+                alt={`${t.name}'s profile`}
+                className="w-16 h-16 rounded-full object-cover border-2 border-orange-200 mr-4"
+              />
+              <h3 className="text-xl font-bold text-gray-800 flex-1">{t.name}</h3>
+            </div>
+            <p className="mt-2 text-gray-600 flex items-center gap-1">
+              <Tag className="w-4 h-4" /> {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
             </p>
-            <p className="text-lg font-medium text-blue-600 mb-3">
+            <p className="mt-1 text-lg font-semibold text-orange-600">
               ₹{t.teacherProfile?.fee || 0}/hr
             </p>
-            <p className="text-sm text-gray-700 flex-1 line-clamp-3 mb-4">
+            <p className="mt-4 text-gray-700 flex-1 line-clamp-3 break-words">
               {t.teacherProfile?.bio || "No bio available"}
             </p>
-            <Link
-              to={`/student/teacher/${t._id}`}
-              className="px-6 py-2 bg-gradient-to-r from-indigo-600 to-blue-500 text-white rounded-lg shadow-md hover:from-indigo-700 hover:to-blue-600 transition-all duration-200"
-            >
-              View Profile
-            </Link>
+            <div className="mt-4 flex justify-end">
+              <Link
+                to={`/student/teacher/${t._id}`}
+                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+              >
+                View Profile
+              </Link>
+            </div>
           </motion.div>
         ))}
       </motion.div>
 
       {!isLoading && filtered.length === 0 && (
-        <motion.p variants={cardVariants} className="text-center text-gray-500 text-lg py-10">
+        <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
           No teachers found.
         </motion.p>
       )}
