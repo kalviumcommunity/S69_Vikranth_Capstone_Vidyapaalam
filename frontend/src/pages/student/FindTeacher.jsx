@@ -491,6 +491,9 @@
 
 
 
+
+
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
@@ -554,7 +557,6 @@ export default function FindTeacher() {
       animate="show"
       variants={containerVariants}
     >
-      {/* Title */}
       <motion.header variants={cardVariants} className="text-center">
         <h1 className="text-3xl font-bold text-orange-600">
           Find Your Perfect Teacher
@@ -564,7 +566,6 @@ export default function FindTeacher() {
         </p>
       </motion.header>
 
-      {/* Search */}
       <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -578,12 +579,10 @@ export default function FindTeacher() {
         </div>
       </motion.div>
 
-      {/* Results count */}
       <motion.h2 variants={cardVariants} className="text-xl font-semibold">
         {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
       </motion.h2>
 
-      {/* Cards Grid */}
       <motion.div
         variants={containerVariants}
         className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
