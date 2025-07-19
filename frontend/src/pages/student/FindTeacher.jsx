@@ -479,11 +479,7 @@ export default function FindTeacher() {
         if (!api) {
           throw new Error("API instance is undefined");
         }
-        const url = api.defaults.baseURL + "/api/teacher-profiles";
-        console.log("DEBUG: Fetching from", url);
         const response = await api.get("/api/teacher-profiles");
-        console.log("DEBUG: Response status", response.status);
-        console.log("DEBUG: Response data", response.data);
         const formattedTeachers = response.data.map(profile => ({
           _id: profile._id,
           name: profile.userId?.name || profile.name || "Unknown Teacher",
@@ -495,7 +491,6 @@ export default function FindTeacher() {
             availability: profile.availability || false,
           },
         }));
-        console.log("DEBUG: Formatted teachers", formattedTeachers);
         setTeachers(formattedTeachers);
       } catch (error) {
         console.error("Error fetching teacher profiles:", {
@@ -640,32 +635,52 @@ export default function FindTeacher() {
           <motion.div
             key={t._id}
             variants={cardVariants}
-            whileHover={{ scale: 1.05, rotateY: 5, boxShadow: "0 15px 30px rgba(0, 0, 0, 0.2)", transition: { duration: 0.4 } }}
-            className="max-w-md bg-gradient-to-br from-orange-100 to-amber-100 backdrop-blur-sm border-2 border-orange-200 rounded-2xl p-8 flex flex-col items-center text-center shadow-xl hover:shadow-2xl transition-all duration-300"
+            whileHover={{
+              scale: 1.03,
+              boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
+              transition: { duration: 0.3 }
+            }}
+            className="bg-white rounded-2xl shadow-md overflow-hidden transition-all duration-300 border border-orange-100 hover:border-orange-300"
           >
-            <div className="mb-6">
+            <div className="p-6 flex flex-col sm:flex-row items-center sm:items-start gap-6">
               <img
                 src={t.teacherProfile.avatarUrl}
                 alt={`${t.name}'s profile`}
-                className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow-lg"
+                className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow"
               />
-              <h3 className="mt-4 text-2xl font-semibold text-orange-800 tracking-wide">{t.name}</h3>
+              <div className="flex-1 space-y-3 text-center sm:text-left">
+                <h3 className="text-2xl font-bold text-orange-700">{t.name}</h3>
+                <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+                  {(t.teacherProfile?.teachingSkills || []).map((skill, i) => (
+                    <span
+                      key={i}
+                      className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+                <p className="text-gray-600 line-clamp-3">{t.teacherProfile.bio}</p>
+                <div className="flex items-center justify-between sm:justify-start gap-6 mt-2">
+                  <p className="text-lg font-semibold text-amber-600">
+                    ₹{t.teacherProfile?.fee || 0}/hr
+                  </p>
+                  {t.teacherProfile.availability && (
+                    <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                      Available
+                    </span>
+                  )}
+                </div>
+                <div className="mt-4">
+                  <Link
+                    to={`/student/teacher/${t._id}`}
+                    className="inline-block px-6 py-2 text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow transition"
+                  >
+                    View Profile
+                  </Link>
+                </div>
+              </div>
             </div>
-            <div className="px-3 py-1 bg-amber-100 text-amber-800 text-sm font-medium rounded-full mb-6">
-              {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
-            </div>
-            <p className="text-xl font-medium text-amber-600 mb-6">
-              ₹{t.teacherProfile?.fee || 0}/hr
-            </p>
-            <div className="text-gray-700 flex-1 min-h-[5rem] h-20 line-clamp-3 break-words overflow-hidden mb-6">
-              {t.teacherProfile?.bio || "No bio available"}
-            </div>
-            <Link
-              to={`/student/teacher/${t._id}`}
-              className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow-md hover:from-orange-600 hover:to-amber-600 transition-all duration-300"
-            >
-              View Profile
-            </Link>
           </motion.div>
         ))}
       </motion.div>
