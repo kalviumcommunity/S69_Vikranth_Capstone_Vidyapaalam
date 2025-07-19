@@ -494,6 +494,139 @@
 
 
 
+// import React, { useState, useEffect } from "react";
+// import { Link } from "react-router-dom";
+// import { Search } from "lucide-react";
+// import { motion } from "framer-motion";
+// import { useAuth } from "../../contexts/AuthContext";
+
+// const containerVariants = {
+//   hidden: { opacity: 0 },
+//   show: {
+//     opacity: 1,
+//     transition: { staggerChildren: 0.1 }
+//   }
+// };
+// const cardVariants = {
+//   hidden: { opacity: 0, y: 20 },
+//   show: { opacity: 1, y: 0 },
+// };
+
+// export default function FindTeacher() {
+//   const { api } = useAuth();
+//   const [search, setSearch] = useState("");
+//   const [teachers, setTeachers] = useState([]);
+//   const [isLoading, setIsLoading] = useState(true);
+
+//   useEffect(() => {
+//     const fetchTeachers = async () => {
+//       setIsLoading(true);
+//       try {
+//         if (!api) {
+//           throw new Error("API instance is undefined");
+//         }
+//         const url = api.defaults.baseURL + "/api/teacher-profiles";
+//         console.log("DEBUG: Fetching from", url);
+//         const response = await api.get("/api/teacher-profiles");
+//         console.log("DEBUG: Response status", response.status);
+//         console.log("DEBUG: Response data", response.data);
+//         const formattedTeachers = response.data.map(profile => ({
+//           _id: profile._id,
+//           name: profile.userId?.name || profile.name || "Unknown Teacher",
+//         }));
+//         console.log("DEBUG: Formatted teachers", formattedTeachers);
+//         setTeachers(formattedTeachers);
+//       } catch (error) {
+//         console.error("Error fetching teacher profiles:", {
+//           message: error.message,
+//           status: error.response?.status,
+//           data: error.response?.data,
+//           baseURL: api?.defaults?.baseURL
+//         });
+//         setTeachers([]);
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+//     fetchTeachers();
+//   }, [api]);
+
+//   const filtered = teachers.filter(t => 
+//     search === "" || t.name.toLowerCase().includes(search.toLowerCase())
+//   );
+
+//   return (
+//     <motion.div
+//       className="max-w-6xl mx-auto p-6 space-y-6"
+//       initial="hidden"
+//       animate="show"
+//       variants={containerVariants}
+//     >
+//       <motion.header variants={cardVariants} className="text-center">
+//         <h1 className="text-3xl font-bold text-orange-600">
+//           Find Your Perfect Teacher
+//         </h1>
+//         <p className="text-gray-600">
+//           Search expert instructors by name.
+//         </p>
+//       </motion.header>
+
+//       <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4">
+//         <div className="relative flex-1">
+//           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+//           <input
+//             type="text"
+//             value={search}
+//             onChange={e => setSearch(e.target.value)}
+//             placeholder="Search by name…"
+//             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+//           />
+//         </div>
+//       </motion.div>
+
+//       <motion.h2 variants={cardVariants} className="text-xl font-semibold">
+//         {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
+//       </motion.h2>
+
+//       <motion.div
+//         variants={containerVariants}
+//         className="grid gap-6 grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+//       >
+//         {filtered.map(t => (
+//           <motion.div
+//             key={t._id}
+//             variants={cardVariants}
+//             whileHover={{ scale: 1.03 }}
+//             className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 flex flex-col"
+//           >
+//             <h3 className="text-xl font-bold text-gray-800">{t.name}</h3>
+//             <div className="mt-4 flex justify-end">
+//               <Link
+//                 to={`/student/teacher/${t._id}`}
+//                 className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+//               >
+//                 View Profile
+//               </Link>
+//             </div>
+//           </motion.div>
+//         ))}
+//       </motion.div>
+
+//       {!isLoading && filtered.length === 0 && (
+//         <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
+//           No teachers found.
+//         </motion.p>
+//       )}
+//     </motion.div>
+//   );
+// }
+
+
+
+
+
+
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
@@ -533,6 +666,11 @@ export default function FindTeacher() {
         const formattedTeachers = response.data.map(profile => ({
           _id: profile._id,
           name: profile.userId?.name || profile.name || "Unknown Teacher",
+          teacherProfile: {
+            teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
+            fee: profile.hourlyRate || 0,
+            bio: profile.aboutMe || "No bio available",
+          },
         }));
         console.log("DEBUG: Formatted teachers", formattedTeachers);
         setTeachers(formattedTeachers);
@@ -552,7 +690,11 @@ export default function FindTeacher() {
   }, [api]);
 
   const filtered = teachers.filter(t => 
-    search === "" || t.name.toLowerCase().includes(search.toLowerCase())
+    search === "" ||
+    t.name.toLowerCase().includes(search.toLowerCase()) ||
+    (t.teacherProfile?.teachingSkills || []).some(skill =>
+      skill.toLowerCase().includes(search.toLowerCase())
+    )
   );
 
   return (
@@ -567,7 +709,7 @@ export default function FindTeacher() {
           Find Your Perfect Teacher
         </h1>
         <p className="text-gray-600">
-          Search expert instructors by name.
+          Search expert instructors by name or subject.
         </p>
       </motion.header>
 
@@ -578,7 +720,7 @@ export default function FindTeacher() {
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name…"
+            placeholder="Search by name or subject…"
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
@@ -600,6 +742,15 @@ export default function FindTeacher() {
             className="bg-white rounded-xl shadow hover:shadow-lg transition p-6 flex flex-col"
           >
             <h3 className="text-xl font-bold text-gray-800">{t.name}</h3>
+            <p className="mt-2 text-gray-600 flex items-center gap-1">
+              {(t.teacherProfile?.teachingSkills || []).join(", ") || "N/A"}
+            </p>
+            <p className="mt-2 text-lg font-semibold text-orange-600">
+              ₹{t.teacherProfile?.fee || 0}/hr
+            </p>
+            <p className="mt-4 text-gray-700 flex-1 line-clamp-3">
+              {t.teacherProfile?.bio || "No bio available"}
+            </p>
             <div className="mt-4 flex justify-end">
               <Link
                 to={`/student/teacher/${t._id}`}
