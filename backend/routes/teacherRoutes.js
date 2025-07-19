@@ -88,6 +88,7 @@ const {
   getAuthenticatedTeacherProfile,
   updateTeacherProfile,
   deleteTeacherProfile,
+  getTeacherProfileById 
 } = require('../controller/teacherController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -100,5 +101,6 @@ router.get('/me', protect, authorizeRoles('teacher'), getAuthenticatedTeacherPro
 router.post('/', protect, authorizeRoles('teacher'), upload, createTeacherProfile);
 router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTeacherProfile);
 router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
+router.get('/:id', getTeacherProfileById);
 
 module.exports = router;
