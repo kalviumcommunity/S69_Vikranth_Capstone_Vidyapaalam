@@ -522,28 +522,33 @@ export default function FindTeacher() {
     const fetchTeachers = async () => {
       setIsLoading(true);
       try {
-        console.log("DEBUG: Fetching from", api.defaults.baseURL + "/api/teacher-profiles");
+        if (!api) {
+          throw new Error("API instance is undefined");
+        }
+        const url = api.defaults.baseURL + "/api/teacher-profiles";
+        console.log("DEBUG: Fetching from", url);
         const response = await api.get("/api/teacher-profiles");
-        const formattedTeachers = response.data
-          .filter(profile => profile.isProfileComplete)
-          .map(profile => ({
-            _id: profile._id,
-            name: profile.userId?.name || profile.name || "Unknown Teacher",
-          }));
+        console.log("DEBUG: Response status", response.status);
+        console.log("DEBUG: Response data", response.data);
+        const formattedTeachers = response.data.map(profile => ({
+          _id: profile._id,
+          name: profile.userId?.name || profile.name || "Unknown Teacher",
+        }));
+        console.log("DEBUG: Formatted teachers", formattedTeachers);
         setTeachers(formattedTeachers);
       } catch (error) {
-        console.error("Error fetching teacher profiles:", error);
+        console.error("Error fetching teacher profiles:", {
+          message: error.message,
+          status: error.response?.status,
+          data: error.response?.data,
+          baseURL: api?.defaults?.baseURL
+        });
         setTeachers([]);
       } finally {
         setIsLoading(false);
       }
     };
-    if (api) {
-      fetchTeachers();
-    } else {
-      console.error("API instance is undefined");
-      setIsLoading(false);
-    }
+    fetchTeachers();
   }, [api]);
 
   const filtered = teachers.filter(t => 
