@@ -517,20 +517,18 @@ export default function FindTeacher() {
     return matchName && matchSubject && matchRating && matchPrice && matchAvail;
   });
 
- return (
+return (
   <motion.div
-    className="w-full min-h-screen p-4 md:p-6 bg-white"
+    className="w-full min-h-screen p-6 bg-white"
     initial="hidden"
     animate="show"
     variants={containerVariants}
   >
-    <motion.header variants={cardVariants} className="text-center mb-4">
+    <motion.header variants={cardVariants} className="text-center mb-6">
       <h1 className="text-3xl font-bold text-orange-600">
         Find Your Perfect Teacher
       </h1>
-      <p className="text-gray-600">
-        Search and filter expert instructors.
-      </p>
+      <p className="text-gray-600">Search and filter expert instructors.</p>
     </motion.header>
 
     <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4 mb-6 border border-gray-200">
@@ -553,6 +551,8 @@ export default function FindTeacher() {
           {open ? "Hide Filters" : "Show Filters"}
         </button>
       </div>
+
+      {/* Filters */}
       <div
         className={`mt-4 grid grid-cols-1 gap-4 transition-all duration-300 overflow-hidden ${
           open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
@@ -627,57 +627,53 @@ export default function FindTeacher() {
       {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
     </motion.h2>
 
-    <motion.div variants={containerVariants} className="flex flex-col gap-6">
+    <motion.div variants={containerVariants} className="flex flex-col gap-6 w-full">
       {filtered.map(t => (
         <motion.div
           key={t._id}
           variants={cardVariants}
           whileHover={{
             scale: 1.01,
-            boxShadow: "0 12px 24px rgba(0,0,0,0.12)",
+            boxShadow: "0 12px 24px rgba(0,0,0,0.1)",
             transition: { duration: 0.3 }
           }}
-          className="w-full bg-white rounded-xl shadow border border-orange-100 hover:border-orange-300 transition-all duration-300"
+          className="w-full flex flex-col sm:flex-row items-center sm:items-start bg-white border border-gray-200 rounded-xl shadow p-6"
         >
-          <div className="p-6 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-            <img
-              src={t.teacherProfile.avatarUrl}
-              alt={`${t.name}'s profile`}
-              className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow"
-            />
-            <div className="flex-1 text-center sm:text-left space-y-2">
-              <div className="flex justify-between items-center">
-                <h3 className="text-2xl font-bold text-orange-700">{t.name}</h3>
-                {t.teacherProfile.availability && (
-                  <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full hidden sm:inline">
-                    Available
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-                {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
-                  <span
-                    key={i}
-                    className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-              <p className="text-gray-600 line-clamp-3">{t.teacherProfile.bio}</p>
-              <div className="flex items-center justify-center sm:justify-start gap-4">
-                <span className="text-lg font-semibold text-amber-600">
-                  ₹{t.teacherProfile.fee}/hr
+          <img
+            src={t.teacherProfile.avatarUrl}
+            alt={`${t.name}'s profile`}
+            className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow mr-6"
+          />
+          <div className="flex-1 space-y-2 text-center sm:text-left">
+            <div className="flex justify-between items-center flex-wrap">
+              <h3 className="text-2xl font-bold text-orange-700">{t.name}</h3>
+              {t.teacherProfile.availability && (
+                <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full mt-2 sm:mt-0">
+                  Available
                 </span>
-              </div>
-              <div>
-                <Link
-                  to={`/student/teacher/${t._id}`}
-                  className="inline-block mt-3 px-6 py-2 text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow transition"
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
+              {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
+                <span
+                  key={i}
+                  className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full"
                 >
-                  View Profile
-                </Link>
-              </div>
+                  {skill}
+                </span>
+              ))}
+            </div>
+            <p className="text-gray-600 line-clamp-3">{t.teacherProfile.bio}</p>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 justify-center sm:justify-start">
+              <span className="text-lg font-semibold text-amber-600">
+                ₹{t.teacherProfile.fee}/hr
+              </span>
+              <Link
+                to={`/student/teacher/${t._id}`}
+                className="inline-block px-6 py-2 text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow transition"
+              >
+                View Profile
+              </Link>
             </div>
           </div>
         </motion.div>
