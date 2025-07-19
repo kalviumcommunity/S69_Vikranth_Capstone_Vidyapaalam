@@ -219,7 +219,7 @@ const TeacherProfile = () => {
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
         console.log("API Response:", response.data);
-        setTeacher(response.data);
+        setTeacher(response.data || {});
       } catch (error) {
         console.error("Error fetching teacher profile:", {
           message: error.message,
@@ -277,9 +277,14 @@ const TeacherProfile = () => {
       transition={{ duration: 0.4 }}
       className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white"
     >
+      {/* Header */}
       <div className="flex flex-col md:flex-row items-start gap-6">
         <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex items-center justify-center">
-          <img src={teacher.avatarUrl || '/placeholder.svg'} alt={teacher.name} className="h-full w-full object-cover" />
+          <img
+            src={teacher.avatarUrl || '/placeholder.svg'}
+            alt={teacher.name || 'Unknown Teacher'}
+            className="h-full w-full object-cover"
+          />
         </div>
 
         <div className="flex-1 space-y-3">
@@ -300,37 +305,46 @@ const TeacherProfile = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            {Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.map((skill, idx) => (
-              <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-                {skill}
-              </span>
-            ))}
+            {Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
+              teacher.teachingSkills.map((skill, idx) => (
+                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                  {skill}
+                </span>
+              ))
+            ) : (
+              <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">No skills listed</span>
+            )}
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 text-yellow-500" />
               <span>{(teacher.rating || 0).toFixed(1)}</span>
             </div>
           </div>
 
-          <div className="text-2xl font-semibold text-orange-600">${(teacher.hourlyRate || 0)}/hour</div>
+          <div className="text-2xl font-semibold text-orange-600">${teacher.hourlyRate || 0}/hour</div>
 
           <p className="text-gray-700 leading-relaxed mt-2 text-sm">{teacher.bio || 'No bio available'}</p>
 
           <div className="mt-4 pt-4 border-t border-gray-200">
             <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
             <div className="flex flex-wrap gap-2">
-              {Array.isArray(teacher.availability) && teacher.availability.map((slot, idx) => (
-                <span
-                  key={idx}
-                  className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full border border-blue-100"
-                >
-                  {slot}
-                </span>
-              ))}
+              {Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
+                teacher.availability.map((slot, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full border border-blue-100"
+                  >
+                    {slot}
+                  </span>
+                ))
+              ) : (
+                <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">No availability</span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
+      {/* Video Introduction */}
       {teacher.videoUrl && (
         <Card>
           <CardHeader>
@@ -345,7 +359,8 @@ const TeacherProfile = () => {
         </Card>
       )}
 
-      {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 && (
+      {/* Gallery */}
+      {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Gallery</CardTitle>
@@ -354,15 +369,20 @@ const TeacherProfile = () => {
             {teacher.galleryPhotos.map((photo, idx) => (
               <img
                 key={idx}
-                src={photo.url}
+                src={photo.url || '/placeholder.svg'}
                 alt={photo.name || `Photo ${idx + 1}`}
                 className="w-full h-48 object-cover rounded-lg shadow-md"
               />
             ))}
           </CardContent>
         </Card>
+      ) : (
+        <Card>
+          <CardContent className="text-center py-4 text-gray-500">No gallery photos available</CardContent>
+        </Card>
       )}
 
+      {/* Book Session */}
       <div className="flex justify-center">
         <Link to={`/student/book-session/${teacher._id}`}>
           <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full md:w-auto py-3 px-6 rounded-md text-sm font-medium">
