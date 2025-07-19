@@ -218,7 +218,7 @@ const TeacherProfile = () => {
           throw new Error("API instance is undefined");
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
-        console.log("API Response:", response.data); // Debug log
+        console.log("API Response:", response.data);
         const profile = response.data;
         setTeacher({
           _id: profile._id,
@@ -237,7 +237,9 @@ const TeacherProfile = () => {
           data: error.response?.data,
           baseURL: api?.defaults?.baseURL,
         });
-        setTeacher(null);
+        if (error.response?.status === 404) {
+          setTeacher(null); // Explicitly set to null for 404
+        }
       } finally {
         setIsLoading(false);
       }
