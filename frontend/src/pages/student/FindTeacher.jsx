@@ -635,7 +635,7 @@ export default function FindTeacher() {
               <img
                 src={t.teacherProfile.avatarUrl}
                 alt={`${t.name}'s profile`}
-                className="w-24 h-24 object-cover rounded-full border-2 border-orange-200 shadow-md"
+                className="w-40 h-40 object-cover rounded-full border-2 border-orange-200 shadow-md"
               />
             </div>
             <div className="col-span-4 space-y-3 text-left">
