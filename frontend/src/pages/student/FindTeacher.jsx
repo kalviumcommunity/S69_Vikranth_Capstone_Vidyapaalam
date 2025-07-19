@@ -468,7 +468,6 @@ export default function FindTeacher() {
   const [subject, setSubject] = useState(subjects[0]);
   const [rating, setRating] = useState(ratingOptions[0].value);
   const [priceRange, setPriceRange] = useState(priceRanges[0]);
-  const [availableOnly, setAvailableOnly] = useState(false);
   const [teachers, setTeachers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -513,178 +512,159 @@ export default function FindTeacher() {
       (t.teacherProfile?.teachingSkills || []).some(skill => skill === subject);
     const matchRating = rating === 0 || t.teacherProfile?.rating >= rating;
     const matchPrice = priceRange.min <= t.teacherProfile.fee && t.teacherProfile.fee <= priceRange.max;
-    const matchAvail = !availableOnly || t.teacherProfile.availability === true;
-    return matchName && matchSubject && matchRating && matchPrice && matchAvail;
+    return matchName && matchSubject && matchRating && matchPrice;
   });
 
-return (
-  <motion.div
-    className="w-full min-h-screen p-6 bg-white"
-    initial="hidden"
-    animate="show"
-    variants={containerVariants}
-  >
-    <motion.header variants={cardVariants} className="text-center mb-6">
-      <h1 className="text-3xl font-bold text-orange-600">
-        Find Your Perfect Teacher
-      </h1>
-      <p className="text-gray-600">Search and filter expert instructors.</p>
-    </motion.header>
+  return (
+    <motion.div
+      className="w-full min-h-screen p-6 bg-white"
+      initial="hidden"
+      animate="show"
+      variants={containerVariants}
+    >
+      <motion.header variants={cardVariants} className="text-center mb-6">
+        <h1 className="text-3xl font-bold text-orange-600">
+          Find Your Perfect Teacher
+        </h1>
+        <p className="text-gray-600">Search and filter expert instructors.</p>
+      </motion.header>
 
-    <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4 mb-6 border border-gray-200">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search by name…"
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
-        </div>
-        <button
-          onClick={() => setOpen(o => !o)}
-          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
-        >
-          <Filter className="w-5 h-5" />
-          {open ? "Hide Filters" : "Show Filters"}
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div
-        className={`mt-4 grid grid-cols-1 gap-4 transition-all duration-300 overflow-hidden ${
-          open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <Tag className="w-5 h-5 text-gray-500" />
-          <select
-            value={subject}
-            onChange={e => setSubject(e.target.value)}
-            className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            {subjects.map(s => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <Star className="w-5 h-5 text-gray-500" />
-          <select
-            value={rating}
-            onChange={e => setRating(parseFloat(e.target.value))}
-            className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            {ratingOptions.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-gray-500" />
-          <select
-            value={priceRange.label}
-            onChange={e => {
-              const found = priceRanges.find(r => r.label === e.target.value);
-              if (found) setPriceRange(found);
-            }}
-            className="flex-1 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
-          >
-            {priceRanges.map(r => (
-              <option key={r.label} value={r.label}>{r.label}</option>
-            ))}
-          </select>
-        </div>
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={availableOnly}
-            onChange={e => setAvailableOnly(e.target.checked)}
-            className="h-5 w-5 text-orange-600 border rounded focus:ring-2 focus:ring-orange-400"
-          />
-          Available only
-        </label>
-        <div className="flex justify-end">
+      <motion.div variants={cardVariants} className="bg-white shadow rounded-lg p-4 mb-6 border border-gray-200">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name…"
+              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
           <button
-            onClick={() => {
-              setSearch("");
-              setSubject(subjects[0]);
-              setRating(ratingOptions[0].value);
-              setPriceRange(priceRanges[0]);
-              setAvailableOnly(false);
-            }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
           >
-            Clear Filters
+            <Filter className="w-5 h-5" />
+            {open ? "Hide Filters" : "Show Filters"}
           </button>
         </div>
-      </div>
-    </motion.div>
 
-    <motion.h2 variants={cardVariants} className="text-xl font-semibold mb-4">
-      {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
-    </motion.h2>
-
-    <motion.div variants={containerVariants} className="flex flex-col gap-6 w-full">
-      {filtered.map(t => (
-        <motion.div
-          key={t._id}
-          variants={cardVariants}
-          whileHover={{
-            scale: 1.01,
-            boxShadow: "0 12px 24px rgba(0,0,0,0.1)",
-            transition: { duration: 0.3 }
-          }}
-          className="w-full flex flex-col sm:flex-row items-center sm:items-start bg-white border border-gray-200 rounded-xl shadow p-6"
+        <div
+          className={`mt-4 flex flex-row gap-4 transition-all duration-300 overflow-hidden ${
+            open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+          }`}
         >
-          <img
-            src={t.teacherProfile.avatarUrl}
-            alt={`${t.name}'s profile`}
-            className="w-24 h-24 rounded-full object-cover ring-4 ring-orange-100 shadow mr-6"
-          />
-          <div className="flex-1 space-y-2 text-center sm:text-left">
-            <div className="flex justify-between items-center flex-wrap">
-              <h3 className="text-2xl font-bold text-orange-700">{t.name}</h3>
-              {t.teacherProfile.availability && (
-                <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded-full mt-2 sm:mt-0">
-                  Available
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 justify-center sm:justify-start">
-              {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
-                <span
-                  key={i}
-                  className="bg-orange-100 text-orange-700 text-xs font-semibold px-3 py-1 rounded-full"
-                >
-                  {skill}
-                </span>
+          <div className="flex items-center gap-2">
+            <Tag className="w-5 h-5 text-gray-500" />
+            <select
+              value={subject}
+              onChange={e => setSubject(e.target.value)}
+              className="w-40 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {subjects.map(s => (
+                <option key={s} value={s}>{s}</option>
               ))}
-            </div>
-            <p className="text-gray-600 line-clamp-3">{t.teacherProfile.bio}</p>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-2 justify-center sm:justify-start">
-              <span className="text-lg font-semibold text-amber-600">
-                ₹{t.teacherProfile.fee}/hr
-              </span>
-              <Link
-                to={`/student/teacher/${t._id}`}
-                className="inline-block px-6 py-2 text-white bg-orange-500 hover:bg-orange-600 rounded-lg shadow transition"
-              >
-                View Profile
-              </Link>
-            </div>
+            </select>
           </div>
-        </motion.div>
-      ))}
-    </motion.div>
+          <div className="flex items-center gap-2">
+            <Star className="w-5 h-5 text-gray-500" />
+            <select
+              value={rating}
+              onChange={e => setRating(parseFloat(e.target.value))}
+              className="w-40 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {ratingOptions.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <MapPin className="w-5 h-5 text-gray-500" />
+            <select
+              value={priceRange.label}
+              onChange={e => {
+                const found = priceRanges.find(r => r.label === e.target.value);
+                if (found) setPriceRange(found);
+              }}
+              className="w-40 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+            >
+              {priceRanges.map(r => (
+                <option key={r.label} value={r.label}>{r.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={() => {
+                setSearch("");
+                setSubject(subjects[0]);
+                setRating(ratingOptions[0].value);
+                setPriceRange(priceRanges[0]);
+              }}
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+            >
+              Clear Filters
+            </button>
+          </div>
+        </div>
+      </motion.div>
 
-    {!isLoading && filtered.length === 0 && (
-      <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
-        No teachers found.
-      </motion.p>
-    )}
-  </motion.div>
-);
+      <motion.h2 variants={cardVariants} className="text-xl font-semibold mb-4">
+        {isLoading ? "Loading..." : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
+      </motion.h2>
+
+      <motion.div variants={containerVariants} className="flex flex-col gap-6 w-full">
+        {filtered.map(t => (
+          <motion.div
+            key={t._id}
+            variants={cardVariants}
+            whileHover={{
+              scale: 1.02,
+              boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+              transition: { duration: 0.3 }
+            }}
+            className="w-full bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-lg p-6 grid grid-cols-5 gap-4"
+          >
+            <img
+              src={t.teacherProfile.avatarUrl}
+              alt={`${t.name}'s profile`}
+              className="w-full h-32 object-cover rounded-lg border-2 border-orange-200 shadow-md col-span-1"
+            />
+            <div className="col-span-4 space-y-3 text-left">
+              <h3 className="text-2xl font-bold text-orange-800">{t.name}</h3>
+              <div className="flex flex-wrap gap-2">
+                {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
+                  <span
+                    key={i}
+                    className="bg-orange-100 text-orange-700 text-sm font-medium px-3 py-1 rounded-full shadow"
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+              <p className="text-gray-600 line-clamp-3 break-words">{t.teacherProfile.bio}</p>
+              <div className="flex items-center gap-4">
+                <span className="text-xl font-semibold text-amber-700">
+                  ₹{t.teacherProfile.fee}/hr
+                </span>
+                <Link
+                  to={`/student/teacher/${t._id}`}
+                  className="px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow hover:from-orange-600 hover:to-amber-600 transition"
+                >
+                  View Profile
+                </Link>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {!isLoading && filtered.length === 0 && (
+        <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
+          No teachers found.
+        </motion.p>
+      )}
+    </motion.div>
+  );
 }
