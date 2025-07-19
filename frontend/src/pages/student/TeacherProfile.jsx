@@ -219,17 +219,7 @@ const TeacherProfile = () => {
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
         console.log("API Response:", response.data);
-        const profile = response.data;
-        setTeacher({
-          _id: profile._id,
-          name: profile.userId?.name || profile.name || "Unknown Teacher",
-          avatarUrl: profile.avatar?.url || "/placeholder.svg",
-          teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
-          rating: profile.rating || 0,
-          hourlyRate: profile.hourlyRate || 0,
-          bio: profile.aboutMe || "No bio available",
-          availability: profile.availability || [],
-        });
+        setTeacher(response.data);
       } catch (error) {
         console.error("Error fetching teacher profile:", {
           message: error.message,
@@ -238,7 +228,7 @@ const TeacherProfile = () => {
           baseURL: api?.defaults?.baseURL,
         });
         if (error.response?.status === 404) {
-          setTeacher(null); // Explicitly set to null for 404
+          setTeacher(null);
         }
       } finally {
         setIsLoading(false);
@@ -311,9 +301,11 @@ const TeacherProfile = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-              {teacher.teachingSkills[0] || "No skill listed"}
-            </span>
+            {teacher.teachingSkills.map((skill, idx) => (
+              <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                {skill}
+              </span>
+            ))}
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 text-yellow-500" />
               <span>{teacher.rating.toFixed(1)}</span>
@@ -339,6 +331,40 @@ const TeacherProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Video Introduction */}
+      {teacher.videoUrl && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Video Introduction</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <video controls className="w-full aspect-video">
+              <source src={teacher.videoUrl} type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Gallery */}
+      {teacher.galleryPhotos.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gallery</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {teacher.galleryPhotos.map((photo, idx) => (
+              <img
+                key={idx}
+                src={photo.url}
+                alt={photo.name}
+                className="w-full h-48 object-cover rounded-lg shadow-md"
+              />
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Book Session */}
       <div className="flex justify-center">
