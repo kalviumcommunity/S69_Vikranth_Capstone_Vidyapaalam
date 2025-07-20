@@ -80,6 +80,37 @@
 
 
 
+// const express = require('express');
+// const {
+//   createTeacherProfile,
+//   getTeacherProfiles,
+//   getTeacherProfileByUserId,
+//   getAuthenticatedTeacherProfile,
+//   updateTeacherProfile,
+//   deleteTeacherProfile,
+//   getTeacherProfileById 
+// } = require('../controller/teacherController');
+// const { protect, authorizeRoles } = require('../middleware/authMiddleware');
+// const upload = require('../middleware/uploadMiddleware');
+
+// const router = express.Router();
+
+// router.get('/', getTeacherProfiles);
+// router.get('/user/:userId', getTeacherProfileByUserId);
+// router.get('/me', protect, authorizeRoles('teacher'), getAuthenticatedTeacherProfile);
+// router.post('/', protect, authorizeRoles('teacher'), upload, createTeacherProfile);
+// router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTeacherProfile);
+// router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
+// router.get('/:id', getTeacherProfileById);
+
+// module.exports = router;
+
+
+
+
+
+
+
 const express = require('express');
 const {
   createTeacherProfile,
@@ -88,7 +119,7 @@ const {
   getAuthenticatedTeacherProfile,
   updateTeacherProfile,
   deleteTeacherProfile,
-  getTeacherProfileById 
+  getTeacherProfileById
 } = require('../controller/teacherController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -98,9 +129,9 @@ const router = express.Router();
 router.get('/', getTeacherProfiles);
 router.get('/user/:userId', getTeacherProfileByUserId);
 router.get('/me', protect, authorizeRoles('teacher'), getAuthenticatedTeacherProfile);
+router.get('/:id', getTeacherProfileById);
 router.post('/', protect, authorizeRoles('teacher'), upload, createTeacherProfile);
 router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTeacherProfile);
 router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
-router.get('/:id', getTeacherProfileById);
 
 module.exports = router;
