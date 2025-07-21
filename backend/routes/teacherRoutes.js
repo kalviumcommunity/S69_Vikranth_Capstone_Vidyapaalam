@@ -129,7 +129,7 @@ const router = express.Router();
 router.get('/', getTeacherProfiles);
 router.get('/user/:userId', getTeacherProfileByUserId);
 router.get('/me', protect, authorizeRoles('teacher'), getAuthenticatedTeacherProfile);
-router.get('/:id', getTeacherProfileByUserId);
+router.get('/:id', getTeacherProfileById);
 router.post('/', protect, authorizeRoles('teacher'), upload, createTeacherProfile);
 router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTeacherProfile);
 router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
