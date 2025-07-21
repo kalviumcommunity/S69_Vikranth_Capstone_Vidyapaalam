@@ -538,21 +538,28 @@ const TeacherProfile = () => {
               <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Time Slot</th>
+                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Date</th>
+                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Slots</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
-                    teacher.availability.map((slot, idx) => (
-                      <tr key={idx} className="border-t">
-                        <td className="py-2 px-4 text-gray-700">
-                          {typeof slot === 'string' ? slot : 'Invalid format'}
-                        </td>
-                      </tr>
-                    ))
+                    teacher.availability.map((slot, idx) => {
+                      const [datePart] = slot.split(' ');
+                      const [year, month, day] = datePart.split('-');
+                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}`;
+                      const timeSlot = slot.split(' ').slice(1).join(' ');
+                      return (
+                        <tr key={idx} className="border-t">
+                          <td className="py-2 px-4 text-gray-700">{formattedDate}</td>
+                          <td className="py-2 px-4 text-gray-700">{timeSlot}</td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td className="py-2 px-4 text-center text-gray-500">No availability</td>
+                      <td colSpan="2" className="py-2 px-4 text-center text-gray-500">No availability</td>
                     </tr>
                   )}
                 </tbody>
