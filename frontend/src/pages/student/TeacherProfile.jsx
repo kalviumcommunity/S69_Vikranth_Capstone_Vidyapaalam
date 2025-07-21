@@ -426,7 +426,11 @@ const TeacherProfile = () => {
           throw new Error("API instance is undefined");
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
-        console.log("API Response:", response.data);
+        console.log("API Response:", {
+          ...response.data,
+          userIdTeachingSkills: response.data.userId?.teachingSkills,
+          teachingSkills: response.data.teachingSkills,
+        });
         setTeacher(response.data || {});
       } catch (error) {
         console.error("Error fetching teacher profile:", {
