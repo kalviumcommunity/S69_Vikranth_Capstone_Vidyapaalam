@@ -513,7 +513,13 @@ const TeacherProfile = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            {Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
+            {Array.isArray(teacher.userId?.teachingSkills) && teacher.userId.teachingSkills.length > 0 ? (
+              teacher.userId.teachingSkills.map((skill, idx) => (
+                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                  {skill}
+                </span>
+              ))
+            ) : Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
               teacher.teachingSkills.map((skill, idx) => (
                 <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
                   {skill}
