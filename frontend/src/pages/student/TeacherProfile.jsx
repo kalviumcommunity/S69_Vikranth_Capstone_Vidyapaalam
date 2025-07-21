@@ -549,11 +549,34 @@ const TeacherProfile = () => {
                           {new Date(item.date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
                         </td>
                         <td className="py-2 px-4 text-gray-700">
-                          {item.slots.map((slot, slotIdx) => (
-                            <span key={slotIdx} className="inline-block mr-2 mb-1 bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded">
-                              {`${slot.startTime} - ${slot.endTime}`}
-                            </span>
-                          ))}
+                          {Array.isArray(item.slots) && item.slots.length > 0 ? (
+                            item.slots.map((slot, slotIdx) => (
+                              <span key={slotIdx} className="inline-block mr-2 mb-1 bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded">
+                                {`${slot.startTime} - ${slot.endTime}`}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-500 text-xs">No slots</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
+                    teacher.availability.map((item, idx) => (
+                      <tr key={idx} className="border-t">
+                        <td className="py-2 px-4 text-gray-700">
+                          {new Date(item.date).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                        </td>
+                        <td className="py-2 px-4 text-gray-700">
+                          {Array.isArray(item.slots) && item.slots.length > 0 ? (
+                            item.slots.map((slot, slotIdx) => (
+                              <span key={slotIdx} className="inline-block mr-2 mb-1 bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded">
+                                {`${slot.startTime} - ${slot.endTime}`}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-500 text-xs">No slots</span>
+                          )}
                         </td>
                       </tr>
                     ))
