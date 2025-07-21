@@ -426,12 +426,22 @@ const TeacherProfile = () => {
           throw new Error("API instance is undefined");
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
-        console.log("API Response:", {
-          ...response.data,
-          userIdTeachingSkills: response.data.userId?.teachingSkills,
-          teachingSkills: response.data.teachingSkills,
-        });
-        setTeacher(response.data || {});
+        const formattedTeacher = {
+          _id: response.data._id,
+          name: response.data.userId?.name || response.data.name || "Unknown Teacher",
+          teacherProfile: {
+            avatarUrl: response.data.avatarUrl || "https://via.placeholder.com/64",
+            teachingSkills: response.data.userId?.teachingSkills || response.data.teachingSkills || [],
+            hourlyRate: response.data.hourlyRate || 0,
+            bio: response.data.bio || "No bio available",
+            availability: response.data.availability || [],
+            videoUrl: response.data.videoUrl,
+            galleryPhotos: response.data.galleryPhotos || [],
+            rating: response.data.rating || 0,
+          },
+        };
+        console.log("API Response:", formattedTeacher);
+        setTeacher(formattedTeacher);
       } catch (error) {
         console.error("Error fetching teacher profile:", {
           message: error.message,
@@ -493,7 +503,7 @@ const TeacherProfile = () => {
       <div className="flex flex-col md:flex-row items-start gap-6">
         <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex items-center justify-center">
           <img
-            src={teacher.avatarUrl || '/placeholder.svg'}
+            src={teacher.teacherProfile.avatarUrl || '/placeholder.svg'}
             alt={teacher.name || 'Unknown Teacher'}
             className="h-full w-full object-cover"
           />
@@ -517,14 +527,8 @@ const TeacherProfile = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-            {Array.isArray(teacher.userId?.teachingSkills) && teacher.userId.teachingSkills.length > 0 ? (
-              teacher.userId.teachingSkills.map((skill, idx) => (
-                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-                  {skill}
-                </span>
-              ))
-            ) : Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
-              teacher.teachingSkills.map((skill, idx) => (
+            {Array.isArray(teacher.teacherProfile.teachingSkills) && teacher.teacherProfile.teachingSkills.length > 0 ? (
+              teacher.teacherProfile.teachingSkills.map((skill, idx) => (
                 <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
                   {skill}
                 </span>
@@ -534,13 +538,13 @@ const TeacherProfile = () => {
             )}
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 text-yellow-500" />
-              <span>{(teacher.rating || 0).toFixed(1)}</span>
+              <span>{(teacher.teacherProfile.rating || 0).toFixed(1)}</span>
             </div>
           </div>
 
-          <div className="text-2xl font-semibold text-orange-600">${teacher.hourlyRate || 0}/hour</div>
+          <div className="text-2xl font-semibold text-orange-600">${teacher.teacherProfile.hourlyRate || 0}/hour</div>
 
-          <p className="text-gray-700 leading-relaxed mt-2 text-sm">{teacher.bio || 'No bio available'}</p>
+          <p className="text-gray-700 leading-relaxed mt-2 text-sm">{teacher.teacherProfile.bio || 'No bio available'}</p>
 
           <div className="mt-4 pt-4 border-t border-gray-200">
             <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
@@ -553,8 +557,8 @@ const TeacherProfile = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
-                    teacher.availability.map((slot, idx) => {
+                  {Array.isArray(teacher.teacherProfile.availability) && teacher.teacherProfile.availability.length > 0 ? (
+                    teacher.teacherProfile.availability.map((slot, idx) => {
                       const [datePart] = slot.split(' ');
                       const [year, month, day] = datePart.split('-');
                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -580,14 +584,14 @@ const TeacherProfile = () => {
       </div>
 
       {/* Video Introduction */}
-      {teacher.videoUrl && (
+      {teacher.teacherProfile.videoUrl && (
         <Card>
           <CardHeader>
             <CardTitle>Video Introduction</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <video controls className="w-full aspect-video">
-              <source src={teacher.videoUrl} type="video/mp4" />
+              <source src={teacher.teacherProfile.videoUrl} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
           </CardContent>
@@ -595,13 +599,13 @@ const TeacherProfile = () => {
       )}
 
       {/* Gallery */}
-      {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
+      {Array.isArray(teacher.teacherProfile.galleryPhotos) && teacher.teacherProfile.galleryPhotos.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Gallery</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {teacher.galleryPhotos.map((photo, idx) => (
+            {teacher.teacherProfile.galleryPhotos.map((photo, idx) => (
               <img
                 key={idx}
                 src={photo.url || '/placeholder.svg'}
