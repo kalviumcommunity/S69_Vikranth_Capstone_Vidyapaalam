@@ -1136,10 +1136,11 @@ exports.deleteTeacherProfile = async (req, res) => {
 
 exports.getTeacherProfileById = async (req, res) => {
   try {
-    const profile = await TeacherProfile.findById(req.params.id).populate('userId', 'name bio availability');
+    const profile = await TeacherProfile.findById(req.params.id).populate('userId', 'name bio availability teachingSkills');
     if (!profile) {
       return res.status(404).json({ message: 'Teacher not found' });
     }
+
     const formattedAvailability = profile.userId.availability.map(item => {
       const date = item.date.toISOString().split('T')[0];
       return `${date} ${item.slots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}`;
@@ -1149,7 +1150,7 @@ exports.getTeacherProfileById = async (req, res) => {
       _id: profile._id,
       name: profile.userId.name || 'Unknown Teacher',
       avatarUrl: profile.avatar?.url || '',
-      teachingSkills: profile.skills || [],
+      teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
       rating: profile.rating || 0,
       hourlyRate: profile.hourlyRate || 0,
       bio: profile.userId.bio || 'No bio available',
