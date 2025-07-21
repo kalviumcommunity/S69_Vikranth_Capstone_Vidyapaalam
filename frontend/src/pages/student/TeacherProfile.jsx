@@ -427,7 +427,8 @@ const TeacherProfile = () => {
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
         console.log("Full API Response:", response.data);
-        console.log("Teaching Skills Check:", {
+        console.log("Detailed Skills Check:", {
+          userId: response.data.userId,
           userIdTeachingSkills: response.data.userId?.teachingSkills,
           directTeachingSkills: response.data.teachingSkills,
         });
