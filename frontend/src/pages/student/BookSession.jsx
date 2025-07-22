@@ -278,6 +278,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Calendar as CalendarIcon, Clock, ArrowRight, CreditCard } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "../../contexts/AuthContext";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
+
 
 const steps = [
   { value: "date", label: "Select Date & Time" },
