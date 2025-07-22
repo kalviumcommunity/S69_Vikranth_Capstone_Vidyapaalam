@@ -192,11 +192,6 @@
 // export default TeacherProfile;
 
 
-
-
-
-
-
 // import React, { useState, useEffect } from "react";
 // import { motion } from "framer-motion";
 // import { useParams, Link } from "react-router-dom";
@@ -218,8 +213,13 @@
 //           throw new Error("API instance is undefined");
 //         }
 //         const response = await api.get(`/api/teacher-profiles/${id}`);
-//         console.log("API Response:", response.data);
-//         setTeacher(response.data || {});
+//         console.log("Full API Response:", response.data);
+//         console.log("Detailed Skills Check:", {
+//           userId: response.data.userId,
+//           userIdTeachingSkills: response.data.userId?.teachingSkills,
+//           directTeachingSkills: response.data.teachingSkills,
+//         });
+//         setTeacher(response.data);
 //       } catch (error) {
 //         console.error("Error fetching teacher profile:", {
 //           message: error.message,
@@ -305,7 +305,13 @@
 //           </div>
 
 //           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-//             {Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
+//             {Array.isArray(teacher.userId?.teachingSkills) && teacher.userId.teachingSkills.length > 0 ? (
+//               teacher.userId.teachingSkills.map((skill, idx) => (
+//                 <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+//                   {skill}
+//                 </span>
+//               ))
+//             ) : Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
 //               teacher.teachingSkills.map((skill, idx) => (
 //                 <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
 //                   {skill}
@@ -326,19 +332,36 @@
 
 //           <div className="mt-4 pt-4 border-t border-gray-200">
 //             <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
-//             <div className="flex flex-wrap gap-2">
-//               {Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
-//                 teacher.availability.map((slot, idx) => (
-//                   <span
-//                     key={idx}
-//                     className="px-2 py-1 bg-blue-50 text-blue-600 text-xs rounded-full border border-blue-100"
-//                   >
-//                     {slot}
-//                   </span>
-//                 ))
-//               ) : (
-//                 <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">No availability</span>
-//               )}
+//             <div className="overflow-x-auto">
+//               <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+//                 <thead>
+//                   <tr className="bg-gray-50">
+//                     <th className="py-2 px-4 text-left text-gray-600 font-semibold">Date</th>
+//                     <th className="py-2 px-4 text-left text-gray-600 font-semibold">Slots</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   {Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
+//                     teacher.availability.map((slot, idx) => {
+//                       const [datePart] = slot.split(' ');
+//                       const [year, month, day] = datePart.split('-');
+//                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+//                       const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}`;
+//                       const timeSlot = slot.split(' ').slice(1).join(' ');
+//                       return (
+//                         <tr key={idx} className="border-t">
+//                           <td className="py-2 px-4 text-gray-700">{formattedDate}</td>
+//                           <td className="py-2 px-4 text-gray-700">{timeSlot}</td>
+//                         </tr>
+//                       );
+//                     })
+//                   ) : (
+//                     <tr>
+//                       <td colSpan="2" className="py-2 px-4 text-center text-gray-500">No availability</td>
+//                     </tr>
+//                   )}
+//                 </tbody>
+//               </table>
 //             </div>
 //           </div>
 //         </div>
@@ -396,8 +419,6 @@
 // };
 
 // export default TeacherProfile;
-
-
 
 
 
@@ -483,6 +504,22 @@ const TeacherProfile = () => {
     );
   }
 
+  // Filter and sort availability
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to start of today
+  const bookableAvailability = Array.isArray(teacher.availability)
+    ? teacher.availability
+        .map(item => {
+          const [dateStr] = item.split(' ');
+          const [year, month, day] = dateStr.split('-');
+          const slotDate = new Date(year, month - 1, day);
+          return { date: slotDate, original: item };
+        })
+        .filter(item => item.date >= today) // Exclude yesterday and earlier
+        .sort((a, b) => a.date - b.date) // Sort chronologically
+        .map(item => item.original)
+    : [];
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -554,8 +591,8 @@ const TeacherProfile = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.isArray(teacher.availability) && teacher.availability.length > 0 ? (
-                    teacher.availability.map((slot, idx) => {
+                  {bookableAvailability.length > 0 ? (
+                    bookableAvailability.map((slot, idx) => {
                       const [datePart] = slot.split(' ');
                       const [year, month, day] = datePart.split('-');
                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -570,7 +607,7 @@ const TeacherProfile = () => {
                     })
                   ) : (
                     <tr>
-                      <td colSpan="2" className="py-2 px-4 text-center text-gray-500">No availability</td>
+                      <td colSpan="2" className="py-2 px-4 text-center text-gray-500">No future availability</td>
                     </tr>
                   )}
                 </tbody>
