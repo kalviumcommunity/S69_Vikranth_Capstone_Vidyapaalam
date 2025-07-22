@@ -277,7 +277,6 @@
 
 
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
@@ -310,24 +309,23 @@ const BookSession = () => {
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
 
-        // Improved parsing to capture all valid slots
+        // Revised parsing to capture all valid slots
         const parsedAvailability = response.data.availability.map(item => {
           console.log("Raw availability item:", item); // Log raw data for debugging
           const [dateStr, slotsPart] = item.split(" ", 2); // Split only on first space
           const date = new Date(dateStr);
           const slots = slotsPart
-            ? slotsPart.split(",").map(slot => slot.trim()).reduce((acc, slot) => {
+            ? slotsPart.split(",").map(slot => slot.trim()).flatMap(slot => {
                 if (slot.length > 0) {
                   const times = slot.split("-");
                   if (times.length === 2 && times[0] && times[1]) {
                     const [startTime, endTime] = times;
-                    acc.push({ startTime, endTime: endTime.replace(",", ""), available: true });
-                  } else {
-                    console.warn("Invalid slot format:", slot);
+                    return [{ startTime, endTime: endTime.replace(",", ""), available: true }];
                   }
+                  console.warn("Invalid slot format:", slot);
                 }
-                return acc;
-              }, [])
+                return [];
+              })
             : [];
           return { date, slots };
         });
