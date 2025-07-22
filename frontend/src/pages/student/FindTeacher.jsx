@@ -686,7 +686,7 @@ export default function FindTeacher() {
 
   return (
     <motion.div
-      className="max-w-5xl mx-auto p-4 sm:p-6 bg-white"
+      className="max-w-5xl mx-auto p-4 sm:p-6 bg-white ml-64" // Added ml-64 (256px) to account for sidebar width
       initial="hidden"
       animate="show"
       variants={containerVariants}
@@ -831,24 +831,24 @@ export default function FindTeacher() {
               variants={cardVariants}
               whileHover={{
                 scale: 1.02,
-                boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+                boxShadow: "0 10px 20px rgba(0, 0, 0, 0.1)",
                 transition: { duration: 0.3 }
               }}
-              className="bg-white border border-gray-200 rounded-xl shadow-lg p-4"
+              className="bg-white border border-gray-200 rounded-xl shadow-md p-5 hover:shadow-lg transition-all duration-200"
             >
-              <div className="flex items-center gap-4 mb-4">
+              <div className="flex items-center gap-4 mb-5">
                 <img
                   src={t.teacherProfile.avatarUrl}
                   alt={`${t.name}'s profile`}
-                  className="w-16 h-16 object-cover rounded-full border-2 border-orange-200 shadow-md"
+                  className="w-20 h-20 object-cover rounded-full border-2 border-orange-200"
                 />
-                <div className="space-y-1">
-                  <h3 className="text-xl font-bold text-orange-800">{t.name}</h3>
+                <div className="space-y-2">
+                  <h3 className="text-xl font-semibold text-orange-800">{t.name}</h3>
                   <div className="flex flex-wrap gap-2">
-                    {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
+                    {(t.teacherProfile.teachingSkills || []).slice(0, 3).map((skill, i) => ( // Limit to 3 skills
                       <span
                         key={i}
-                        className="bg-orange-100 text-orange-700 text-sm font-medium px-2 py-1 rounded-full shadow"
+                        className="bg-orange-100 text-orange-700 text-xs font-medium px-2.5 py-1 rounded-full"
                       >
                         {skill}
                       </span>
@@ -856,14 +856,14 @@ export default function FindTeacher() {
                   </div>
                 </div>
               </div>
-              <p className="text-gray-600 line-clamp-3 break-words mb-4">{t.teacherProfile.bio}</p>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <p className="text-gray-600 text-sm leading-relaxed line-clamp-3 mb-5">{t.teacherProfile.bio}</p>
+              <div className="flex items-center justify-between">
                 <span className="text-lg font-semibold text-amber-700">
                   ₹{t.teacherProfile.fee}/hr
                 </span>
                 <Link
                   to={`/student/teacher/${t._id}`}
-                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow hover:from-orange-600 hover:to-amber-600 transition"
+                  className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg text-sm font-medium hover:from-orange-600 hover:to-amber-600 transition"
                 >
                   View Profile
                 </Link>
@@ -881,4 +881,3 @@ export default function FindTeacher() {
     </motion.div>
   );
 }
-
