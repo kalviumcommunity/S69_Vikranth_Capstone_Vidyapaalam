@@ -685,7 +685,8 @@ export default function FindTeacher() {
 
   return (
     <motion.div
-      className="w-full min-h-screen p-4 sm:p-6 bg-white"
+      className="w-full min-h-screen p-4 sm:p-6 bg-white ml-auto" // ml-auto to push content away from left sidebar
+      style={{ maxWidth: 'calc(100% - 240px)' }} // Adjust based on sidebar width (e.g., 240px)
       initial="hidden"
       animate="show"
       variants={containerVariants}
