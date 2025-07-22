@@ -280,6 +280,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTeacherProfile } from "../../contexts/TeacherProfileContext";
 
 const steps = [
   { value: "date", label: "Select Date & Time" },
@@ -290,29 +291,33 @@ const BookSession = () => {
   const { teacherId } = useParams();
   const navigate = useNavigate();
   const { api } = useAuth();
+  const { teacherProfile: authTeacherProfile } = useTeacherProfile(); // For authenticated teacher context
   const [step, setStep] = useState("date");
   const [selectedDate, setSelectedDate] = useState(undefined);
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [teacher, setTeacher] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [progress, setProgress] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAvailability = async () => {
+    const fetchTeacherData = async () => {
       setIsLoading(true);
       try {
         if (!api) throw new Error("API instance is undefined");
-        const response = await api.get(`/api/teacher-profiles/${teacherId}/availability`);
+        const response = await api.get(`/api/teacher-profiles/${teacherId}`);
+        setTeacher(response.data);
         setAvailableSlots(response.data.availability || []);
       } catch (error) {
-        console.error("Error fetching availability:", error);
-        alert("Failed to load availability");
+        console.error("Error fetching teacher data:", error);
+        alert("Failed to load teacher data or availability");
+        setTeacher(null);
         setAvailableSlots([]);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchAvailability();
+    fetchTeacherData();
   }, [api, teacherId]);
 
   useEffect(() => {
@@ -383,15 +388,6 @@ const BookSession = () => {
       }));
   };
 
-  const teacher = {
-    id: teacherId,
-    name: "Maria Johnson", // Replace with dynamic data if available
-    avatar: "/placeholder.svg",
-    initials: "MJ",
-    skill: "Yoga", // Replace with dynamic skill if available
-    hourlyRate: 30, // Replace with dynamic rate if available
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -402,7 +398,7 @@ const BookSession = () => {
       <div className="text-center">
         <h2 className="text-3xl font-bold text-orange-600 mb-2">Book a Session</h2>
         <p className="text-lg text-gray-600">
-          Schedule your session with <span className="font-semibold">{teacher.name}</span>
+          Schedule your session with <span className="font-semibold">{teacher?.userId?.name || "Unknown Teacher"}</span>
         </p>
       </div>
 
@@ -496,11 +492,11 @@ const BookSession = () => {
           <CardContent className="space-y-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-600">
-                {teacher.initials}
+                {teacher?.userId?.initials || "??"} {/* Assuming initials can be derived or fetched */}
               </div>
               <div>
-                <p className="font-medium text-gray-800">{teacher.name}</p>
-                <p className="text-sm text-gray-500">{teacher.skill} Teacher</p>
+                <p className="font-medium text-gray-800">{teacher?.userId?.name || "Unknown Teacher"}</p>
+                <p className="text-sm text-gray-500">{teacher?.userId?.teachingSkills?.[0] || "Unknown Skill"} Teacher</p>
               </div>
             </div>
 
@@ -520,7 +516,7 @@ const BookSession = () => {
               <h4 className="font-semibold text-gray-800 mb-3">Payment Summary</h4>
               <div className="flex justify-between text-gray-600 mb-1">
                 <span>Session Fee</span>
-                <span>${teacher.hourlyRate}.00</span>
+                <span>${teacher?.hourlyRate || 0}.00</span>
               </div>
               <div className="flex justify-between text-gray-600 mb-1">
                 <span>Platform Fee</span>
@@ -528,7 +524,7 @@ const BookSession = () => {
               </div>
               <div className="flex justify-between font-semibold text-gray-800 pt-2 border-t">
                 <span>Total</span>
-                <span>${teacher.hourlyRate + 2}.00</span>
+                <span>${(teacher?.hourlyRate || 0) + 2}.00</span>
               </div>
             </div>
 
@@ -558,5 +554,3 @@ const BookSession = () => {
 };
 
 export default BookSession;
-
-
