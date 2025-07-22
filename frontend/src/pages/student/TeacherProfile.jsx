@@ -781,33 +781,70 @@ const TeacherProfile = () => {
 
   return (
     <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4 }}
+        className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white max-w-screen-xl mx-auto"
+      >
+        <div className="flex flex-col md:flex-row items-start gap-6">
+          <div className="h-32 w-32 bg-gray-200 rounded-full animate-pulse"></div>
+          <div className="flex-1 space-y-3">
+            <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+            <div className="h-6 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-20 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="h-16 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (!teacher) {
+    return (
+      <div className="text-center py-10">
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Teacher not found
+        </h2>
+        <Link
+          to="/student/favorites"
+          className="mt-4 inline-block text-orange-600 hover:underline"
+        >
+          Back to Favorites
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8 p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen" // Consistent padding and background
+      className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white max-w-screen-xl mx-auto"
     >
-      {/* Header Section */}
-      <div className="bg-white p-6 rounded-lg shadow-md flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8">
-        {/* Avatar */}
-        <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden ring-4 ring-orange-400 bg-gray-100 flex items-center justify-center flex-shrink-0">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+        <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex items-center justify-center">
           <img
-            src={teacher.avatarUrl || 'https://via.placeholder.com/150'} // Improved placeholder
-            alt={teacher.name || 'Teacher Avatar'}
+            src={teacher.avatarUrl || "/placeholder.svg"}
+            alt={teacher.name || "Unknown Teacher"}
             className="h-full w-full object-cover"
           />
         </div>
 
-        {/* Teacher Info */}
         <div className="flex-1 space-y-3">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-800 break-words">{teacher.name || 'Unknown Teacher'}</h1>
-            <div className="flex flex-wrap gap-2 justify-end"> {/* Use flex-wrap and justify-end for button alignment */}
-              <button className="flex items-center gap-1 text-orange-600 border border-orange-600 rounded-full px-4 py-2 text-sm font-medium hover:bg-orange-50 transition-colors">
+            <h1 className="text-3xl font-bold text-gray-800">
+              {teacher.name || "Unknown Teacher"}
+            </h1>
+            <div className="flex flex-wrap gap-2">
+              <button className="flex items-center gap-1 text-orange-600 border border-orange-600 rounded-md px-3 py-1 text-sm hover:bg-orange-50">
                 <Heart className="h-4 w-4" />
                 Favorite
               </button>
               <Link to={`/student/chat/${teacher._id}`}>
-                <button className="flex items-center gap-1 text-blue-600 border border-blue-600 rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-50 transition-colors">
+                <button className="flex items-center gap-1 text-blue-600 border border-blue-600 rounded-md px-3 py-1 text-sm hover:bg-blue-50">
                   <MessageCircle className="h-4 w-4" />
                   Message
                 </button>
@@ -815,92 +852,120 @@ const TeacherProfile = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
-            {/* Skills */}
-            {Array.isArray(teacher.userId?.teachingSkills) && teacher.userId.teachingSkills.length > 0 ? (
-              teacher.userId.teachingSkills.map((skill, idx) => (
-                <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
-                  {skill}
+          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+            {Array.isArray(teacher.userId?.teachingSkills) &&
+            teacher.userId.teachingSkills.length > 0
+              ? teacher.userId.teachingSkills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs"
+                  >
+                    {skill}
+                  </span>
+                ))
+              : Array.isArray(teacher.teachingSkills) &&
+                teacher.teachingSkills.length > 0
+              ? teacher.teachingSkills.map((skill, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs"
+                  >
+                    {skill}
+                  </span>
+                ))
+              : (
+                <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">
+                  No skills listed
                 </span>
-              ))
-            ) : Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
-              teacher.teachingSkills.map((skill, idx) => (
-                <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
-                  {skill}
-                </span>
-              ))
-            ) : (
-              <span className="px-3 py-1 bg-gray-200 text-gray-500 rounded-full text-xs font-medium">No skills listed</span>
-            )}
-            {/* Rating */}
+              )}
             <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" /> {/* Added fill for solid star */}
-              <span className="font-semibold text-gray-700">{(teacher.rating || 0).toFixed(1)}</span>
+              <Star className="h-4 w-4 text-yellow-500" />
+              <span>{(teacher.rating || 0).toFixed(1)}</span>
             </div>
           </div>
 
-          {/* Hourly Rate */}
-          <div className="text-2xl sm:text-3xl font-bold text-orange-600">${teacher.hourlyRate || 0}<span className="text-lg font-medium text-gray-500">/hour</span></div>
+          <div className="text-2xl font-semibold text-orange-600">
+            ${teacher.hourlyRate || 0}/hour
+          </div>
 
-          {/* Bio */}
-          <p className="text-gray-700 leading-relaxed text-base mt-2">{teacher.bio || 'No bio available. The teacher has not provided a description yet.'}</p>
+          <p className="text-gray-700 leading-relaxed mt-2 text-sm">
+            {teacher.bio || "No bio available"}
+          </p>
+
+          {/* Availability */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
+            <div className="w-full overflow-x-auto rounded-md border border-gray-200">
+              <table className="min-w-[500px] w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">
+                      Date
+                    </th>
+                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">
+                      Slots
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookableAvailability.length > 0 ? (
+                    bookableAvailability.map((slot, idx) => {
+                      const [datePart] = slot.split(" ");
+                      const [year, month, day] = datePart.split("-");
+                      const monthNames = [
+                        "Jan",
+                        "Feb",
+                        "Mar",
+                        "Apr",
+                        "May",
+                        "Jun",
+                        "Jul",
+                        "Aug",
+                        "Sep",
+                        "Oct",
+                        "Nov",
+                        "Dec",
+                      ];
+                      const formattedDate = `${day} ${
+                        monthNames[parseInt(month, 10) - 1]
+                      }`;
+                      const timeSlot = slot.split(" ").slice(1).join(" ");
+                      return (
+                        <tr key={`${datePart}-${idx}`} className="border-t">
+                          <td className="py-2 px-4 text-gray-700">
+                            {formattedDate}
+                          </td>
+                          <td className="py-2 px-4 text-gray-700">
+                            {timeSlot}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan="2"
+                        className="py-2 px-4 text-center text-gray-500"
+                      >
+                        No future availability
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Availability Section */}
-      <Card className="bg-white shadow-md">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-orange-600" /> Availability
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto"> {/* Ensures horizontal scroll on small screens */}
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                  <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time Slot</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {bookableAvailability.length > 0 ? (
-                  bookableAvailability.map((slot, idx) => {
-                    const [datePart, ...timeParts] = slot.split(' ');
-                    const [year, month, day] = datePart.split('-');
-                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}, ${year}`; // Added year for clarity
-                    const timeSlot = timeParts.join(' ');
-                    return (
-                      <tr key={`${datePart}-${idx}`} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-gray-900">{formattedDate}</td>
-                        <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-700">{timeSlot || 'Full day'}</td> {/* Handle cases where only date is present */}
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan="2" className="py-4 px-4 text-center text-gray-500 text-base">
-                      No future availability slots listed at the moment. Please check back later!
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-      {/* Horizontal Line */}
-      <hr className="border-gray-200" />
-
       {/* Video Introduction */}
       {teacher.videoUrl && (
-        <Card className="bg-white shadow-md">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold text-gray-800">Video Introduction</CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>Video Introduction</CardTitle>
           </CardHeader>
-          <CardContent className="p-0 rounded-b-lg overflow-hidden">
-            <video controls className="w-full aspect-video bg-black">
+          <CardContent className="p-0">
+            <video controls className="w-full aspect-video rounded-md">
               <source src={teacher.videoUrl} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
@@ -909,41 +974,36 @@ const TeacherProfile = () => {
       )}
 
       {/* Gallery */}
-      {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
-        <Card className="bg-white shadow-md">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold text-gray-800">Gallery</CardTitle>
+      {Array.isArray(teacher.galleryPhotos) &&
+      teacher.galleryPhotos.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gallery</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0"> {/* Adjusted padding */}
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {teacher.galleryPhotos.map((photo, idx) => (
-              <div key={idx} className="relative group overflow-hidden rounded-lg shadow-md transition-shadow hover:shadow-lg">
-                <img
-                  src={photo.url || 'https://via.placeholder.com/400x300?text=No+Image'} // Improved placeholder
-                  alt={photo.name || `Gallery photo ${idx + 1}`}
-                  className="w-full h-48 object-cover rounded-lg transform transition-transform duration-300 group-hover:scale-105"
-                />
-                {photo.name && (
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity">
-                    {photo.name}
-                  </div>
-                )}
-              </div>
+              <img
+                key={idx}
+                src={photo.url || "/placeholder.svg"}
+                alt={photo.name || `Photo ${idx + 1}`}
+                className="w-full h-48 sm:h-56 md:h-64 object-cover rounded-lg shadow-md"
+              />
             ))}
           </CardContent>
         </Card>
       ) : (
-        <Card className="bg-white shadow-md">
-          <CardContent className="text-center py-6 text-gray-500 text-base">
-            No gallery photos available from this teacher.
+        <Card>
+          <CardContent className="text-center py-4 text-gray-500">
+            No gallery photos available
           </CardContent>
         </Card>
       )}
 
-      {/* Book Session Button */}
-      <div className="flex justify-center py-4"> {/* Added vertical padding */}
+      {/* Book Session */}
+      <div className="flex justify-center px-4">
         <Link to={`/student/book-session/${teacher._id}`}>
-          <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full max-w-xs justify-center py-3 px-6 rounded-full text-lg font-semibold shadow-lg transition-colors transform hover:scale-105">
-            <Calendar className="h-6 w-6" />
+          <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full sm:w-auto py-3 px-6 rounded-md text-sm font-medium text-center">
+            <Calendar className="h-5 w-5" />
             Book a Session
           </button>
         </Link>
