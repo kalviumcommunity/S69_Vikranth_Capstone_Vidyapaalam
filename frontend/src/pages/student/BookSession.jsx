@@ -272,14 +272,18 @@
 
 
 
+
+
+
+
+
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar as CalendarIcon, Clock, ArrowRight, CreditCard } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { useAuth } from "../../contexts/AuthContext";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
-
 
 const steps = [
   { value: "date", label: "Select Date & Time" },
@@ -306,15 +310,21 @@ const BookSession = () => {
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
 
-        // Enhanced parsing to handle multiple slots with proper trimming
+        // Enhanced parsing with error handling and logging
         const parsedAvailability = response.data.availability.map(item => {
+          console.log("Raw availability item:", item); // Log raw data for debugging
           const [dateStr, slotsPart] = item.split(" ", 2); // Split only on first space
           const date = new Date(dateStr);
           const slots = slotsPart
             ? slotsPart.split(",").map(slot => slot.trim()).map(slot => {
-                const [startTime, endTime] = slot.split("-");
-                return { startTime, endTime: endTime.replace(",", ""), available: true }; // Remove trailing commas
-              })
+                const times = slot.split("-");
+                if (times.length !== 2 || !times[0] || !times[1]) {
+                  console.warn("Invalid slot format:", slot);
+                  return null; // Skip invalid slots
+                }
+                const [startTime, endTime] = times;
+                return { startTime, endTime: endTime.replace(",", ""), available: true };
+              }).filter(slot => slot !== null) // Filter out invalid slots
             : [];
           return { date, slots };
         });
