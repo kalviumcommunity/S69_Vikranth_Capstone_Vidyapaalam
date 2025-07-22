@@ -306,14 +306,16 @@ const BookSession = () => {
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
 
-        // Parse availability strings into structured data, handling multiple slots correctly
+        // Enhanced parsing to handle multiple slots with proper trimming
         const parsedAvailability = response.data.availability.map(item => {
           const [dateStr, slotsPart] = item.split(" ", 2); // Split only on first space
           const date = new Date(dateStr);
-          const slots = slotsPart.split(", ").map(slot => {
-            const [startTime, endTime] = slot.split("-");
-            return { startTime, endTime, available: true }; // Assume all slots are available
-          });
+          const slots = slotsPart
+            ? slotsPart.split(",").map(slot => slot.trim()).map(slot => {
+                const [startTime, endTime] = slot.split("-");
+                return { startTime, endTime: endTime.replace(",", ""), available: true }; // Remove trailing commas
+              })
+            : [];
           return { date, slots };
         });
         setAvailableSlots(parsedAvailability);
