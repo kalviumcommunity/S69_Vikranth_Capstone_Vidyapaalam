@@ -306,11 +306,11 @@ const BookSession = () => {
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
 
-        // Parse availability strings into structured data
+        // Parse availability strings into structured data, handling multiple slots
         const parsedAvailability = response.data.availability.map(item => {
-          const [dateStr, slotsStr] = item.split(" ");
+          const [dateStr, ...slotsStr] = item.split(" "); // Split date and all slots
           const date = new Date(dateStr);
-          const slots = slotsStr.split(", ").map(slot => {
+          const slots = slotsStr.join(" ").split(", ").map(slot => {
             const [startTime, endTime] = slot.split("-");
             return { startTime, endTime, available: true }; // Assume all slots are available
           });
@@ -494,7 +494,7 @@ const BookSession = () => {
 
         {/* Step 2: Payment Review (unchanged as requested) */}
         <div className={`p-8 ${step !== "payment" && "hidden"}`}>
-          <h3 className="text-xl font-semibold text-gray-800 mb-6">2. Review & Payment</h3>
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">2. Review & Pay</h3>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-gray-800">Booking Summary</CardTitle>
           </CardHeader>
