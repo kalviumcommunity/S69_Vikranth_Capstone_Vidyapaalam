@@ -686,7 +686,7 @@ export default function FindTeacher() {
 
   return (
     <motion.div
-      className="max-w-5xl mx-auto p-4 sm:p-6 bg-white ml-64" // Added ml-64 (256px) to account for sidebar width
+      className="max-w-5xl mx-auto p-6 space-y-8"
       initial="hidden"
       animate="show"
       variants={containerVariants}
@@ -814,7 +814,7 @@ export default function FindTeacher() {
       )}
 
       {isLoading ? (
-        <motion.div variants={containerVariants} className="flex flex-col gap-6 w-full">
+        <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array(3).fill().map((_, index) => (
             <motion.div
               key={index}
@@ -840,12 +840,12 @@ export default function FindTeacher() {
                 <img
                   src={t.teacherProfile.avatarUrl}
                   alt={`${t.name}'s profile`}
-                  className="w-20 h-20 object-cover rounded-full border-2 border-orange-200"
+                  className="w-16 h-16 object-cover rounded-full border-2 border-orange-200"
                 />
                 <div className="space-y-2">
                   <h3 className="text-xl font-semibold text-orange-800">{t.name}</h3>
                   <div className="flex flex-wrap gap-2">
-                    {(t.teacherProfile.teachingSkills || []).slice(0, 3).map((skill, i) => ( // Limit to 3 skills
+                    {(t.teacherProfile.teachingSkills || []).slice(0, 3).map((skill, i) => (
                       <span
                         key={i}
                         className="bg-orange-100 text-orange-700 text-xs font-medium px-2.5 py-1 rounded-full"
