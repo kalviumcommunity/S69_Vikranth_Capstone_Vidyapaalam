@@ -758,144 +758,206 @@ const TeacherProfile = () => {
     : [];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white"
+   <motion.div
+  className="w-full min-h-screen p-4 sm:p-6 md:p-8 bg-white"
+  initial="hidden"
+  animate="show"
+  variants={containerVariants}
+>
+  {/* Header */}
+  {isLoading ? (
+    <motion.div variants={cardVariants} className="text-center mb-6">
+      <div className="h-8 bg-gray-200 rounded w-3/4 mx-auto animate-pulse mb-2"></div>
+      <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto animate-pulse"></div>
+    </motion.div>
+  ) : (
+    <motion.header variants={cardVariants} className="text-center mb-6">
+      <h1 className="text-3xl font-bold text-orange-600">Find Your Perfect Teacher</h1>
+      <p className="text-gray-600">Search and filter expert instructors.</p>
+    </motion.header>
+  )}
+
+  {/* Search & Filters */}
+  <motion.div
+    variants={cardVariants}
+    className="bg-white border border-gray-200 shadow rounded-lg p-4 mb-6"
+  >
+    <div className="flex flex-col md:flex-row md:items-center gap-4">
+      {/* Search input */}
+      <div className="relative flex-1 w-full">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name or skill…"
+          className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+        />
+      </div>
+
+      {/* Toggle Filter */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition"
+        >
+          <Filter className="w-5 h-5" />
+          {open ? "Hide Filters" : "Show Filters"}
+        </button>
+      </div>
+    </div>
+
+    {/* Filter Options */}
+    <div
+      className={`transition-all duration-300 mt-4 overflow-hidden ${
+        open ? "max-h-screen opacity-100" : "max-h-0 opacity-0"
+      }`}
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-start gap-6">
-        <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex-shrink-0">
+      <div className="flex flex-wrap gap-4">
+        {/* Subject */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Tag className="w-5 h-5 text-gray-500" />
+          <select
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
+            className="w-full md:w-40 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            {subjects.map(s => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Rating */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <Star className="w-5 h-5 text-gray-500" />
+          <select
+            value={rating}
+            onChange={e => setRating(parseFloat(e.target.value))}
+            className="w-full md:w-40 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            {ratingOptions.map(o => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Price Range */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <MapPin className="w-5 h-5 text-gray-500" />
+          <select
+            value={priceRange.label}
+            onChange={e => {
+              const found = priceRanges.find(r => r.label === e.target.value);
+              if (found) setPriceRange(found);
+            }}
+            className="w-full md:w-40 py-2 px-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+          >
+            {priceRanges.map(r => (
+              <option key={r.label} value={r.label}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Clear Button */}
+        <div className="flex justify-start md:justify-end w-full md:w-auto">
+          <button
+            onClick={() => {
+              setSearch("");
+              setSubject(subjects[0]);
+              setRating(ratingOptions[0].value);
+              setPriceRange(priceRanges[0]);
+            }}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
+          >
+            Clear Filters
+          </button>
+        </div>
+      </div>
+    </div>
+  </motion.div>
+
+  {/* Results Count */}
+  <motion.h2
+    variants={cardVariants}
+    className="text-xl font-semibold mb-4 text-center md:text-left"
+  >
+    {isLoading
+      ? "Loading..."
+      : `${filtered.length} Teacher${filtered.length !== 1 ? "s" : ""} Found`}
+  </motion.h2>
+
+  {/* Teacher Cards */}
+  <motion.div
+    variants={containerVariants}
+    className="grid grid-cols-1 md:grid-cols-2 gap-6"
+  >
+    {filtered.map(t => (
+      <motion.div
+        key={t._id}
+        variants={cardVariants}
+        whileHover={{
+          scale: 1.02,
+          boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
+          transition: { duration: 0.3 },
+        }}
+        className="w-full bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-lg p-4 md:p-6 flex flex-col sm:flex-row gap-4"
+      >
+        {/* Avatar */}
+        <div className="flex justify-center sm:justify-start items-center">
           <img
-            src={teacher.avatarUrl || "/placeholder.svg"}
-            alt={teacher.name || "Unknown Teacher"}
-            className="h-full w-full object-cover"
+            src={t.teacherProfile.avatarUrl}
+            alt={`${t.name}'s profile`}
+            className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-full border-2 border-orange-200 shadow-md"
           />
         </div>
 
-        <div className="flex-1 w-full space-y-3">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-800">{teacher.name || "Unknown Teacher"}</h1>
-            <div className="flex flex-wrap gap-2">
-              <button className="flex items-center gap-1 text-orange-600 border border-orange-600 rounded-md px-3 py-1 text-sm hover:bg-orange-50">
-                <Heart className="h-4 w-4" />
-                Favorite
-              </button>
-              <Link to={`/student/chat/${teacher._id}`}>
-                <button className="flex items-center gap-1 text-blue-600 border border-blue-600 rounded-md px-3 py-1 text-sm hover:bg-blue-50">
-                  <MessageCircle className="h-4 w-4" />
-                  Message
-                </button>
-              </Link>
-            </div>
+        {/* Info */}
+        <div className="flex-1 space-y-3">
+          <h3 className="text-2xl font-bold text-orange-800">{t.name}</h3>
+          <div className="flex flex-wrap gap-2">
+            {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
+              <span
+                key={i}
+                className="bg-orange-100 text-orange-700 text-sm font-medium px-3 py-1 rounded-full shadow"
+              >
+                {skill}
+              </span>
+            ))}
           </div>
-
-          <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-            {(teacher.userId?.teachingSkills || teacher.teachingSkills || []).length > 0 ? (
-              (teacher.userId?.teachingSkills || teacher.teachingSkills).map((skill, idx) => (
-                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
-                  {skill}
-                </span>
-              ))
-            ) : (
-              <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">No skills listed</span>
-            )}
-            <div className="flex items-center gap-1 ml-auto">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <span>{(teacher.rating || 0).toFixed(1)}</span>
-            </div>
-          </div>
-
-          <div className="text-2xl font-semibold text-orange-600">${teacher.hourlyRate || 0}/hour</div>
-          <p className="text-gray-700 leading-relaxed mt-2 text-sm">{teacher.bio || "No bio available"}</p>
-
-          {/* Availability */}
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Date</th>
-                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Slots</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookableAvailability.length > 0 ? (
-                    bookableAvailability.map((slot, idx) => {
-                      const [datePart] = slot.split(" ");
-                      const [year, month, day] = datePart.split("-");
-                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                      const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}`;
-                      const timeSlot = slot.split(" ").slice(1).join(" ");
-                      return (
-                        <tr key={`${datePart}-${idx}`} className="border-t">
-                          <td className="py-2 px-4 text-gray-700">{formattedDate}</td>
-                          <td className="py-2 px-4 text-gray-700">{timeSlot}</td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="2" className="py-2 px-4 text-center text-gray-500">
-                        No future availability
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+          <p className="text-gray-600 line-clamp-3 break-words text-sm">
+            {t.teacherProfile.bio}
+          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <span className="text-xl font-semibold text-amber-700">
+              ₹{t.teacherProfile.fee}/hr
+            </span>
+            <Link
+              to={`/student/teacher/${t._id}`}
+              className="px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow hover:from-orange-600 hover:to-amber-600 transition"
+            >
+              View Profile
+            </Link>
           </div>
         </div>
-      </div>
+      </motion.div>
+    ))}
+  </motion.div>
 
-      {/* Video Introduction */}
-      {teacher.videoUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Video Introduction</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <video controls className="w-full aspect-video">
-              <source src={teacher.videoUrl} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </CardContent>
-        </Card>
-      )}
+  {/* No results */}
+  {!isLoading && filtered.length === 0 && (
+    <motion.p variants={cardVariants} className="text-center text-gray-500 py-10">
+      No teachers found.
+    </motion.p>
+  )}
+</motion.div>
 
-      {/* Gallery */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Gallery</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
-            teacher.galleryPhotos.map((photo, idx) => (
-              <img
-                key={idx}
-                src={photo.url || "/placeholder.svg"}
-                alt={photo.name || `Photo ${idx + 1}`}
-                className="w-full h-48 object-cover rounded-lg shadow-md"
-              />
-            ))
-          ) : (
-            <div className="text-gray-500 col-span-full text-center py-6">No gallery photos available</div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Book Session Button */}
-      <div className="flex justify-center">
-        <Link to={`/student/book-session/${teacher._id}`}>
-          <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full sm:w-auto py-3 px-6 rounded-md text-sm font-medium">
-            <Calendar className="h-5 w-5" />
-            Book a Session
-          </button>
-        </Link>
-      </div>
-    </motion.div>
   );
 };
 
