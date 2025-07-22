@@ -276,13 +276,15 @@
 
 
 
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar as CalendarIcon, Clock, ArrowRight, CreditCard } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../../components/ui/card";
 import { useAuth } from "../../contexts/AuthContext";
+import { useTeacherProfile } from "../../contexts/TeacherProfileContext";
 
 const steps = [
   { value: "date", label: "Select Date & Time" },
@@ -293,8 +295,9 @@ const BookSession = () => {
   const { teacherId } = useParams();
   const navigate = useNavigate();
   const { api } = useAuth();
+  const { teacherProfile: authTeacherProfile } = useTeacherProfile(); // For authenticated teacher context
   const [step, setStep] = useState("date");
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(undefined);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [teacher, setTeacher] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
@@ -308,29 +311,7 @@ const BookSession = () => {
         if (!api) throw new Error("API instance is undefined");
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
-
-        // Revised parsing to capture all valid slots
-        const parsedAvailability = response.data.availability.map(item => {
-          console.log("Raw availability item:", item); // Log raw data for debugging
-          const [dateStr, slotsPart] = item.split(" ", 2); // Split only on first space
-          const date = new Date(dateStr);
-          const slots = slotsPart
-            ? slotsPart.split(",").map(slot => slot.trim()).flatMap(slot => {
-                if (slot.length > 0) {
-                  const times = slot.split("-");
-                  if (times.length === 2 && times[0] && times[1]) {
-                    const [startTime, endTime] = times;
-                    return [{ startTime, endTime: endTime.replace(",", ""), available: true }];
-                  }
-                  console.warn("Invalid slot format:", slot);
-                }
-                return [];
-              })
-            : [];
-          return { date, slots };
-        });
-        setAvailableSlots(parsedAvailability);
-        console.log("Parsed availableSlots:", parsedAvailability); // Debug log
+        setAvailableSlots(response.data.availability || []);
       } catch (error) {
         console.error("Error fetching teacher data:", error);
         alert("Failed to load teacher data or availability");
@@ -382,9 +363,15 @@ const BookSession = () => {
   };
 
   const handleSelectDate = (date) => {
-    setSelectedDate(date instanceof Date ? date : null);
-    setSelectedSlot(null); // Reset slot when date changes
-    setProgress(date ? 25 : 0);
+    if (date instanceof Date) {
+      setSelectedDate(date);
+      setSelectedSlot(null); // Reset slot when date changes
+      setProgress(25);
+    } else {
+      setSelectedDate(undefined);
+      setSelectedSlot(null);
+      setProgress(0);
+    }
   };
 
   const handleSelectSlot = (slot) => {
@@ -394,20 +381,15 @@ const BookSession = () => {
 
   const getAvailableSlotsForDate = () => {
     if (!selectedDate) return [];
-    const dateStr = selectedDate.toISOString().split("T")[0];
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
     return availableSlots
-      .filter(item => item.date.toISOString().split("T")[0] === dateStr)
-      .flatMap(item => item.slots.map(slot => ({
-        id: `${dateStr}-${slot.startTime}-${slot.endTime}`, // Unique ID
+      .filter(item => format(new Date(item.date), "yyyy-MM-dd") === dateStr)
+      .flatMap(item => item.slots.filter(slot => slot.available))
+      .map(slot => ({
+        id: `${dateStr}-${slot.startTime}-${slot.endTime}`, // Unique ID based on date and time
         time: `${slot.startTime} - ${slot.endTime}`,
         available: slot.available,
-      })));
-  };
-
-  const isDateDisabled = (date) => {
-    if (date < new Date()) return true;
-    const dateStr = date.toISOString().split("T")[0];
-    return !availableSlots.some(item => item.date.toISOString().split("T")[0] === dateStr);
+      }));
   };
 
   return (
@@ -420,7 +402,7 @@ const BookSession = () => {
       <div className="text-center">
         <h2 className="text-3xl font-bold text-orange-600 mb-2">Book a Session</h2>
         <p className="text-lg text-gray-600">
-          Schedule your session with <span className="font-semibold">{teacher?.name || "Unknown Teacher"}</span>
+          Schedule your session with <span className="font-semibold">{teacher?.userId?.name || "Unknown Teacher"}</span>
         </p>
       </div>
 
@@ -460,7 +442,7 @@ const BookSession = () => {
                 selected={selectedDate}
                 onSelect={handleSelectDate}
                 className="rounded-md border shadow-sm"
-                disabled={isDateDisabled}
+                disabled={(date) => date < new Date() || !availableSlots.some(item => format(new Date(item.date), "yyyy-MM-dd") === format(date, "yyyy-MM-dd"))}
               />
             </div>
             <div>
@@ -507,18 +489,18 @@ const BookSession = () => {
 
         {/* Step 2: Payment Review (unchanged as requested) */}
         <div className={`p-8 ${step !== "payment" && "hidden"}`}>
-          <h3 className="text-xl font-semibold text-gray-800 mb-6">2. Review & Pay</h3>
+          <h3 className="text-xl font-semibold text-gray-800 mb-6">2. Review & Payment</h3>
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-semibold text-gray-800">Booking Summary</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-600">
-                {teacher?.name?.split(' ').map(n => n[0]).join('') || "??"} {/* Derive initials */}
+                {teacher?.userId?.initials || "??"} {/* Assuming initials can be derived or fetched */}
               </div>
               <div>
-                <p className="font-medium text-gray-800">{teacher?.name || "Unknown Teacher"}</p>
-                <p className="text-sm text-gray-500">{teacher?.teachingSkills?.[0] || "Unknown Skill"} Teacher</p>
+                <p className="font-medium text-gray-800">{teacher?.userId?.name || "Unknown Teacher"}</p>
+                <p className="text-sm text-gray-500">{teacher?.userId?.teachingSkills?.[0] || "Unknown Skill"} Teacher</p>
               </div>
             </div>
 
@@ -526,7 +508,7 @@ const BookSession = () => {
               <h4 className="font-semibold text-gray-800">Session Details</h4>
               <div className="flex items-center text-gray-600">
                 <CalendarIcon className="h-5 w-5 mr-2" />
-                <span>{selectedDate ? selectedDate.toLocaleDateString('en-US', { dateStyle: 'long' }) : "Not selected"}</span>
+                <span>{selectedDate ? format(selectedDate, "PPP") : "Not selected"}</span>
               </div>
               <div className="flex items-center text-gray-600">
                 <Clock className="h-5 w-5 mr-2" />
