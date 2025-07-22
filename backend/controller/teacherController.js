@@ -1162,3 +1162,59 @@ exports.getTeacherProfileById = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+
+exports.getTeacherAvailability = async (req, res) => {
+  try {
+    const teacherProfile = await TeacherProfile.findById(req.params.id).populate('userId', 'availability');
+    if (!teacherProfile) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    const availability = teacherProfile.userId.availability.map(item => ({
+      date: item.date.toISOString().split('T')[0],
+      slots: item.slots.map(slot => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        available: slot.available,
+      })),
+    }));
+
+    res.status(200).json({ availability });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.createBooking = async (req, res) => {
+  try {
+    const { date, slotId } = req.body; // slotId should be a unique identifier (e.g., index or custom ID)
+    const teacherProfile = await TeacherProfile.findById(req.params.id).populate('userId', 'availability');
+    if (!teacherProfile) {
+      return res.status(404).json({ message: 'Teacher not found' });
+    }
+
+    const user = teacherProfile.userId;
+    const availability = user.availability.find(a => format(new Date(a.date), "yyyy-MM-dd") === date);
+    if (!availability) {
+      return res.status(400).json({ message: 'No availability for the selected date' });
+    }
+
+    const slotIndex = availability.slots.findIndex(slot => {
+      const slotKey = `${availability.date.toISOString().split('T')[0]}-${slot.startTime}-${slot.endTime}`;
+      return slotKey === slotId; // Match based on a unique identifier
+    });
+
+    if (slotIndex === -1 || !availability.slots[slotIndex].available) {
+      return res.status(400).json({ message: 'Slot not available' });
+    }
+
+    availability.slots[slotIndex].available = false;
+    await user.save();
+
+    res.status(201).json({ message: 'Booking successful', bookedSlot: availability.slots[slotIndex] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

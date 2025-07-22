@@ -45,7 +45,8 @@ const UserSchema = new mongoose.Schema({
     },
     slots: [{
       startTime: { type: String, required: true },
-      endTime: { type: String, required: true }
+      endTime: { type: String, required: true },
+      available: { type: Boolean, default: true }, 
     }],
   }],
   teacherOnboardingComplete: {
