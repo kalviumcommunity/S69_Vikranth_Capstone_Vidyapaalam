@@ -312,11 +312,12 @@ const BookSession = () => {
           const date = new Date(dateStr);
           const slots = slotsStr.split(", ").map(slot => {
             const [startTime, endTime] = slot.split("-");
-            return { startTime, endTime, available: true }; // Assume all slots are available initially
+            return { startTime, endTime, available: true }; // Assume all slots are available
           });
           return { date, slots };
         });
         setAvailableSlots(parsedAvailability);
+        console.log("Parsed availableSlots:", parsedAvailability); // Debug log
       } catch (error) {
         console.error("Error fetching teacher data:", error);
         alert("Failed to load teacher data or availability");
@@ -562,4 +563,3 @@ const BookSession = () => {
 };
 
 export default BookSession;
-
