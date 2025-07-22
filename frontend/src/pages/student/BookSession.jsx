@@ -310,21 +310,24 @@ const BookSession = () => {
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
 
-        // Enhanced parsing with improved slot handling
+        // Improved parsing to capture all valid slots
         const parsedAvailability = response.data.availability.map(item => {
           console.log("Raw availability item:", item); // Log raw data for debugging
           const [dateStr, slotsPart] = item.split(" ", 2); // Split only on first space
           const date = new Date(dateStr);
           const slots = slotsPart
-            ? slotsPart.split(",").map(slot => slot.trim()).filter(slot => slot.length > 0).map(slot => {
-                const times = slot.split("-");
-                if (times.length === 2 && times[0] && times[1]) {
-                  const [startTime, endTime] = times;
-                  return { startTime, endTime: endTime.replace(",", ""), available: true };
+            ? slotsPart.split(",").map(slot => slot.trim()).reduce((acc, slot) => {
+                if (slot.length > 0) {
+                  const times = slot.split("-");
+                  if (times.length === 2 && times[0] && times[1]) {
+                    const [startTime, endTime] = times;
+                    acc.push({ startTime, endTime: endTime.replace(",", ""), available: true });
+                  } else {
+                    console.warn("Invalid slot format:", slot);
+                  }
                 }
-                console.warn("Invalid slot format:", slot);
-                return null; // Skip invalid slots
-              }).filter(slot => slot !== null)
+                return acc;
+              }, [])
             : [];
           return { date, slots };
         });
