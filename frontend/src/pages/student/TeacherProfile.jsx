@@ -427,7 +427,7 @@
 
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion } from "framer-variants";
 import { useParams, Link } from "react-router-dom";
 import { Star, MessageCircle, Heart, Calendar } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
@@ -505,19 +505,21 @@ const TeacherProfile = () => {
   }
 
   // Filter and sort availability
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0); // Use UTC to avoid timezone issues
+  const today = new Date(); // Use local date (IST)
+  today.setHours(0, 0, 0, 0); // Set to start of today in local time
+  console.log("Today (local):", today.toISOString()); // Debug today’s date
   const bookableAvailability = Array.isArray(teacher.availability)
     ? teacher.availability
         .map(item => {
           const [dateStr] = item.split(' ');
           const [year, month, day] = dateStr.split('-');
-          const slotDate = new Date(Date.UTC(year, month - 1, day)); // Use UTC for consistency
+          const slotDate = new Date(year, month - 1, day); // Use local date
+          console.log("Slot Date:", slotDate.toISOString(), "Original:", item); // Debug slot dates
           return { date: slotDate, original: item };
         })
         .filter(item => item.date >= today) // Exclude yesterday and earlier
         .sort((a, b) => a.date - b.date) // Sort chronologically
-        .map((item, index) => ({ ...item, sortIndex: index })) // Add index for stable rendering
+        .map((item, index) => ({ ...item, sortIndex: index })) // Add index for stability
         .map(item => item.original)
     : [];
 
@@ -600,7 +602,7 @@ const TeacherProfile = () => {
                       const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}`;
                       const timeSlot = slot.split(' ').slice(1).join(' ');
                       return (
-                        <tr key={`${datePart}-${idx}`} className="border-t"> {/* Use unique key */}
+                        <tr key={`${datePart}-${idx}`} className="border-t">
                           <td className="py-2 px-4 text-gray-700">{formattedDate}</td>
                           <td className="py-2 px-4 text-gray-700">{timeSlot}</td>
                         </tr>
@@ -618,6 +620,7 @@ const TeacherProfile = () => {
         </div>
       </div>
 
+      {/* Video Introduction */}
       {teacher.videoUrl && (
         <Card>
           <CardHeader>
@@ -632,6 +635,7 @@ const TeacherProfile = () => {
         </Card>
       )}
 
+      {/* Gallery */}
       {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
         <Card>
           <CardHeader>
@@ -654,6 +658,7 @@ const TeacherProfile = () => {
         </Card>
       )}
 
+      {/* Book Session */}
       <div className="flex justify-center">
         <Link to={`/student/book-session/${teacher._id}`}>
           <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full md:w-auto py-3 px-6 rounded-md text-sm font-medium">
