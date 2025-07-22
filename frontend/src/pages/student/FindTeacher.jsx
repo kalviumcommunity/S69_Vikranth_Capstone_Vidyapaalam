@@ -580,6 +580,7 @@
 
 
 
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Search, Filter, Tag, Star, MapPin } from "lucide-react";
@@ -685,8 +686,7 @@ export default function FindTeacher() {
 
   return (
     <motion.div
-      className="w-full min-h-screen p-4 sm:p-6 bg-white ml-auto" // ml-auto to push content away from left sidebar
-      style={{ maxWidth: 'calc(100% - 240px)' }} // Adjust based on sidebar width (e.g., 240px)
+      className="max-w-5xl mx-auto p-4 sm:p-6 bg-white"
       initial="hidden"
       animate="show"
       variants={containerVariants}
@@ -824,7 +824,7 @@ export default function FindTeacher() {
           ))}
         </motion.div>
       ) : (
-        <motion.div variants={containerVariants} className="flex flex-col gap-6 w-full">
+        <motion.div variants={containerVariants} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {filtered.map(t => (
             <motion.div
               key={t._id}
@@ -834,39 +834,39 @@ export default function FindTeacher() {
                 boxShadow: "0 15px 30px rgba(0,0,0,0.1)",
                 transition: { duration: 0.3 }
               }}
-              className="w-full bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl shadow-lg p-4 sm:p-6 grid grid-cols-1 md:grid-cols-5 gap-4"
+              className="bg-white border border-gray-200 rounded-xl shadow-lg p-4"
             >
-              <div className="col-span-1 h-40 flex items-center justify-center w-full">
+              <div className="flex items-center gap-4 mb-4">
                 <img
                   src={t.teacherProfile.avatarUrl}
                   alt={`${t.name}'s profile`}
-                  className="w-full h-40 object-cover rounded-full border-2 border-orange-200 shadow-md"
+                  className="w-16 h-16 object-cover rounded-full border-2 border-orange-200 shadow-md"
                 />
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold text-orange-800">{t.name}</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
+                      <span
+                        key={i}
+                        className="bg-orange-100 text-orange-700 text-sm font-medium px-2 py-1 rounded-full shadow"
+                      >
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="col-span-4 space-y-3 text-left w-full">
-                <h3 className="text-2xl font-bold text-orange-800">{t.name}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(t.teacherProfile.teachingSkills || []).map((skill, i) => (
-                    <span
-                      key={i}
-                      className="bg-orange-100 text-orange-700 text-sm font-medium px-3 py-1 rounded-full shadow"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-gray-600 line-clamp-3 break-words">{t.teacherProfile.bio}</p>
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                  <span className="text-xl font-semibold text-amber-700">
-                    ₹{t.teacherProfile.fee}/hr
-                  </span>
-                  <Link
-                    to={`/student/teacher/${t._id}`}
-                    className="w-full sm:w-auto px-5 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow hover:from-orange-600 hover:to-amber-600 transition"
-                  >
-                    View Profile
-                  </Link>
-                </div>
+              <p className="text-gray-600 line-clamp-3 break-words mb-4">{t.teacherProfile.bio}</p>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <span className="text-lg font-semibold text-amber-700">
+                  ₹{t.teacherProfile.fee}/hr
+                </span>
+                <Link
+                  to={`/student/teacher/${t._id}`}
+                  className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-lg shadow hover:from-orange-600 hover:to-amber-600 transition"
+                >
+                  View Profile
+                </Link>
               </div>
             </motion.div>
           ))}
@@ -881,3 +881,4 @@ export default function FindTeacher() {
     </motion.div>
   );
 }
+
