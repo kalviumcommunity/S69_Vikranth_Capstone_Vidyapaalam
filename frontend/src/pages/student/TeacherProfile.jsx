@@ -427,7 +427,7 @@
 
 
 import React, { useState, useEffect } from "react";
-import { motion } from "framer-variants";
+import { motion } from "framer-motion";
 import { useParams, Link } from "react-router-dom";
 import { Star, MessageCircle, Heart, Calendar } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
