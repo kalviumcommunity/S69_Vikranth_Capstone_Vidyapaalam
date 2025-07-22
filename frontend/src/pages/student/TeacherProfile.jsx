@@ -426,6 +426,257 @@
 
 
 
+// import React, { useState, useEffect } from "react";
+// import { motion } from "framer-motion";
+// import { useParams, Link } from "react-router-dom";
+// import { Star, MessageCircle, Heart, Calendar } from "lucide-react";
+// import { useAuth } from "../../contexts/AuthContext";
+// import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+
+// const TeacherProfile = () => {
+//   const { id } = useParams();
+//   const { api } = useAuth();
+//   const [teacher, setTeacher] = useState(null);
+//   const [isLoading, setIsLoading] = useState(true);
+
+//   useEffect(() => {
+//     const fetchTeacher = async () => {
+//       setIsLoading(true);
+//       try {
+//         if (!api) {
+//           throw new Error("API instance is undefined");
+//         }
+//         const response = await api.get(`/api/teacher-profiles/${id}`);
+//         console.log("Full API Response:", response.data);
+//         console.log("Detailed Skills Check:", {
+//           userId: response.data.userId,
+//           userIdTeachingSkills: response.data.userId?.teachingSkills,
+//           directTeachingSkills: response.data.teachingSkills,
+//         });
+//         setTeacher(response.data);
+//       } catch (error) {
+//         console.error("Error fetching teacher profile:", {
+//           message: error.message,
+//           status: error.response?.status,
+//           data: error.response?.data,
+//           baseURL: api?.defaults?.baseURL,
+//         });
+//         if (error.response?.status === 404) {
+//           setTeacher(null);
+//         }
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+//     fetchTeacher();
+//   }, [api, id]);
+
+//   if (isLoading) {
+//     return (
+//       <motion.div
+//         initial={{ opacity: 0 }}
+//         animate={{ opacity: 1 }}
+//         transition={{ duration: 0.4 }}
+//         className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white"
+//       >
+//         <div className="flex flex-col md:flex-row items-start gap-6">
+//           <div className="h-32 w-32 bg-gray-200 rounded-full animate-pulse"></div>
+//           <div className="flex-1 space-y-3">
+//             <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+//             <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+//             <div className="h-6 bg-gray-200 rounded w-full animate-pulse"></div>
+//             <div className="h-20 bg-gray-200 rounded w-full animate-pulse"></div>
+//             <div className="h-16 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
+//           </div>
+//         </div>
+//       </motion.div>
+//     );
+//   }
+
+//   if (!teacher) {
+//     return (
+//       <div className="text-center py-10">
+//         <h2 className="text-2xl font-semibold text-gray-800">Teacher not found</h2>
+//         <Link to="/student/favorites" className="mt-4 inline-block text-orange-600 hover:underline">
+//           Back to Favorites
+//         </Link>
+//       </div>
+//     );
+//   }
+
+//   // Filter and sort availability
+//   const today = new Date(); // Use local date (IST)
+//   today.setHours(0, 0, 0, 0); // Set to start of today in local time
+//   console.log("Today (local):", today.toISOString()); // Debug today’s date
+//   const bookableAvailability = Array.isArray(teacher.availability)
+//     ? teacher.availability
+//         .map(item => {
+//           const [dateStr] = item.split(' ');
+//           const [year, month, day] = dateStr.split('-');
+//           const slotDate = new Date(year, month - 1, day); // Use local date
+//           console.log("Slot Date:", slotDate.toISOString(), "Original:", item); // Debug slot dates
+//           return { date: slotDate, original: item };
+//         })
+//         .filter(item => item.date >= today) // Exclude yesterday and earlier
+//         .sort((a, b) => a.date - b.date) // Sort chronologically
+//         .map((item, index) => ({ ...item, sortIndex: index })) // Add index for stability
+//         .map(item => item.original)
+//     : [];
+
+//   return (
+//     <motion.div
+//       initial={{ opacity: 0, y: 20 }}
+//       animate={{ opacity: 1, y: 0 }}
+//       transition={{ duration: 0.4 }}
+//       className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white"
+//     >
+//       {/* Header */}
+//       <div className="flex flex-col md:flex-row items-start gap-6">
+//         <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex items-center justify-center">
+//           <img
+//             src={teacher.avatarUrl || '/placeholder.svg'}
+//             alt={teacher.name || 'Unknown Teacher'}
+//             className="h-full w-full object-cover"
+//           />
+//         </div>
+
+//         <div className="flex-1 space-y-3">
+//           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+//             <h1 className="text-3xl font-bold text-gray-800">{teacher.name || 'Unknown Teacher'}</h1>
+//             <div className="flex gap-2">
+//               <button className="flex items-center gap-1 text-orange-600 border border-orange-600 rounded-md px-3 py-1 text-sm hover:bg-orange-50">
+//                 <Heart className="h-4 w-4" />
+//                 Favorite
+//               </button>
+//               <Link to={`/student/chat/${teacher._id}`}>
+//                 <button className="flex items-center gap-1 text-blue-600 border border-blue-600 rounded-md px-3 py-1 text-sm hover:bg-blue-50">
+//                   <MessageCircle className="h-4 w-4" />
+//                   Message
+//                 </button>
+//               </Link>
+//             </div>
+//           </div>
+
+//           <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+//             {Array.isArray(teacher.userId?.teachingSkills) && teacher.userId.teachingSkills.length > 0 ? (
+//               teacher.userId.teachingSkills.map((skill, idx) => (
+//                 <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+//                   {skill}
+//                 </span>
+//               ))
+//             ) : Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
+//               teacher.teachingSkills.map((skill, idx) => (
+//                 <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+//                   {skill}
+//                 </span>
+//               ))
+//             ) : (
+//               <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">No skills listed</span>
+//             )}
+//             <div className="flex items-center gap-1">
+//               <Star className="h-4 w-4 text-yellow-500" />
+//               <span>{(teacher.rating || 0).toFixed(1)}</span>
+//             </div>
+//           </div>
+
+//           <div className="text-2xl font-semibold text-orange-600">${teacher.hourlyRate || 0}/hour</div>
+
+//           <p className="text-gray-700 leading-relaxed mt-2 text-sm">{teacher.bio || 'No bio available'}</p>
+
+//           <div className="mt-4 pt-4 border-t border-gray-200">
+//             <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
+//             <div className="overflow-x-auto">
+//               <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
+//                 <thead>
+//                   <tr className="bg-gray-50">
+//                     <th className="py-2 px-4 text-left text-gray-600 font-semibold">Date</th>
+//                     <th className="py-2 px-4 text-left text-gray-600 font-semibold">Slots</th>
+//                   </tr>
+//                 </thead>
+//                 <tbody>
+//                   {bookableAvailability.length > 0 ? (
+//                     bookableAvailability.map((slot, idx) => {
+//                       const [datePart] = slot.split(' ');
+//                       const [year, month, day] = datePart.split('-');
+//                       const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+//                       const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}`;
+//                       const timeSlot = slot.split(' ').slice(1).join(' ');
+//                       return (
+//                         <tr key={`${datePart}-${idx}`} className="border-t">
+//                           <td className="py-2 px-4 text-gray-700">{formattedDate}</td>
+//                           <td className="py-2 px-4 text-gray-700">{timeSlot}</td>
+//                         </tr>
+//                       );
+//                     })
+//                   ) : (
+//                     <tr>
+//                       <td colSpan="2" className="py-2 px-4 text-center text-gray-500">No future availability</td>
+//                     </tr>
+//                   )}
+//                 </tbody>
+//               </table>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+
+//       {/* Video Introduction */}
+//       {teacher.videoUrl && (
+//         <Card>
+//           <CardHeader>
+//             <CardTitle>Video Introduction</CardTitle>
+//           </CardHeader>
+//           <CardContent className="p-0">
+//             <video controls className="w-full aspect-video">
+//               <source src={teacher.videoUrl} type="video/mp4" />
+//               Your browser does not support the video tag.
+//             </video>
+//           </CardContent>
+//         </Card>
+//       )}
+
+//       {/* Gallery */}
+//       {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
+//         <Card>
+//           <CardHeader>
+//             <CardTitle>Gallery</CardTitle>
+//           </CardHeader>
+//           <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+//             {teacher.galleryPhotos.map((photo, idx) => (
+//               <img
+//                 key={idx}
+//                 src={photo.url || '/placeholder.svg'}
+//                 alt={photo.name || `Photo ${idx + 1}`}
+//                 className="w-full h-48 object-cover rounded-lg shadow-md"
+//               />
+//             ))}
+//           </CardContent>
+//         </Card>
+//       ) : (
+//         <Card>
+//           <CardContent className="text-center py-4 text-gray-500">No gallery photos available</CardContent>
+//         </Card>
+//       )}
+
+//       {/* Book Session */}
+//       <div className="flex justify-center">
+//         <Link to={`/student/book-session/${teacher._id}`}>
+//           <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full md:w-auto py-3 px-6 rounded-md text-sm font-medium">
+//             <Calendar className="h-5 w-5" />
+//             Book a Session
+//           </button>
+//         </Link>
+//       </div>
+//     </motion.div>
+//   );
+// };
+
+// export default TeacherProfile;
+
+
+
+
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useParams, Link } from "react-router-dom";
@@ -447,12 +698,7 @@ const TeacherProfile = () => {
           throw new Error("API instance is undefined");
         }
         const response = await api.get(`/api/teacher-profiles/${id}`);
-        console.log("Full API Response:", response.data);
-        console.log("Detailed Skills Check:", {
-          userId: response.data.userId,
-          userIdTeachingSkills: response.data.userId?.teachingSkills,
-          directTeachingSkills: response.data.teachingSkills,
-        });
+        // console.log("Full API Response:", response.data); // Keep for debugging if needed
         setTeacher(response.data);
       } catch (error) {
         console.error("Error fetching teacher profile:", {
@@ -471,55 +717,65 @@ const TeacherProfile = () => {
     fetchTeacher();
   }, [api, id]);
 
+  // Loading Skeleton
   if (isLoading) {
     return (
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
-        className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white"
+        className="space-y-8 p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen" // Added padding and background
       >
-        <div className="flex flex-col md:flex-row items-start gap-6">
-          <div className="h-32 w-32 bg-gray-200 rounded-full animate-pulse"></div>
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8 bg-white p-6 rounded-lg shadow-md">
+          <div className="h-28 w-28 sm:h-32 sm:w-32 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
           <div className="flex-1 space-y-3">
-            <div className="h-8 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/3 animate-pulse"></div>
-            <div className="h-6 bg-gray-200 rounded w-full animate-pulse"></div>
-            <div className="h-20 bg-gray-200 rounded w-full animate-pulse"></div>
-            <div className="h-16 bg-gray-200 rounded w-full animate-pulse mt-4"></div>
+            <div className="h-7 bg-gray-200 rounded w-3/4 sm:w-1/2 animate-pulse"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 sm:w-1/3 animate-pulse"></div>
+            <div className="h-5 bg-gray-200 rounded w-full animate-pulse mt-2"></div>
+            <div className="h-16 bg-gray-200 rounded w-full animate-pulse"></div>
+            <div className="flex gap-3 mt-4">
+              <div className="h-9 w-28 bg-gray-200 rounded-md animate-pulse"></div>
+              <div className="h-9 w-28 bg-gray-200 rounded-md animate-pulse"></div>
+            </div>
           </div>
         </div>
+        {/* Additional skeleton for cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="h-48 bg-gray-100 animate-pulse"></Card>
+          <Card className="h-48 bg-gray-100 animate-pulse"></Card>
+        </div>
+        <Card className="h-60 bg-gray-100 animate-pulse"></Card>
       </motion.div>
     );
   }
 
+  // Teacher Not Found State
   if (!teacher) {
     return (
-      <div className="text-center py-10">
-        <h2 className="text-2xl font-semibold text-gray-800">Teacher not found</h2>
-        <Link to="/student/favorites" className="mt-4 inline-block text-orange-600 hover:underline">
-          Back to Favorites
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gray-50 text-center p-4">
+        <h2 className="text-3xl font-bold text-gray-800 mb-4">Teacher not found 😟</h2>
+        <p className="text-gray-600 mb-6">The profile you are looking for does not exist or has been removed.</p>
+        <Link to="/student/dashboard" className="inline-block bg-orange-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-orange-700 transition-colors text-lg font-medium">
+          Go to Dashboard
         </Link>
       </div>
     );
   }
 
-  // Filter and sort availability
-  const today = new Date(); // Use local date (IST)
+  // Filter and sort availability for bookable slots
+  const today = new Date();
   today.setHours(0, 0, 0, 0); // Set to start of today in local time
-  console.log("Today (local):", today.toISOString()); // Debug today’s date
+
   const bookableAvailability = Array.isArray(teacher.availability)
     ? teacher.availability
         .map(item => {
           const [dateStr] = item.split(' ');
           const [year, month, day] = dateStr.split('-');
-          const slotDate = new Date(year, month - 1, day); // Use local date
-          console.log("Slot Date:", slotDate.toISOString(), "Original:", item); // Debug slot dates
+          const slotDate = new Date(year, month - 1, day); // Use local date for comparison
           return { date: slotDate, original: item };
         })
-        .filter(item => item.date >= today) // Exclude yesterday and earlier
-        .sort((a, b) => a.date - b.date) // Sort chronologically
-        .map((item, index) => ({ ...item, sortIndex: index })) // Add index for stability
+        .filter(item => item.date >= today) // Exclude past dates
+        .sort((a, b) => a.date.getTime() - b.date.getTime()) // Sort chronologically
         .map(item => item.original)
     : [];
 
@@ -528,28 +784,30 @@ const TeacherProfile = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white"
+      className="space-y-8 p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen" // Consistent padding and background
     >
-      {/* Header */}
-      <div className="flex flex-col md:flex-row items-start gap-6">
-        <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex items-center justify-center">
+      {/* Header Section */}
+      <div className="bg-white p-6 rounded-lg shadow-md flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8">
+        {/* Avatar */}
+        <div className="h-28 w-28 sm:h-32 sm:w-32 rounded-full overflow-hidden ring-4 ring-orange-400 bg-gray-100 flex items-center justify-center flex-shrink-0">
           <img
-            src={teacher.avatarUrl || '/placeholder.svg'}
-            alt={teacher.name || 'Unknown Teacher'}
+            src={teacher.avatarUrl || 'https://via.placeholder.com/150'} // Improved placeholder
+            alt={teacher.name || 'Teacher Avatar'}
             className="h-full w-full object-cover"
           />
         </div>
 
+        {/* Teacher Info */}
         <div className="flex-1 space-y-3">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <h1 className="text-3xl font-bold text-gray-800">{teacher.name || 'Unknown Teacher'}</h1>
-            <div className="flex gap-2">
-              <button className="flex items-center gap-1 text-orange-600 border border-orange-600 rounded-md px-3 py-1 text-sm hover:bg-orange-50">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-800 break-words">{teacher.name || 'Unknown Teacher'}</h1>
+            <div className="flex flex-wrap gap-2 justify-end"> {/* Use flex-wrap and justify-end for button alignment */}
+              <button className="flex items-center gap-1 text-orange-600 border border-orange-600 rounded-full px-4 py-2 text-sm font-medium hover:bg-orange-50 transition-colors">
                 <Heart className="h-4 w-4" />
                 Favorite
               </button>
               <Link to={`/student/chat/${teacher._id}`}>
-                <button className="flex items-center gap-1 text-blue-600 border border-blue-600 rounded-md px-3 py-1 text-sm hover:bg-blue-50">
+                <button className="flex items-center gap-1 text-blue-600 border border-blue-600 rounded-full px-4 py-2 text-sm font-medium hover:bg-blue-50 transition-colors">
                   <MessageCircle className="h-4 w-4" />
                   Message
                 </button>
@@ -557,77 +815,92 @@ const TeacherProfile = () => {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600">
+            {/* Skills */}
             {Array.isArray(teacher.userId?.teachingSkills) && teacher.userId.teachingSkills.length > 0 ? (
               teacher.userId.teachingSkills.map((skill, idx) => (
-                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
                   {skill}
                 </span>
               ))
             ) : Array.isArray(teacher.teachingSkills) && teacher.teachingSkills.length > 0 ? (
               teacher.teachingSkills.map((skill, idx) => (
-                <span key={idx} className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs">
+                <span key={idx} className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-semibold">
                   {skill}
                 </span>
               ))
             ) : (
-              <span className="px-2 py-1 bg-gray-200 text-gray-500 rounded-full text-xs">No skills listed</span>
+              <span className="px-3 py-1 bg-gray-200 text-gray-500 rounded-full text-xs font-medium">No skills listed</span>
             )}
+            {/* Rating */}
             <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 text-yellow-500" />
-              <span>{(teacher.rating || 0).toFixed(1)}</span>
+              <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" /> {/* Added fill for solid star */}
+              <span className="font-semibold text-gray-700">{(teacher.rating || 0).toFixed(1)}</span>
             </div>
           </div>
 
-          <div className="text-2xl font-semibold text-orange-600">${teacher.hourlyRate || 0}/hour</div>
+          {/* Hourly Rate */}
+          <div className="text-2xl sm:text-3xl font-bold text-orange-600">${teacher.hourlyRate || 0}<span className="text-lg font-medium text-gray-500">/hour</span></div>
 
-          <p className="text-gray-700 leading-relaxed mt-2 text-sm">{teacher.bio || 'No bio available'}</p>
-
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-lg shadow-sm">
-                <thead>
-                  <tr className="bg-gray-50">
-                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Date</th>
-                    <th className="py-2 px-4 text-left text-gray-600 font-semibold">Slots</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {bookableAvailability.length > 0 ? (
-                    bookableAvailability.map((slot, idx) => {
-                      const [datePart] = slot.split(' ');
-                      const [year, month, day] = datePart.split('-');
-                      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                      const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}`;
-                      const timeSlot = slot.split(' ').slice(1).join(' ');
-                      return (
-                        <tr key={`${datePart}-${idx}`} className="border-t">
-                          <td className="py-2 px-4 text-gray-700">{formattedDate}</td>
-                          <td className="py-2 px-4 text-gray-700">{timeSlot}</td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan="2" className="py-2 px-4 text-center text-gray-500">No future availability</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          {/* Bio */}
+          <p className="text-gray-700 leading-relaxed text-base mt-2">{teacher.bio || 'No bio available. The teacher has not provided a description yet.'}</p>
         </div>
       </div>
 
+      {/* Availability Section */}
+      <Card className="bg-white shadow-md">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-orange-600" /> Availability
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto"> {/* Ensures horizontal scroll on small screens */}
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                  <th scope="col" className="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time Slot</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {bookableAvailability.length > 0 ? (
+                  bookableAvailability.map((slot, idx) => {
+                    const [datePart, ...timeParts] = slot.split(' ');
+                    const [year, month, day] = datePart.split('-');
+                    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    const formattedDate = `${day} ${monthNames[parseInt(month, 10) - 1]}, ${year}`; // Added year for clarity
+                    const timeSlot = timeParts.join(' ');
+                    return (
+                      <tr key={`${datePart}-${idx}`} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap text-sm font-medium text-gray-900">{formattedDate}</td>
+                        <td className="py-3 px-4 whitespace-nowrap text-sm text-gray-700">{timeSlot || 'Full day'}</td> {/* Handle cases where only date is present */}
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="2" className="py-4 px-4 text-center text-gray-500 text-base">
+                      No future availability slots listed at the moment. Please check back later!
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      {/* Horizontal Line */}
+      <hr className="border-gray-200" />
+
       {/* Video Introduction */}
       {teacher.videoUrl && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Video Introduction</CardTitle>
+        <Card className="bg-white shadow-md">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold text-gray-800">Video Introduction</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <video controls className="w-full aspect-video">
+          <CardContent className="p-0 rounded-b-lg overflow-hidden">
+            <video controls className="w-full aspect-video bg-black">
               <source src={teacher.videoUrl} type="video/mp4" />
               Your browser does not support the video tag.
             </video>
@@ -637,32 +910,40 @@ const TeacherProfile = () => {
 
       {/* Gallery */}
       {Array.isArray(teacher.galleryPhotos) && teacher.galleryPhotos.length > 0 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Gallery</CardTitle>
+        <Card className="bg-white shadow-md">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold text-gray-800">Gallery</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 pt-0"> {/* Adjusted padding */}
             {teacher.galleryPhotos.map((photo, idx) => (
-              <img
-                key={idx}
-                src={photo.url || '/placeholder.svg'}
-                alt={photo.name || `Photo ${idx + 1}`}
-                className="w-full h-48 object-cover rounded-lg shadow-md"
-              />
+              <div key={idx} className="relative group overflow-hidden rounded-lg shadow-md transition-shadow hover:shadow-lg">
+                <img
+                  src={photo.url || 'https://via.placeholder.com/400x300?text=No+Image'} // Improved placeholder
+                  alt={photo.name || `Gallery photo ${idx + 1}`}
+                  className="w-full h-48 object-cover rounded-lg transform transition-transform duration-300 group-hover:scale-105"
+                />
+                {photo.name && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                    {photo.name}
+                  </div>
+                )}
+              </div>
             ))}
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardContent className="text-center py-4 text-gray-500">No gallery photos available</CardContent>
+        <Card className="bg-white shadow-md">
+          <CardContent className="text-center py-6 text-gray-500 text-base">
+            No gallery photos available from this teacher.
+          </CardContent>
         </Card>
       )}
 
-      {/* Book Session */}
-      <div className="flex justify-center">
+      {/* Book Session Button */}
+      <div className="flex justify-center py-4"> {/* Added vertical padding */}
         <Link to={`/student/book-session/${teacher._id}`}>
-          <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full md:w-auto py-3 px-6 rounded-md text-sm font-medium">
-            <Calendar className="h-5 w-5" />
+          <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full max-w-xs justify-center py-3 px-6 rounded-full text-lg font-semibold shadow-lg transition-colors transform hover:scale-105">
+            <Calendar className="h-6 w-6" />
             Book a Session
           </button>
         </Link>
@@ -672,8 +953,3 @@ const TeacherProfile = () => {
 };
 
 export default TeacherProfile;
-
-
-
-
-
