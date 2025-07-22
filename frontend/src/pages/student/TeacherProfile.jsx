@@ -682,7 +682,12 @@ import { motion } from "framer-motion";
 import { useParams, Link } from "react-router-dom";
 import { Star, MessageCircle, Heart, Calendar } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../components/ui/card";
 
 const TeacherProfile = () => {
   const { id } = useParams();
@@ -694,11 +699,8 @@ const TeacherProfile = () => {
     const fetchTeacher = async () => {
       setIsLoading(true);
       try {
-        if (!api) {
-          throw new Error("API instance is undefined");
-        }
+        if (!api) throw new Error("API instance is undefined");
         const response = await api.get(`/api/teacher-profiles/${id}`);
-        // console.log("Full API Response:", response.data); // Keep for debugging if needed
         setTeacher(response.data);
       } catch (error) {
         console.error("Error fetching teacher profile:", {
@@ -707,9 +709,7 @@ const TeacherProfile = () => {
           data: error.response?.data,
           baseURL: api?.defaults?.baseURL,
         });
-        if (error.response?.status === 404) {
-          setTeacher(null);
-        }
+        if (error.response?.status === 404) setTeacher(null);
       } finally {
         setIsLoading(false);
       }
@@ -717,70 +717,27 @@ const TeacherProfile = () => {
     fetchTeacher();
   }, [api, id]);
 
-  // Loading Skeleton
+  // Availability logic
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const bookableAvailability = Array.isArray(teacher?.availability)
+    ? teacher.availability
+        .map((item) => {
+          const [dateStr] = item.split(" ");
+          const [year, month, day] = dateStr.split("-");
+          const slotDate = new Date(year, month - 1, day);
+          return { date: slotDate, original: item };
+        })
+        .filter((item) => item.date >= today)
+        .sort((a, b) => a.date - b.date)
+        .map((item, index) => ({ ...item, sortIndex: index }))
+        .map((item) => item.original)
+    : [];
+
+  // Loading skeleton
   if (isLoading) {
     return (
       <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        className="space-y-8 p-4 sm:p-6 lg:p-10 bg-gray-50 min-h-screen" // Added padding and background
-      >
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-6 md:gap-8 bg-white p-6 rounded-lg shadow-md">
-          <div className="h-28 w-28 sm:h-32 sm:w-32 bg-gray-200 rounded-full animate-pulse flex-shrink-0"></div>
-          <div className="flex-1 space-y-3">
-            <div className="h-7 bg-gray-200 rounded w-3/4 sm:w-1/2 animate-pulse"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 sm:w-1/3 animate-pulse"></div>
-            <div className="h-5 bg-gray-200 rounded w-full animate-pulse mt-2"></div>
-            <div className="h-16 bg-gray-200 rounded w-full animate-pulse"></div>
-            <div className="flex gap-3 mt-4">
-              <div className="h-9 w-28 bg-gray-200 rounded-md animate-pulse"></div>
-              <div className="h-9 w-28 bg-gray-200 rounded-md animate-pulse"></div>
-            </div>
-          </div>
-        </div>
-        {/* Additional skeleton for cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="h-48 bg-gray-100 animate-pulse"></Card>
-          <Card className="h-48 bg-gray-100 animate-pulse"></Card>
-        </div>
-        <Card className="h-60 bg-gray-100 animate-pulse"></Card>
-      </motion.div>
-    );
-  }
-
-  // Teacher Not Found State
-  if (!teacher) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-80px)] bg-gray-50 text-center p-4">
-        <h2 className="text-3xl font-bold text-gray-800 mb-4">Teacher not found 😟</h2>
-        <p className="text-gray-600 mb-6">The profile you are looking for does not exist or has been removed.</p>
-        <Link to="/student/dashboard" className="inline-block bg-orange-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-orange-700 transition-colors text-lg font-medium">
-          Go to Dashboard
-        </Link>
-      </div>
-    );
-  }
-
-  // Filter and sort availability for bookable slots
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to start of today in local time
-
-  const bookableAvailability = Array.isArray(teacher.availability)
-    ? teacher.availability
-        .map(item => {
-          const [dateStr] = item.split(' ');
-          const [year, month, day] = dateStr.split('-');
-          const slotDate = new Date(year, month - 1, day); // Use local date for comparison
-          return { date: slotDate, original: item };
-        })
-        .filter(item => item.date >= today) // Exclude past dates
-        .sort((a, b) => a.date.getTime() - b.date.getTime()) // Sort chronologically
-        .map(item => item.original)
-    : [];
-
-  return (
-    <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4 }}
