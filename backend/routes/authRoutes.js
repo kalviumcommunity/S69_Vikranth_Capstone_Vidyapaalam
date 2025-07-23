@@ -110,7 +110,7 @@ router.post('/login', loginValidationRules, validate, loginUser);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logoutUser);
 
-router.post('/auth/firebase-google', firebaseAuth);
+router.post('/firebase-google', firebaseAuth);
 
 router.get('/profile', protect, getMe);
 
