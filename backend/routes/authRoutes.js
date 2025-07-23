@@ -91,6 +91,7 @@ const {
     updateUserProfile,
     updateTeachingSkills,
     updateAvailability,
+    firebaseAuth
 } = require('../controller/authController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -109,6 +110,7 @@ router.post('/login', loginValidationRules, validate, loginUser);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', logoutUser);
 
+router.post('/auth/firebase-google', firebaseAuth);
 
 router.get('/profile', protect, getMe);
 

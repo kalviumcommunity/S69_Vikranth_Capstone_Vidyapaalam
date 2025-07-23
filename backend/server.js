@@ -5,6 +5,8 @@ const connectDB = require('./config/db');
 require('dotenv').config();
 const cookieParser = require('cookie-parser');
 
+require('./services/firebaseAdmin'); 
+
 const app = express();
 const port = process.env.PORT || 5000; 
 

@@ -550,6 +550,7 @@ const User = require('../models/User');
 const BlacklistedToken = require('../models/BlackListedToken');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
+const admin = require('firebase-admin');
 
 const cookieOptions = {
     httpOnly: true,
@@ -667,6 +668,7 @@ exports.loginUser = async (req, res) => {
     }
 };
 
+
 exports.getMe = async (req, res) => {
     const user = await User.findById(req.user.id).select('-password -activeToken');
 
@@ -682,12 +684,15 @@ exports.getMe = async (req, res) => {
             teachingSkills: user.teachingSkills,
             teacherOnboardingComplete: user.teacherOnboardingComplete,
             isVerified: user.isVerified,
-            availability: user.availability, // Make sure to include availability if needed on frontend
+            availability: user.availability,
+            firebaseUid: user.firebaseUid,
+            picture: user.picture
         });
     } else {
         res.status(404).json({ message: 'User not found' });
     }
 };
+
 
 exports.refreshToken = async (req, res) => {
     const refreshTokenCookie = req.cookies.refreshToken;
@@ -832,6 +837,7 @@ exports.updateUserProfile = async (req, res) => {
         if (req.body.bio !== undefined) user.bio = req.body.bio;
         if (req.body.teacherOnboardingComplete !== undefined) user.teacherOnboardingComplete = req.body.teacherOnboardingComplete;
         if (req.body.isVerified !== undefined) user.isVerified = req.body.isVerified;
+        if (req.body.picture !== undefined) user.picture = req.body.picture;
 
         await user.save();
 
@@ -849,6 +855,8 @@ exports.updateUserProfile = async (req, res) => {
                 teacherOnboardingComplete: user.teacherOnboardingComplete,
                 isVerified: user.isVerified,
                 availability: user.availability,
+                firebaseUid: user.firebaseUid,
+                picture: user.picture
             }
         });
 
@@ -1013,5 +1021,86 @@ exports.updateAvailability = async (req, res) => {
     } catch (error) {
         console.error('Error updating availability:', error);
         res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+
+
+exports.firebaseAuth = async (req, res) => {
+    const { idToken } = req.body;
+
+    if (!idToken) {
+        return res.status(400).json({ message: 'Firebase ID token is missing.' });
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        const firebaseUid = decodedToken.uid;
+        const email = decodedToken.email;
+        const name = decodedToken.name || decodedToken.email.split('@')[0];
+        const picture = decodedToken.picture || null;
+
+        let user = await User.findOne({ firebaseUid });
+
+        if (!user) {
+            user = await User.findOne({ email });
+            if (user) {
+                user.firebaseUid = firebaseUid;
+                user.name = name;
+                user.picture = picture;
+                await user.save();
+                console.log(`Existing user (${user.email}) successfully linked with Firebase UID.`);
+            } else {
+                user = new User({
+                    firebaseUid,
+                    email,
+                    name,
+                    picture,
+                    isVerified: true,
+                    role: null,
+                    password: ''
+                });
+                await user.save();
+                console.log(`New user created in MongoDB via Firebase: ${user.email}`);
+            }
+        } else {
+            if (user.name !== name || user.picture !== picture) {
+                user.name = name;
+                user.picture = picture;
+                await user.save();
+                console.log(`User (${user.email}) data updated in MongoDB.`);
+            } else {
+                console.log(`User (${user.email}) already exists in MongoDB.`);
+            }
+        }
+
+        const accessToken = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        user.activeToken = refreshToken;
+        await user.save();
+
+        res.cookie('accessToken', accessToken, { ...cookieOptions, maxAge: ACCESS_TOKEN_AGE });
+        res.cookie('refreshToken', refreshToken, { ...cookieOptions, maxAge: REFRESH_TOKEN_AGE });
+
+        res.status(200).json({
+            message: 'Authentication successful with Firebase Google.',
+            user: {
+                id: user._id,
+                firebaseUid: user.firebaseUid,
+                email: user.email,
+                name: user.name,
+                picture: user.picture,
+                role: user.role,
+                isVerified: user.isVerified
+            }
+        });
+
+    } catch (error) {
+        console.error('Error during Firebase ID token verification or user processing:', error);
+        if (error.code === 'auth/id-token-expired') {
+            return res.status(401).json({ message: 'Authentication token has expired. Please sign in again.' });
+        }
+        res.status(401).json({ message: 'Authentication failed. Invalid token or internal error.', error: error.message });
     }
 };
