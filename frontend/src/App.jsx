@@ -230,6 +230,7 @@ import PrivateRoute from "./components/ui/PrivateRoute";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TeacherProfileProvider } from "./contexts/TeacherProfileContext";
+import { SessionProvider } from "./contexts/SessionContext"
 
 import Index from "./pages/index";
 import SkillsPage from "./pages/SkillsPage";
@@ -324,7 +325,9 @@ const App = () => {
       <BrowserRouter >
         <AuthProvider>
           <TeacherProfileProvider>
-            <AppContent /> 
+            <SessionProvider>
+            <AppContent />
+            </SessionProvider>
           </TeacherProfileProvider>
         </AuthProvider>
       </BrowserRouter>
