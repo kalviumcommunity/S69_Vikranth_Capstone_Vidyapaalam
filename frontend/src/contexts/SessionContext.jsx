@@ -25,9 +25,9 @@ export function SessionProvider({ children }) {
       const data = response.data || {};
       let upcomingData = [], pastData = [];
       if (Array.isArray(data)) {
-        const now = Date.now();
-        upcomingData = data.filter((s) => new Date(s.date).getTime() > now);
-        pastData = data.filter((s) => new Date(s.date).getTime() <= now);
+        const now = new Date();
+        upcomingData = data.filter((s) => new Date(s.dateTime) > now);
+        pastData = data.filter((s) => new Date(s.dateTime) <= now);
       } else if (data.upcoming && data.past) {
         upcomingData = data.upcoming || [];
         pastData = data.past || [];
@@ -63,8 +63,7 @@ export function SessionProvider({ children }) {
           .toUpperCase()
           .slice(0, 2),
         skill: teacherData.skill || "Unknown",
-        date: new Date(Date.now() + 7 * 86400000).toISOString(),
-        time: "10:00 AM",
+        dateTime: teacherData.dateTime || new Date(Date.now() + 7 * 86400000).toISOString(), // Configurable dateTime
       };
       const response = await api.post("/api/student/sessions", newSession);
       setUpcoming((prev) => [...prev, response.data]);
