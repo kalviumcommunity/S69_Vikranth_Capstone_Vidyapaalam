@@ -24,12 +24,14 @@ const authRoutes = require('./routes/authRoutes');
 const skillRoutes = require('./routes/skillRoutes');
 const teacherProfileRoutes = require('./routes/teacherRoutes');
 const googleCalendarAuthRoutes = require('./routes/googleCalendarAuthRoutes'); 
+const sessionRoutes = require("./routes/sessionRoutes");
 
 // Mount Routes
 app.use('/auth', authRoutes); 
 app.use('/api/skills', skillRoutes);
 app.use('/api/teacher-profiles', teacherProfileRoutes);
 app.use('/auth/calendar', googleCalendarAuthRoutes); 
+app.use("/api", sessionRoutes);
 
 // Base route
 app.get('/', (req, res) => {

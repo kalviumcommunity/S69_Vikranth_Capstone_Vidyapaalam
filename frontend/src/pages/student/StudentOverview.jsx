@@ -447,11 +447,11 @@
 
 
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext.jsx";
+import { useSession } from "../../contexts/SessionContext";
 
 const container = {
   hidden: { opacity: 0, y: 20 },
@@ -469,11 +469,11 @@ const SessionCard = ({ session, isPast }) => (
   >
     <div className="flex items-center gap-4">
       <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold">
-        {session.teacherInitials}
+        {session.teacherInitials || session.teacherName?.slice(0, 2).toUpperCase()}
       </div>
       <div className="space-y-1">
         <h3 className="text-lg font-semibold text-gray-800">
-          {session.teacherName}
+          {session.teacherName || "Unknown Teacher"}
         </h3>
         {session.skill && <p className="text-sm text-gray-500">{session.skill} Teacher</p>}
       </div>
@@ -486,7 +486,7 @@ const SessionCard = ({ session, isPast }) => (
       </div>
       <div className="flex items-center text-gray-600">
         <Clock className="w-5 h-5 mr-2 text-gray-500" />
-        <span>{session.time}</span>
+        <span>{session.time || "N/A"}</span>
       </div>
     </div>
 
@@ -516,66 +516,10 @@ const EmptyState = ({ message, linkText, linkTo }) => (
 );
 
 export default function StudentOverview() {
-  const { user, api } = useAuth(); // Added api from useAuth
+  const { upcoming, past, loading, error, fetchSessions, handlePaymentSuccess } = useSession();
   const [showPast, setShowPast] = useState(false);
-  const [upcoming, setUpcoming] = useState([]);
-  const [past, setPast] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Simulate adding a session after payment
-  const handlePaymentSuccess = (teacherData) => {
-    const newSession = {
-      _id: `pay${Date.now()}`, // Unique ID based on timestamp
-      teacherName: teacherData.name,
-      teacherInitials: teacherData.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2),
-      skill: teacherData.skill || "Unknown",
-      date: new Date(Date.now() + 7 * 86400000).toISOString(), // Set 7 days from now
-      time: "10:00 AM",
-    };
-    setUpcoming((prev) => [...prev, newSession]);
-  };
-
-  useEffect(() => {
-    const fetchSessions = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        if (!api) {
-          throw new Error("API instance is undefined");
-        }
-        const response = await api.get("/api/student/sessions"); // Adjust endpoint as needed
-        const now = Date.now();
-        const { upcoming: upcomingData = [], past: pastData = [] } = response.data || {};
-
-        // Filter sessions based on current date
-        const filteredUpcoming = upcomingData.filter(
-          (session) => new Date(session.date).getTime() > now
-        );
-        const filteredPast = pastData.filter(
-          (session) => new Date(session.date).getTime() <= now
-        );
-
-        setUpcoming(filteredUpcoming);
-        setPast(filteredPast);
-      } catch (err) {
-        console.error("Error fetching sessions:", err);
-        setError("Failed to load sessions. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSessions();
-  }, [api]);
-
-  // Determine the display name for the welcome message
-  const displayUserName = user?.name || user?.email || "Student";
+  const displayUserName = "Student"; // Fallback since user is now in AuthContext
 
   return (
     <motion.div
@@ -584,7 +528,6 @@ export default function StudentOverview() {
       animate="show"
       variants={container}
     >
-      {/* Header */}
       <motion.div variants={item} className="text-center">
         <h2 className="text-3xl sm:text-4xl text-orange-600 font-bold">
           Welcome back, {displayUserName}!
@@ -592,7 +535,6 @@ export default function StudentOverview() {
         <p className="text-gray-500">Here’s your learning sessions.</p>
       </motion.div>
 
-      {/* Toggle */}
       <motion.div variants={item} className="flex justify-center gap-6 border-b pb-2">
         {["Upcoming", "Past"].map((label) => {
           const active = label === (showPast ? "Past" : "Upcoming");
@@ -612,7 +554,6 @@ export default function StudentOverview() {
         })}
       </motion.div>
 
-      {/* Content */}
       {loading ? (
         <motion.p variants={item} className="text-center text-gray-500 py-10">
           Loading sessions...
