@@ -97,6 +97,7 @@
 const User = require("../models/User");
 const Session = require("../models/Session");
 const Razorpay = require("razorpay");
+const crypto = require("crypto");
 
 const razorpay = new Razorpay({
   key_id: "rzp_test_59BvySck8scTA8",
@@ -196,31 +197,38 @@ exports.createPaymentOrder = async (req, res) => {
 exports.handleRazorpayWebhook = async (req, res) => {
   const secret = "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d";
 
-  // --- DEBUGGING LOGS (KEEP THESE IN FOR NOW) ---
+  // --- DEBUGGING LOGS (Keep these in for now) ---
   console.log("--- WEBHOOK RECEIVED ---");
   console.log("Headers:", req.headers);
-  console.log("req.body (parsed by express.raw):", req.body);
-  console.log("req.rawBody (from express.raw middleware):", req.rawBody ? req.rawBody.toString() : "undefined/null");
+  console.log("req.body (Buffer from express.raw):", req.body); // Now req.body is the Buffer
+  // console.log("req.rawBody (should be undefined):", req.rawBody ? req.rawBody.toString() : "undefined/null"); // This will now always be undefined, so we can remove this line after confirmation
   console.log("--- END DEBUGGING LOGS ---");
 
-  const dataToHash = typeof req.rawBody === 'object' && req.rawBody !== null && req.rawBody instanceof Buffer
-                     ? req.rawBody
-                     : JSON.stringify(req.body);
+  // The raw body is now on req.body because of express.raw()
+  const dataToHash = req.body; // req.body is already the Buffer now
 
-  if (!dataToHash) {
-    console.error("Webhook Error: No body data found for signature verification.");
-    return res.status(400).json({ status: "failure", error: "No body data" });
+  if (!dataToHash || !(dataToHash instanceof Buffer)) {
+    console.error("Webhook Error: Raw body not found or not a Buffer for signature verification.");
+    return res.status(400).json({ status: "failure", error: "No raw body data" });
   }
 
   const shasum = crypto.createHmac("sha256", secret);
-  shasum.update(dataToHash);
+  shasum.update(dataToHash); // Use the Buffer directly for hashing
 
   const digest = shasum.digest("hex");
 
+  // Manually parse the buffer to get the JSON payload for processing
+  let payment;
+  try {
+    payment = JSON.parse(dataToHash.toString('utf8'));
+  } catch (parseError) {
+    console.error("Webhook Error: Failed to parse raw body as JSON:", parseError);
+    return res.status(400).json({ status: "failure", error: "Malformed JSON body" });
+  }
+
   if (digest === req.headers["x-razorpay-signature"]) {
     try {
-      const payment = req.body;
-
+      // payment variable now holds the parsed JSON
       if (payment.event === 'payment.captured') {
         const userId = payment.payload.payment.entity.notes.userId;
         const user = await User.findById(userId);
