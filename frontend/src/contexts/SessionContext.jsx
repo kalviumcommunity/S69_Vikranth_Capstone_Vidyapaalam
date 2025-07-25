@@ -167,7 +167,7 @@ export function SessionProvider({ children }) {
         teacherData,
       });
       const options = {
-        key: "rzp_test_bIwms9Sf6PPERD" ,
+        key: "rzp_test_59BvySck8scTA8" ,
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
@@ -175,7 +175,7 @@ export function SessionProvider({ children }) {
         description: `Session with ${teacherData.name}`,
         handler: async (response) => {
           console.log("Payment Success:", response);
-          await fetchSessions(); // Refresh sessions after payment
+          await fetchSessions(); /
         },
         prefill: {
           name: user.name,
@@ -187,7 +187,7 @@ export function SessionProvider({ children }) {
         modal: {
           ondismiss: () => {
             setError("Payment cancelled by user. Please try again.");
-            fetchSessions(); // Refresh to check for partial updates
+            fetchSessions(); 
           },
         },
       };
