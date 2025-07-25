@@ -12,6 +12,8 @@ const port = process.env.PORT || 5000;
 
 app.use(express.json());
 
+app.use(express.raw({ type: "application/json" }));
+
 app.use(cors({
   origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', 
   credentials : true
@@ -25,6 +27,7 @@ const skillRoutes = require('./routes/skillRoutes');
 const teacherProfileRoutes = require('./routes/teacherRoutes');
 const googleCalendarAuthRoutes = require('./routes/googleCalendarAuthRoutes'); 
 const sessionRoutes = require("./routes/sessionRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 // Mount Routes
 app.use('/auth', authRoutes); 
@@ -32,6 +35,8 @@ app.use('/api/skills', skillRoutes);
 app.use('/api/teacher-profiles', teacherProfileRoutes);
 app.use('/auth/calendar', googleCalendarAuthRoutes); 
 app.use("/api", sessionRoutes);
+app.use("/api", paymentRoutes);
+
 
 // Base route
 app.get('/', (req, res) => {
