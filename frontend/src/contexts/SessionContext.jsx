@@ -167,7 +167,7 @@ export function SessionProvider({ children }) {
         teacherData,
       });
       const options = {
-        key: rzp_test_bIwms9Sf6PPERD ,
+        key: "rzp_test_bIwms9Sf6PPERD" ,
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
