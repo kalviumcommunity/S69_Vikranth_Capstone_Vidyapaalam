@@ -10,6 +10,8 @@ require('./services/firebaseAdmin');
 const app = express();
 const port = process.env.PORT || 5000; 
 
+const paymentRoutes = require("./routes/paymentRoutes");
+
 app.post(
   '/api/razorpay-webhook',
   express.raw({ type: 'application/json' }), 
@@ -31,7 +33,6 @@ const skillRoutes = require('./routes/skillRoutes');
 const teacherProfileRoutes = require('./routes/teacherRoutes');
 const googleCalendarAuthRoutes = require('./routes/googleCalendarAuthRoutes'); 
 const sessionRoutes = require("./routes/sessionRoutes");
-const paymentRoutes = require("./routes/paymentRoutes");
 
 // Mount Routes
 app.use('/auth', authRoutes); 
