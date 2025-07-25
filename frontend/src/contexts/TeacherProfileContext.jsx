@@ -1,39 +1,4 @@
 
-// // src/contexts/TeacherProfileContext.js
-
-// import React, { createContext, useState, useEffect, useContext, useCallback, useRef } from 'react';
-// import { toast } from '@/hooks/use-toast';
-// import { useAuth } from './AuthContext';
-// import { api } from '../api/axios';
-
-// // Create the context
-// const TeacherProfileContext = createContext(null);
-
-// // Export the context
-// export { TeacherProfileContext };
-
-// const TEACHER_PROFILE_API_PATH = "/api/teacher-profiles";
-
-// // Provider Component
-// export const TeacherProfileProvider = ({ children }) => {
-//   const { user, loading: authLoading } = useAuth();
-//   const [teacherProfile, setTeacherProfile] = useState(null);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [isSaving, setIsSaving] = useState(false);
-//   const [error, setError] = useState(null);
-
-//   const [avatarFile, setAvatarFile] = useState(null);
-//   const [videoFile, setVideoFile] = useState(null);
-//   const [galleryFiles, setGalleryFiles] = useState([]);
-
-//   const isMountedRef = useRef(true);
-
-//   useEffect(() => {
-//     return () => {
-//       isMountedRef.current = false;
-//     };
-//   }, []);
-
 
 
 
@@ -276,9 +241,207 @@
 
 
 
+// import React, { createContext, useContext, useState, useEffect } from 'react';
+// import { api } from '../api/axios';
+// import { toast } from '@/components/ui/use-toast';
+// import { useAuth } from './AuthContext';
+
+// export const TeacherProfileContext = createContext();
+
+// export const TeacherProfileProvider = ({ children }) => {
+//   const { user } = useAuth();
+//   const [teacherProfile, setTeacherProfile] = useState(null);
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [isSaving, setIsSaving] = useState(false);
+//   const [avatarFile, setAvatarFile] = useState(null);
+//   const [videoFile, setVideoFile] = useState(null);
+//   const [galleryFiles, setGalleryFiles] = useState([]);
+
+//   useEffect(() => {
+//     const fetchProfile = async () => {
+//       if (!user) return;
+//       setIsLoading(true);
+//       try {
+//         const response = await api.get('/api/teacher-profiles/me');
+//         setTeacherProfile(response.data);
+//       } catch (error) {
+//         console.error('Error fetching teacher profile:', error);
+//         if (error.response?.status !== 404) {
+//           toast({
+//             title: 'Error',
+//             description: 'Failed to fetch teacher profile.',
+//             variant: 'destructive'
+//           });
+//         }
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+//     fetchProfile();
+//   }, [user]);
+
+//   const createTeacherProfile = async (profileData) => {
+//     setIsSaving(true);
+//     try {
+//       const formData = new FormData();
+//       for (const key in profileData) {
+//         if (Object.prototype.hasOwnProperty.call(profileData, key)) {
+//           if (key === 'galleryPhotos' && Array.isArray(profileData[key])) {
+//             profileData[key].forEach((photo, index) => {
+//               formData.append(`galleryPhotos[${index}][url]`, photo.url || '');
+//               formData.append(`galleryPhotos[${index}][publicId]`, photo._id || '');
+//               formData.append(`galleryPhotos[${index}][name]`, photo.name || '');
+//             });
+//           } else if (Array.isArray(profileData[key])) {
+//             profileData[key].forEach((item, index) => {
+//               formData.append(`${key}[${index}]`, item);
+//             });
+//           } else {
+//             formData.append(key, profileData[key] ?? '');
+//           }
+//         }
+//       }
+
+//       if (avatarFile) {
+//         formData.append('avatar', avatarFile);
+//       }
+//       if (videoFile) {
+//         formData.append('video', videoFile);
+//       }
+//       galleryFiles.forEach((file, index) => {
+//         formData.append('galleryPhotos', file);
+//       });
+
+//       // Debug FormData
+//       console.log('DEBUG: createTeacherProfile FormData:');
+//       for (let [key, value] of formData.entries()) {
+//         console.log(`  ${key}: ${value}`);
+//       }
+
+//       const response = await api.post('/api/teacher-profiles', formData);
+//       setTeacherProfile(response.data);
+//       setAvatarFile(null);
+//       setVideoFile(null);
+//       setGalleryFiles([]);
+//       toast({
+//         title: 'Success',
+//         description: 'Teacher profile created successfully.',
+//         variant: 'success'
+//       });
+//       return response.data;
+//     } catch (error) {
+//       console.error('Error creating teacher profile:', error);
+//       toast({
+//         title: 'Error',
+//         description: error.response?.data?.message || 'Failed to create teacher profile.',
+//         variant: 'destructive'
+//       });
+//       throw error;
+//     } finally {
+//       setIsSaving(false);
+//     }
+//   };
+
+//   const updateTeacherProfile = async (profileData) => {
+//     setIsSaving(true);
+//     try {
+//       const formData = new FormData();
+//       for (const key in profileData) {
+//         if (Object.prototype.hasOwnProperty.call(profileData, key)) {
+//           if (key === 'galleryPhotos' && Array.isArray(profileData[key])) {
+//             profileData[key].forEach((photo, index) => {
+//               formData.append(`galleryPhotos[${index}][url]`, photo.url || '');
+//               formData.append(`galleryPhotos[${index}][publicId]`, photo._id || '');
+//               formData.append(`galleryPhotos[${index}][name]`, photo.name || '');
+//             });
+//           } else if (Array.isArray(profileData[key])) {
+//             profileData[key].forEach((item, index) => {
+//               formData.append(`${key}[${index}]`, item);
+//             });
+//           } else {
+//             formData.append(key, profileData[key] ?? '');
+//           }
+//         }
+//       }
+
+//       if (avatarFile) {
+//         formData.append('avatar', avatarFile);
+//       }
+//       if (videoFile) {
+//         formData.append('video', videoFile);
+//       }
+//       galleryFiles.forEach((file, index) => {
+//         formData.append('galleryPhotos', file);
+//       });
+
+//       // Debug FormData
+//       console.log('DEBUG: updateTeacherProfile FormData:');
+//       for (let [key, value] of formData.entries()) {
+//         console.log(`  ${key}: ${value}`);
+//       }
+
+//       const response = await api.put(`/api/teacher-profiles/${teacherProfile._id}`, formData);
+//       setTeacherProfile(response.data);
+//       setAvatarFile(null);
+//       setVideoFile(null);
+//       setGalleryFiles([]);
+//       toast({
+//         title: 'Success',
+//         description: 'Teacher profile updated successfully.',
+//         variant: 'success'
+//       });
+//       return response.data;
+//     } catch (error) {
+//       console.error('Error updating teacher profile:', error);
+//       toast({
+//         title: 'Error',
+//         description: error.response?.data?.message || 'Failed to update teacher profile.',
+//         variant: 'destructive'
+//       });
+//       throw error;
+//     } finally {
+//       setIsSaving(false);
+//     }
+//   };
+
+//   return (
+//     <TeacherProfileContext.Provider
+//       value={{
+//         teacherProfile,
+//         setTeacherProfile,
+//         isLoading,
+//         isSaving,
+//         createTeacherProfile,
+//         updateTeacherProfile,
+//         avatarFile,
+//         setAvatarFile,
+//         videoFile,
+//         setVideoFile,
+//         galleryFiles,
+//         setGalleryFiles
+//       }}
+//     >
+//       {children}
+//     </TeacherProfileContext.Provider>
+//   );
+// };
+
+// export const useTeacherProfile = () => {
+//   const context = useContext(TeacherProfileContext);
+//   if (!context) {
+//     throw new Error('useTeacherProfile must be used within a TeacherProfileProvider');
+//   }
+//   return context;
+// };
+
+
+
+
+
+
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { api } from '../api/axios';
-import { toast } from '@/components/ui/use-toast';
 import { useAuth } from './AuthContext';
 
 export const TeacherProfileContext = createContext();
@@ -294,19 +457,26 @@ export const TeacherProfileProvider = ({ children }) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!user) return;
+      if (!user) {
+        setTeacherProfile(null);
+        setIsLoading(false);
+        return;
+      }
+
+      if (user.role !== 'teacher') {
+        setTeacherProfile(null);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
         const response = await api.get('/api/teacher-profiles/me');
         setTeacherProfile(response.data);
       } catch (error) {
         console.error('Error fetching teacher profile:', error);
-        if (error.response?.status !== 404) {
-          toast({
-            title: 'Error',
-            description: 'Failed to fetch teacher profile.',
-            variant: 'destructive'
-          });
+        if (error.response?.status !== 404 && error.response?.status !== 403) {
+          alert('Error: Failed to fetch teacher profile. ' + (error.response?.data?.message || 'Please try again.'));
         }
       } finally {
         setIsLoading(false);
@@ -343,34 +513,20 @@ export const TeacherProfileProvider = ({ children }) => {
       if (videoFile) {
         formData.append('video', videoFile);
       }
-      galleryFiles.forEach((file, index) => {
+      galleryFiles.forEach((file) => {
         formData.append('galleryPhotos', file);
       });
-
-      // Debug FormData
-      console.log('DEBUG: createTeacherProfile FormData:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`  ${key}: ${value}`);
-      }
 
       const response = await api.post('/api/teacher-profiles', formData);
       setTeacherProfile(response.data);
       setAvatarFile(null);
       setVideoFile(null);
       setGalleryFiles([]);
-      toast({
-        title: 'Success',
-        description: 'Teacher profile created successfully.',
-        variant: 'success'
-      });
+      alert('Success: Teacher profile created successfully.');
       return response.data;
     } catch (error) {
       console.error('Error creating teacher profile:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to create teacher profile.',
-        variant: 'destructive'
-      });
+      alert('Error: ' + (error.response?.data?.message || 'Failed to create teacher profile.'));
       throw error;
     } finally {
       setIsSaving(false);
@@ -405,34 +561,20 @@ export const TeacherProfileProvider = ({ children }) => {
       if (videoFile) {
         formData.append('video', videoFile);
       }
-      galleryFiles.forEach((file, index) => {
+      galleryFiles.forEach((file) => {
         formData.append('galleryPhotos', file);
       });
-
-      // Debug FormData
-      console.log('DEBUG: updateTeacherProfile FormData:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`  ${key}: ${value}`);
-      }
 
       const response = await api.put(`/api/teacher-profiles/${teacherProfile._id}`, formData);
       setTeacherProfile(response.data);
       setAvatarFile(null);
       setVideoFile(null);
       setGalleryFiles([]);
-      toast({
-        title: 'Success',
-        description: 'Teacher profile updated successfully.',
-        variant: 'success'
-      });
+      alert('Success: Teacher profile updated successfully.');
       return response.data;
     } catch (error) {
       console.error('Error updating teacher profile:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to update teacher profile.',
-        variant: 'destructive'
-      });
+      alert('Error: ' + (error.response?.data?.message || 'Failed to update teacher profile.'));
       throw error;
     } finally {
       setIsSaving(false);
