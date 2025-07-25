@@ -10,9 +10,13 @@ require('./services/firebaseAdmin');
 const app = express();
 const port = process.env.PORT || 5000; 
 
-app.use(express.json());
+app.post(
+  '/api/razorpay-webhook',
+  express.raw({ type: 'application/json' }), 
+  paymentController.handleRazorpayWebhook 
+);
 
-app.use(express.raw({ type: "application/json" }));
+app.use(express.json());
 
 app.use(cors({
   origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', 
