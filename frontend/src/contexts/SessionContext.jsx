@@ -175,7 +175,7 @@ export function SessionProvider({ children }) {
         description: `Session with ${teacherData.name}`,
         handler: async (response) => {
           console.log("Payment Success:", response);
-          await fetchSessions(); /
+          await fetchSessions(); 
         },
         prefill: {
           name: user.name,
