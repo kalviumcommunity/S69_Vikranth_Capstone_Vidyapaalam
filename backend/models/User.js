@@ -68,6 +68,8 @@ const UserSchema = new mongoose.Schema({
     default: null, 
     select: false, 
   },
+    paymentAcknowledged: { type: Boolean, default: false },
+    
 }, {
   timestamps: true
 });
