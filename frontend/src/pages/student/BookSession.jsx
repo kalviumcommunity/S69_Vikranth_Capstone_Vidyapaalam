@@ -904,18 +904,17 @@ const BookSession = () => {
         const response = await api.get(`/api/teacher-profiles/${teacherId}`);
         setTeacher(response.data);
 
-        // Parse availability strings into structured data, handling multiple slots
         const parsedAvailability = response.data.availability.map(item => {
-          const [dateStr, ...slotsStr] = item.split(" "); // Split date and all slots
+          const [dateStr, ...slotsStr] = item.split(" ");
           const date = new Date(dateStr);
           const slots = slotsStr.join(" ").split(", ").map(slot => {
             const [startTime, endTime] = slot.split("-");
-            return { startTime, endTime, available: true }; // Assume all slots are available
+            return { startTime, endTime, available: true };
           });
           return { date, slots };
         });
         setAvailableSlots(parsedAvailability);
-        console.log("Parsed availableSlots:", parsedAvailability); // Debug log
+        console.log("Parsed availableSlots:", parsedAvailability);
       } catch (error) {
         console.error("Error fetching teacher data:", error);
         alert("Failed to load teacher data or availability");
@@ -979,7 +978,7 @@ const BookSession = () => {
 
   const handleSelectDate = (date) => {
     setSelectedDate(date instanceof Date ? date : null);
-    setSelectedSlot(null); // Reset slot when date changes
+    setSelectedSlot(null);
     setProgress(date ? 25 : 0);
   };
 
@@ -994,7 +993,7 @@ const BookSession = () => {
     return availableSlots
       .filter(item => item.date.toISOString().split("T")[0] === dateStr)
       .flatMap(item => item.slots.map((slot, index) => ({
-        id: `${dateStr}-${slot.startTime}-${slot.endTime}-${index}`, // Unique ID with index
+        id: `${dateStr}-${slot.startTime}-${slot.endTime}-${index}`,
         time: `${slot.startTime} - ${slot.endTime}`,
         startTime: slot.startTime,
         endTime: slot.endTime,
@@ -1022,7 +1021,6 @@ const BookSession = () => {
         </p>
       </div>
 
-      {/* Progress Bar */}
       <div className="relative w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
         <motion.div
           className="bg-orange-500 h-2.5 rounded-full absolute top-0 left-0"
@@ -1047,7 +1045,6 @@ const BookSession = () => {
       </div>
 
       <Card className="shadow-xl rounded-lg overflow-hidden">
-        {/* Step 1: Date Selection */}
         <div className={`p-8 ${step !== "date" && "hidden"}`}>
           <h3 className="text-xl font-semibold text-gray-800 mb-6">1. Select Date & Time</h3>
           <div className="grid gap-8 md:grid-cols-2">
@@ -1103,7 +1100,6 @@ const BookSession = () => {
           </CardFooter>
         </div>
 
-        {/* Step 2: Payment Review */}
         <div className={`p-8 ${step !== "payment" && "hidden"}`}>
           <h3 className="text-xl font-semibold text-gray-800 mb-6">2. Review & Pay</h3>
           <CardHeader className="pb-4">
@@ -1112,7 +1108,7 @@ const BookSession = () => {
           <CardContent className="space-y-6">
             <div className="flex items-center space-x-4">
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center text-sm font-bold text-gray-600">
-                {teacher?.name?.split(' ').map(n => n[0]).join('') || "??"} {/* Derive initials */}
+                {teacher?.name?.split(' ').map(n => n[0]).join('') || "??"}
               </div>
               <div>
                 <p className="font-medium text-gray-800">{teacher?.name || "Unknown Teacher"}</p>

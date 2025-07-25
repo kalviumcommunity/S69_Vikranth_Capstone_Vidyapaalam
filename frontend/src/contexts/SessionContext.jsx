@@ -148,7 +148,7 @@ export function SessionProvider({ children }) {
         data: err.response?.data,
         url: err.response?.config?.url,
       });
-      setError("Failed to load sessions. Please try again later.");
+      setError(`Failed to load sessions: ${err.message}. Please try again.`);
     } finally {
       setLoading(false);
     }
@@ -167,14 +167,14 @@ export function SessionProvider({ children }) {
         teacherData,
       });
       const options = {
-        key: process.env.REACT_APP_RAZORPAY_KEY_ID, // From .env
+        key: process.env.REACT_APP_RAZORPAY_KEY_ID,
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
         name: "Vidyapaalam",
         description: `Session with ${teacherData.name}`,
         handler: async (response) => {
-          console.log("Payment Success:", response); // Log payment details
+          console.log("Payment Success:", response);
           await fetchSessions(); // Refresh sessions after payment
         },
         prefill: {
@@ -184,12 +184,18 @@ export function SessionProvider({ children }) {
         theme: {
           color: "#F7931E",
         },
+        modal: {
+          ondismiss: () => {
+            setError("Payment cancelled by user. Please try again.");
+            fetchSessions(); // Refresh to check for partial updates
+          },
+        },
       };
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
       console.error("Error initiating payment:", err.response?.data || err.message);
-      setError("Failed to initiate payment.");
+      setError(`Payment failed: ${err.message}. Please try again or contact support.`);
     }
   }, [api, user?.id, user?.name, user?.email, fetchSessions]);
 
@@ -220,3 +226,5 @@ export const useSession = () => {
   }
   return context;
 };
+
+

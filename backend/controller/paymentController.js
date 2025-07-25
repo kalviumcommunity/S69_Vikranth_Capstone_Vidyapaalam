@@ -9,7 +9,7 @@ const razorpay = new Razorpay({
 
 exports.createPaymentOrder = async (req, res) => {
   try {
-    const { amount, currency = "INR", teacherData } = req.body; // teacherData: { name, skill, dateTime, startTime, endTime }
+    const { amount, currency = "INR", teacherData } = req.body;
     if (!amount || !teacherData || !teacherData.dateTime || !teacherData.startTime || !teacherData.endTime) {
       return res.status(400).json({ error: "Amount, dateTime, startTime, and endTime are required" });
     }
@@ -32,14 +32,15 @@ exports.createPaymentOrder = async (req, res) => {
 };
 
 exports.handleRazorpayWebhook = async (req, res) => {
-  const payment = req.body;
   const secret = process.env.RAZORPAY_KEY_SECRET;
   const shasum = require("crypto").createHmac("sha256", secret);
-  shasum.update(JSON.stringify(req.body));
+  shasum.update(req.rawBody); // Use raw body for signature verification
+
   const digest = shasum.digest("hex");
 
   if (digest === req.headers["x-razorpay-signature"]) {
     try {
+      const payment = req.body;
       const user = await User.findById(payment.notes.userId);
       if (!user) throw new Error("User not found");
 
@@ -69,9 +70,14 @@ exports.handleRazorpayWebhook = async (req, res) => {
       res.json({ status: "success" });
     } catch (error) {
       console.error("Webhook processing error:", error);
-      res.status(500).json({ status: "failure" });
+      res.status(500).json({ status: "failure", error: error.message });
     }
   } else {
-    res.status(400).json({ status: "failure" });
+    console.error("Signature verification failed");
+    res.status(400).json({ status: "failure", error: "Invalid signature" });
   }
 };
+
+
+
+

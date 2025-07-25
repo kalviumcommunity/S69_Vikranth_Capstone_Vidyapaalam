@@ -12,6 +12,8 @@ const port = process.env.PORT || 5000;
 
 app.use(express.json());
 
+app.use(express.raw({ type: "application/json" }));
+
 app.use(cors({
   origin: 'https://gregarious-sprinkles-9e14c9.netlify.app', 
   credentials : true
