@@ -194,10 +194,26 @@ exports.createPaymentOrder = async (req, res) => {
 
 
 exports.handleRazorpayWebhook = async (req, res) => {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  const secret = "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d";
 
-  const shasum = require("crypto").createHmac("sha256", secret);
-  shasum.update(req.rawBody);
+  // --- DEBUGGING LOGS (KEEP THESE IN FOR NOW) ---
+  console.log("--- WEBHOOK RECEIVED ---");
+  console.log("Headers:", req.headers);
+  console.log("req.body (parsed by express.raw):", req.body);
+  console.log("req.rawBody (from express.raw middleware):", req.rawBody ? req.rawBody.toString() : "undefined/null");
+  console.log("--- END DEBUGGING LOGS ---");
+
+  const dataToHash = typeof req.rawBody === 'object' && req.rawBody !== null && req.rawBody instanceof Buffer
+                     ? req.rawBody
+                     : JSON.stringify(req.body);
+
+  if (!dataToHash) {
+    console.error("Webhook Error: No body data found for signature verification.");
+    return res.status(400).json({ status: "failure", error: "No body data" });
+  }
+
+  const shasum = crypto.createHmac("sha256", secret);
+  shasum.update(dataToHash);
 
   const digest = shasum.digest("hex");
 
@@ -210,10 +226,12 @@ exports.handleRazorpayWebhook = async (req, res) => {
         const user = await User.findById(userId);
 
         if (!user) {
+          console.error(`Webhook Error: User not found for userId: ${userId}`);
           return res.status(404).json({ status: "failure", error: "User not found" });
         }
 
         if (user.lastPaymentId === payment.payload.payment.entity.id) {
+          console.log(`Webhook: Payment ${payment.payload.payment.entity.id} already processed for user ${user.name}`);
           return res.json({ status: "success", message: "Payment already processed" });
         }
 
@@ -226,6 +244,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
         try {
           teacherData = JSON.parse(teacherDataString);
         } catch (parseError) {
+          console.error("Webhook Error: Failed to parse teacherData from notes:", parseError.message);
           return res.status(400).json({ status: "failure", error: "Malformed teacherData in notes" });
         }
 
@@ -249,6 +268,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
         console.log(`Payment ${payment.payload.payment.entity.id} for user ${user.name} processed, session created.`);
         res.json({ status: "success" });
       } else {
+        console.log(`Webhook received for event: ${payment.event}. Not processing.`);
         res.json({ status: "success", message: "Event type not processed" });
       }
     } catch (error) {
@@ -256,7 +276,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
       res.status(500).json({ status: "failure", error: "Internal server error during webhook processing" });
     }
   } else {
-    console.error("Signature verification failed.");
+    console.error("Signature verification failed: Incoming digest does not match calculated digest.");
     res.status(400).json({ status: "failure", error: "Invalid signature" });
   }
 };
