@@ -144,8 +144,58 @@ exports.createPaymentOrder = async (req, res) => {
   }
 };
 
+// exports.handleRazorpayWebhook = async (req, res) => {
+//   const secret = process.env.RAZORPAY_KEY_SECRET;
+//   const shasum = require("crypto").createHmac("sha256", secret);
+//   shasum.update(req.rawBody);
+
+//   const digest = shasum.digest("hex");
+
+//   if (digest === req.headers["x-razorpay-signature"]) {
+//     try {
+//       const payment = req.body;
+//       const user = await User.findById(payment.notes.userId);
+//       if (!user) throw new Error("User not found");
+
+//       user.paymentAcknowledged = true;
+//       user.lastPaymentId = payment.id;
+//       await user.save();
+
+//       const teacherData = JSON.parse(payment.notes.teacherData);
+//       const newSession = new Session({
+//         teacherName: teacherData.name,
+//         teacherInitials: teacherData.name
+//           .split(" ")
+//           .map((n) => n[0])
+//           .join("")
+//           .toUpperCase()
+//           .slice(0, 2),
+//         skill: teacherData.skill || "Unknown",
+//         dateTime: new Date(teacherData.dateTime),
+//         studentId: user._id,
+//         paymentId: payment.id,
+//         startTime: teacherData.startTime,
+//         endTime: teacherData.endTime,
+//       });
+//       await newSession.save();
+
+//       console.log(`Payment ${payment.id} for user ${user.name} processed, session created`);
+//       res.json({ status: "success" });
+//     } catch (error) {
+//       console.error("Webhook processing error:", error);
+//       res.status(500).json({ status: "failure", error: error.message });
+//     }
+//   } else {
+//     console.error("Signature verification failed");
+//     res.status(400).json({ status: "failure", error: "Invalid signature" });
+//   }
+// };
+
+
+
 exports.handleRazorpayWebhook = async (req, res) => {
-  const secret = process.env.RAZORPAY_KEY_SECRET;
+  const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
   const shasum = require("crypto").createHmac("sha256", secret);
   shasum.update(req.rawBody);
 
@@ -154,39 +204,59 @@ exports.handleRazorpayWebhook = async (req, res) => {
   if (digest === req.headers["x-razorpay-signature"]) {
     try {
       const payment = req.body;
-      const user = await User.findById(payment.notes.userId);
-      if (!user) throw new Error("User not found");
 
-      user.paymentAcknowledged = true;
-      user.lastPaymentId = payment.id;
-      await user.save();
+      if (payment.event === 'payment.captured') {
+        const userId = payment.payload.payment.entity.notes.userId;
+        const user = await User.findById(userId);
 
-      const teacherData = JSON.parse(payment.notes.teacherData);
-      const newSession = new Session({
-        teacherName: teacherData.name,
-        teacherInitials: teacherData.name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2),
-        skill: teacherData.skill || "Unknown",
-        dateTime: new Date(teacherData.dateTime),
-        studentId: user._id,
-        paymentId: payment.id,
-        startTime: teacherData.startTime,
-        endTime: teacherData.endTime,
-      });
-      await newSession.save();
+        if (!user) {
+          return res.status(404).json({ status: "failure", error: "User not found" });
+        }
 
-      console.log(`Payment ${payment.id} for user ${user.name} processed, session created`);
-      res.json({ status: "success" });
+        if (user.lastPaymentId === payment.payload.payment.entity.id) {
+          return res.json({ status: "success", message: "Payment already processed" });
+        }
+
+        user.paymentAcknowledged = true;
+        user.lastPaymentId = payment.payload.payment.entity.id;
+        await user.save();
+
+        const teacherDataString = payment.payload.payment.entity.notes.teacherData;
+        let teacherData;
+        try {
+          teacherData = JSON.parse(teacherDataString);
+        } catch (parseError) {
+          return res.status(400).json({ status: "failure", error: "Malformed teacherData in notes" });
+        }
+
+        const newSession = new Session({
+          teacherName: teacherData.name,
+          teacherInitials: teacherData.name
+            .split(" ")
+            .map((n) => n[0])
+            .join("")
+            .toUpperCase()
+            .slice(0, 2),
+          skill: teacherData.skill || "Unknown",
+          dateTime: new Date(teacherData.dateTime),
+          studentId: user._id,
+          paymentId: payment.payload.payment.entity.id,
+          startTime: teacherData.startTime,
+          endTime: teacherData.endTime,
+        });
+        await newSession.save();
+
+        console.log(`Payment ${payment.payload.payment.entity.id} for user ${user.name} processed, session created.`);
+        res.json({ status: "success" });
+      } else {
+        res.json({ status: "success", message: "Event type not processed" });
+      }
     } catch (error) {
       console.error("Webhook processing error:", error);
-      res.status(500).json({ status: "failure", error: error.message });
+      res.status(500).json({ status: "failure", error: "Internal server error during webhook processing" });
     }
   } else {
-    console.error("Signature verification failed");
+    console.error("Signature verification failed.");
     res.status(400).json({ status: "failure", error: "Invalid signature" });
   }
 };
