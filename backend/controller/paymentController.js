@@ -10,12 +10,13 @@ const razorpay = new Razorpay({
 exports.createPaymentOrder = async (req, res) => {
   try {
     const { amount, currency = "INR", teacherData } = req.body;
+    console.log("Received payload:", { amount, currency, teacherData }); // Log incoming data
     if (!amount || !teacherData || !teacherData.dateTime || !teacherData.startTime || !teacherData.endTime) {
       return res.status(400).json({ error: "Amount, dateTime, startTime, and endTime are required" });
     }
 
     const options = {
-      amount: amount * 100, // Amount in paise
+      amount: amount * 100,
       currency,
       receipt: `receipt_${req.user.id}_${Date.now()}`,
       notes: {
@@ -26,15 +27,20 @@ exports.createPaymentOrder = async (req, res) => {
     const order = await razorpay.orders.create(options);
     res.json({ orderId: order.id, amount, currency, teacherData });
   } catch (error) {
-    console.error("Error creating payment order:", error);
-    res.status(500).json({ error: "Failed to create payment order" });
+    console.error("Error creating payment order:", {
+      message: error.message,
+      code: error.code,
+      status: error.statusCode,
+      details: error.response?.data || "No response data",
+    });
+    res.status(500).json({ error: "Failed to create payment order", details: error.message });
   }
 };
 
 exports.handleRazorpayWebhook = async (req, res) => {
   const secret = process.env.RAZORPAY_KEY_SECRET;
   const shasum = require("crypto").createHmac("sha256", secret);
-  shasum.update(req.rawBody); // Use raw body for signature verification
+  shasum.update(req.rawBody);
 
   const digest = shasum.digest("hex");
 
@@ -45,7 +51,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
       if (!user) throw new Error("User not found");
 
       user.paymentAcknowledged = true;
-      user.lastPaymentId = payment.id; // Track the payment ID
+      user.lastPaymentId = payment.id;
       await user.save();
 
       const teacherData = JSON.parse(payment.notes.teacherData);
@@ -77,7 +83,3 @@ exports.handleRazorpayWebhook = async (req, res) => {
     res.status(400).json({ status: "failure", error: "Invalid signature" });
   }
 };
-
-
-
-
