@@ -167,7 +167,7 @@ export function SessionProvider({ children }) {
         teacherData,
       });
       const options = {
-        key: process.env.REACT_APP_RAZORPAY_KEY_ID,
+        key: "rzp_test_bIwms9Sf6PPERD" ,
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
