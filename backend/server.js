@@ -15,8 +15,8 @@ const paymentController = require("./controller/paymentController")
 
 app.post(
   '/api/razorpay-webhook',
-  express.raw({ type: 'application/json' }), 
-  paymentController.handleRazorpayWebhook 
+  express.raw({ type: '*/*' }), 
+  paymentController.handleRazorpayWebhook
 );
 
 app.use(express.json());
