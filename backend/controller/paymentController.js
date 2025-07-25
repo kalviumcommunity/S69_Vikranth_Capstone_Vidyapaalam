@@ -2,15 +2,12 @@ const User = require("../models/User");
 const Session = require("../models/Session");
 const Razorpay = require("razorpay");
 
-// const razorpay = new Razorpay({
-//   key_id: process.env.RAZORPAY_KEY_ID,
-//   key_secret: process.env.RAZORPAY_KEY_SECRET,
-// });
-
 const razorpay = new Razorpay({
-  key_id: "rzp_test_bIwms9Sf6PPERD",
-  key_secret: "3E5E5uKVwShILYF1JX1pGGTE" ,
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
+
 
 exports.createPaymentOrder = async (req, res) => {
   try {
