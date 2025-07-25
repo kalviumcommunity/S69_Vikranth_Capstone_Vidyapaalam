@@ -4,6 +4,5 @@ const {createPaymentOrder,handleRazorpayWebhook} = require("../controller/paymen
 const {protect} = require("../middleware/authMiddleware");
 
 router.post("/create-payment-order", protect, createPaymentOrder);
-router.post("/razorpay-webhook", handleRazorpayWebhook);
 
 module.exports = router;
