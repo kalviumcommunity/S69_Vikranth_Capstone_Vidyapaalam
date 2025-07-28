@@ -1,5 +1,5 @@
 import React from "react";
-import { BookOpen, UserCheck, ChevronLeft, ChevronRight, Users, GraduationCap, DollarSign, Star, Video, Settings, Calendar } from "lucide-react";
+import { BookOpen, UserCheck, ChevronLeft, ChevronRight, Users, GraduationCap, IndianRupee, Star, Video, Settings, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -19,9 +19,7 @@ const studentSteps = [
     bgColor: "bg-teal-50/90"
   },
   {
-    icon: <Video
-
- className="h-12 w-12 text-indigo-600" />,
+    icon: <Video className="h-12 w-12 text-indigo-600" />,
     title: "Book & Learn",
     description: "Schedule interactive video sessions, join live classes, and receive personalized guidance.",
     color: "from-indigo-600/20 to-indigo-300/10",
@@ -59,7 +57,7 @@ const mentorSteps = [
     bgColor: "bg-indigo-50/90"
   },
   {
-    icon: <DollarSign className="h-12 w-12 text-teal-600" />,
+    icon: <IndianRupee className="h-12 w-12 text-teal-600" />,
     title: "Earn & Grow",
     description: "Securely receive payments, build your reputation, and grow your student community.",
     color: "from-teal-600/20 to-teal-300/10",
@@ -129,10 +127,14 @@ const HowItWorks = () => {
   };
 
   return (
-    <div className="py-16 sm:py-24 bg-gradient-to-b from-gray-100 to-gray-50 min-h-screen">
+    <div className="py-16 sm:py-24 bg-white relative overflow-hidden min-h-screen">
+      {/* Decorative background bubbles */}
+      <div className="absolute top-20 left-20 w-72 h-72 bg-orange-100 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-100 rounded-full blur-3xl"></div>
+
       {/* Header with User Type Toggle */}
       <motion.div 
-        className="text-center mb-12 sm:mb-16"
+        className="text-center mb-12 sm:mb-16 relative z-10"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
@@ -171,7 +173,7 @@ const HowItWorks = () => {
       </motion.div>
 
       {/* Main Carousel */}
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
         {/* Large Card Carousel */}
         <div className="relative min-h-[400px] sm:min-h-[450px] md:min-h-[500px] lg:min-h-[550px]" style={{ perspective: '1000px' }}>
           <AnimatePresence initial={false} custom={direction} mode="wait">
@@ -267,9 +269,9 @@ const HowItWorks = () => {
             aria-label={isAutoPlaying ? "Pause auto-play" : "Resume auto-play"}
           >
             {isAutoPlaying ? (
-              <>⏸️ Pause Auto-play</>
+              <> Pause Auto-play</>
             ) : (
-              <>▶️ Resume Auto-play</>
+              <> Resume Auto-play</>
             )}
           </button>
         </motion.div>
