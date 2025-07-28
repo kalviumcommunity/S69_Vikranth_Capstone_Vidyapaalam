@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { BookOpen, Calendar, MessageCircle, UserCheck, IndianRupee, ChevronLeft, ChevronRight, Users, GraduationCap, DollarSign, Star, Video, Settings } from "lucide-react";
-import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const studentSteps = [
