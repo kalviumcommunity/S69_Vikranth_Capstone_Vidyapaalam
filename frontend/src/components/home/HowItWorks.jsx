@@ -19,7 +19,9 @@ const studentSteps = [
     bgColor: "bg-teal-50/90"
   },
   {
-    icon: <Video className="h-12 w-12 text-indigo-600" />,
+    icon: <Video
+
+ className="h-12 w-12 text-indigo-600" />,
     title: "Book & Learn",
     description: "Schedule interactive video sessions, join live classes, and receive personalized guidance.",
     color: "from-indigo-600/20 to-indigo-300/10",
@@ -96,20 +98,20 @@ const HowItWorks = () => {
     setIsAutoPlaying(false);
   };
 
-  const goToStep = (index: number) => {
+  const goToStep = (index) => {
     setDirection(index > currentStep ? 1 : -1);
     setCurrentStep(index);
     setIsAutoPlaying(false);
   };
 
-  const handleUserTypeChange = (type: 'student' | 'mentor') => {
+  const handleUserTypeChange = (type) => {
     setUserType(type);
     setCurrentStep(0);
     setIsAutoPlaying(true);
   };
 
   const slideVariants = {
-    enter: (direction: number) => ({
+    enter: (direction) => ({
       x: direction > 0 ? 800 : -800,
       opacity: 0,
       scale: 0.9
@@ -119,7 +121,7 @@ const HowItWorks = () => {
       opacity: 1,
       scale: 1
     },
-    exit: (direction: number) => ({
+    exit: (direction) => ({
       x: direction < 0 ? 800 : -800,
       opacity: 0,
       scale: 0.9
