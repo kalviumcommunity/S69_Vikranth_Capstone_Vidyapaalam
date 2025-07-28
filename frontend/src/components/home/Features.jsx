@@ -16,18 +16,6 @@ const features = [
     gradient: "from-blue-600 to-blue-400"
   },
   {
-    icon: Star,
-    title: "Smart Matching",
-    description: "AI-powered mentor matching based on skills, availability, and ratings",
-    gradient: "from-orange-400 to-blue-500"
-  },
-  {
-    icon: Users,
-    title: "Global Community",
-    description: "Connect with thousands of verified mentors and learners worldwide",
-    gradient: "from-blue-400 to-orange-400"
-  },
-  {
     icon: Calendar,
     title: "Flexible Scheduling",
     description: "Book sessions that fit your timezone and availability preferences",
@@ -41,7 +29,6 @@ const features = [
   }
 ];
 
-// Framer Motion animations
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
