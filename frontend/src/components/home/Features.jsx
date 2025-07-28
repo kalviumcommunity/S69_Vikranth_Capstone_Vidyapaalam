@@ -1,45 +1,47 @@
 import { motion } from "framer-motion";
 import { Video, MessageSquare, Star, Users, Calendar, Shield } from "lucide-react";
 
+// Define feature cards with icon and custom gradient styling
 const features = [
   {
     icon: Video,
     title: "HD Video Learning",
     description: "Crystal clear video calls with screen sharing and interactive whiteboards",
-    gradient: "from-primary to-primary/70"
+    gradient: "from-orange-500 to-orange-300"
   },
   {
     icon: MessageSquare,
     title: "Real-time Chat",
     description: "Instant messaging with file sharing and code collaboration tools",
-    gradient: "from-tertiary to-tertiary/70"
+    gradient: "from-blue-600 to-blue-400"
   },
   {
     icon: Star,
     title: "Smart Matching",
     description: "AI-powered mentor matching based on skills, availability, and ratings",
-    gradient: "from-primary to-tertiary"
+    gradient: "from-orange-400 to-blue-500"
   },
   {
     icon: Users,
     title: "Global Community",
     description: "Connect with thousands of verified mentors and learners worldwide",
-    gradient: "from-tertiary to-primary"
+    gradient: "from-blue-400 to-orange-400"
   },
   {
     icon: Calendar,
     title: "Flexible Scheduling",
     description: "Book sessions that fit your timezone and availability preferences",
-    gradient: "from-primary/80 to-tertiary/80"
+    gradient: "from-orange-500 to-blue-600"
   },
   {
     icon: Shield,
     title: "Secure Payments",
     description: "Protected transactions with escrow system and satisfaction guarantee",
-    gradient: "from-tertiary/90 to-primary/90"
+    gradient: "from-blue-500 to-orange-400"
   }
 ];
 
+// Framer Motion animations
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -60,29 +62,28 @@ const itemVariants = {
 
 const FutureFeatures = () => {
   return (
-    <section className="py-20 bg-gradient-to-b from-background to-secondary/30 relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      <div className="absolute top-20 left-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-tertiary/10 rounded-full blur-3xl"></div>
+    <section className="py-20 bg-white relative overflow-hidden">
+      {/* Decorative background bubbles */}
+      <div className="absolute top-20 left-20 w-72 h-72 bg-orange-100 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-blue-100 rounded-full blur-3xl"></div>
 
       <div className="container mx-auto px-4 relative z-10">
-        {/* Title & Subtitle */}
+        {/* Heading */}
         <motion.div
           className="text-center mb-16"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="gradient-text">Next-Generation</span> Learning Platform
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-orange-500">
+            Next-Generation Learning Platform
           </h2>
-          <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-            Experience the future of education with cutting-edge technology designed to connect minds and transform learning
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Experience the future of education with cutting-edge technology designed to connect minds and transform learning.
           </p>
         </motion.div>
 
-        {/* Feature Grid */}
+        {/* Feature Cards Grid */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           variants={containerVariants}
@@ -92,46 +93,47 @@ const FutureFeatures = () => {
         >
           {features.map((feature) => (
             <motion.div key={feature.title} variants={itemVariants} className="group relative">
-              <div className="relative bg-card/80 backdrop-blur-sm rounded-2xl p-8 border border-border/50 h-full transition-all duration-500 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-2">
-                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-5 rounded-2xl transition-opacity duration-500`}></div>
+              <div className="relative bg-gray-50 rounded-2xl p-8 border border-gray-200 shadow-md hover:shadow-xl hover:-translate-y-2 transition-all duration-500 h-full">
+                {/* Gradient overlay on hover */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-10 rounded-2xl transition-opacity duration-500`}></div>
 
                 {/* Icon */}
                 <div className="relative mb-6">
-                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} p-0.5 group-hover:scale-110 transition-transform duration-300`}>
-                    <div className="w-full h-full rounded-xl bg-card flex items-center justify-center">
-                      <feature.icon className="w-8 h-8 text-foreground group-hover:text-primary transition-colors duration-300" />
+                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} p-1 group-hover:scale-110 transition-transform duration-300`}>
+                    <div className="w-full h-full rounded-xl bg-white flex items-center justify-center">
+                      <feature.icon className="w-8 h-8 text-gray-800 group-hover:text-orange-500 transition-colors duration-300" />
                     </div>
                   </div>
                 </div>
 
                 {/* Text */}
                 <div className="relative">
-                  <h3 className="text-xl font-semibold mb-3 group-hover:text-primary transition-colors duration-300">
+                  <h3 className="text-xl font-semibold mb-3 group-hover:text-blue-600 transition-colors duration-300">
                     {feature.title}
                   </h3>
-                  <p className="text-muted-foreground leading-relaxed">
+                  <p className="text-gray-600 leading-relaxed">
                     {feature.description}
                   </p>
                 </div>
 
-                {/* Floating pulse effects */}
-                <div className="absolute -top-2 -right-2 w-4 h-4 bg-primary/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"></div>
-                <div className="absolute top-1/2 -left-1 w-2 h-2 bg-tertiary/30 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse delay-200"></div>
+                {/* Floating animation dots */}
+                <div className="absolute -top-2 -right-2 w-4 h-4 bg-orange-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"></div>
+                <div className="absolute top-1/2 -left-1 w-2 h-2 bg-blue-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700 animate-pulse delay-200"></div>
               </div>
             </motion.div>
           ))}
         </motion.div>
 
-        {/* CTA */}
+        {/* Call to Action */}
         <motion.div
           className="text-center mt-16"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 1 }}
         >
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-tertiary p-0.5 rounded-full">
-            <div className="bg-background rounded-full px-8 py-3">
-              <span className="gradient-text font-semibold">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-blue-500 p-1 rounded-full">
+            <div className="bg-white rounded-full px-8 py-3">
+              <span className="text-orange-500 font-semibold text-lg">
                 Ready to Transform Your Learning Journey?
               </span>
             </div>
