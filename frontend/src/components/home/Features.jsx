@@ -1,4 +1,6 @@
 import { Video, MessageSquare, Calendar, Shield, Search, TrendingUp } from "lucide-react"; 
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const features = [
   {
