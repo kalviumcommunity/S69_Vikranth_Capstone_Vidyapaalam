@@ -1,7 +1,5 @@
-import { motion } from "framer-motion";
-import { Video, MessageSquare, Star, Users, Calendar, Shield } from "lucide-react";
+import { Video, MessageSquare, Calendar, Shield, Search, TrendingUp } from "lucide-react"; 
 
-// Define feature cards with icon and custom gradient styling
 const features = [
   {
     icon: Video,
@@ -26,6 +24,18 @@ const features = [
     title: "Secure Payments",
     description: "Protected transactions with escrow system and satisfaction guarantee",
     gradient: "from-blue-500 to-orange-400"
+  },
+  {
+    icon: Search, 
+    title: "Find Your Perfect Mentor",
+    description: "Browse profiles, compare skills, and find the ideal teacher for your learning needs.",
+    gradient: "from-green-500 to-teal-400" 
+  },
+  {
+    icon: TrendingUp, 
+    title: "Personalized Learning Paths",
+    description: "Receive tailored guidance and track your progress with dedicated one-on-one mentorship.",
+    gradient: "from-purple-500 to-pink-400" 
   }
 ];
 
