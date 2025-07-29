@@ -160,13 +160,13 @@
 
 const User = require("../models/User");
 const Session = require("../models/Session");
-const TeacherProfile = require("../models/Teacher"); // <--- NEW: Import TeacherProfile model
+const TeacherProfile = require("../models/Teacher"); // Assuming Teacher model is named 'Teacher'
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
 const razorpay = new Razorpay({
-  key_id: "rzp_test_59BvySck8scTA8", // Replace with your actual key_id if different
-  key_secret: "KZEGvAwmK7Mpp2xJ0L0xJefc", // Replace with your actual key_secret if different
+  key_id: "rzp_test_59BvySck8scTA8", // Replace with your actual key_id
+  key_secret: "KZEGvAwmK7Mpp2xJ0L0xJefc", // Replace with your actual key_secret
 });
 
 exports.createPaymentOrder = async (req, res) => {
@@ -190,7 +190,7 @@ exports.createPaymentOrder = async (req, res) => {
       receipt: receiptId,
       notes: {
         userId: req.user.id.toString(), // Student's User ID
-        teacherData: JSON.stringify(teacherData), // Store teacher's details including ID, date, time
+        teacherData: JSON.stringify(teacherData), // Store teacher's details
       },
     };
 
@@ -215,11 +215,12 @@ exports.handleRazorpayWebhook = async (req, res) => {
   const secret = "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d"; // YOUR RAZORPAY WEBHOOK SECRET
 
   console.log("--- RAZORPAY WEBHOOK RECEIVED ---");
+
   console.log("Headers:", req.headers);
-  console.log("req.body (Buffer):", req.body);
+  console.log("req.body (Buffer):", req.body); // Should be a Buffer if using express.raw()
   console.log("--- END WEBHOOK DEBUGGING ---");
 
-  const dataToHash = req.body; 
+  const dataToHash = req.body; // Assuming express.raw() or similar has populated req.body as a Buffer
 
   if (!dataToHash || !(dataToHash instanceof Buffer)) {
     console.error("Webhook Error: Raw body not found or not a Buffer for signature verification.");
@@ -232,7 +233,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
 
   let payment;
   try {
-    payment = JSON.parse(dataToHash.toString('utf8'));
+    payment = JSON.parse(dataToHash.toString('utf8')); // Parse the buffer to JSON
   } catch (parseError) {
     console.error("Webhook Error: Failed to parse raw body as JSON:", parseError);
     return res.status(400).json({ status: "failure", error: "Malformed JSON body in webhook" });
@@ -289,17 +290,17 @@ exports.handleRazorpayWebhook = async (req, res) => {
         await newSession.save();
         console.log(`Session created: Teacher: ${teacherData.name}, Student: ${studentUser.name}, Time: ${teacherData.startTime}-${teacherData.endTime} on ${teacherData.dateTime}`);
 
-        // --- IMPORTANT: Remove booked slot from teacher's availability ---
+        // --- IMPORTANT: Mark booked slot as unavailable in teacher's availability ---
         try {
             const teacherIdFromNotes = teacherData.teacherId; 
-            let teacherUser = await User.findById(teacherIdFromNotes); // Try finding by ID directly
+            let teacherUser = await User.findById(teacherIdFromNotes); 
 
-            // Fallback: If User not found, try finding via TeacherProfile
+            // Fallback: If User not found directly by ID (e.g., if TeacherProfile._id was sent)
             if (!teacherUser) {
                 console.warn(`Webhook: Teacher User not found directly with ID ${teacherIdFromNotes}. Attempting to find via TeacherProfile.`);
                 const teacherProfile = await TeacherProfile.findById(teacherIdFromNotes); 
                 if (teacherProfile && teacherProfile.userId) {
-                    teacherUser = await User.findById(teacherProfile.userId); // Found via TeacherProfile's userId
+                    teacherUser = await User.findById(teacherProfile.userId); 
                     if (teacherUser) {
                         console.log(`Webhook: Teacher User found indirectly via TeacherProfile (Original ID: ${teacherIdFromNotes}, Actual User ID: ${teacherUser._id}).`);
                     } else {
@@ -312,11 +313,9 @@ exports.handleRazorpayWebhook = async (req, res) => {
 
             if (!teacherUser) {
                 console.error(`Webhook Error: Critical - Teacher User not found at all for availability update (ID: ${teacherIdFromNotes}). Session was booked, but availability could not be updated!`);
-                // Continue to send success to Razorpay, but this indicates a severe data inconsistency.
                 return res.json({ status: "success", message: "Session created, but teacher availability could not be updated." });
             }
 
-            // Now, proceed with updating the availability on the found teacherUser
             const bookedDateString = teacherData.dateTime; 
             const bookedStartTime = teacherData.startTime;
             const bookedEndTime = teacherData.endTime;
@@ -327,20 +326,23 @@ exports.handleRazorpayWebhook = async (req, res) => {
             });
 
             if (availabilityEntry) {
-                const initialSlotCount = availabilityEntry.slots.length;
-                availabilityEntry.slots = availabilityEntry.slots.filter(slot =>
-                    !(slot.startTime === bookedStartTime && slot.endTime === bookedEndTime)
+                // Find the specific slot and mark it as unavailable
+                const slotToUpdate = availabilityEntry.slots.find(slot =>
+                    slot.startTime === bookedStartTime && 
+                    slot.endTime === bookedEndTime &&
+                    slot.available === true // Ensure it's currently available
                 );
 
-                if (availabilityEntry.slots.length === initialSlotCount) {
-                    console.warn(`Webhook Warning: Slot ${bookedStartTime}-${bookedEndTime} not found for removal from teacher ${teacherUser._id}'s availability on ${bookedDateString}. Possibly already booked or data mismatch.`);
+                if (slotToUpdate) {
+                    slotToUpdate.available = false; // Mark it as booked/unavailable
+                    console.log(`Webhook: Slot ${bookedStartTime}-${bookedEndTime} on ${bookedDateString} for teacher ${teacherUser._id} marked as BOOKED.`);
                 } else {
-                    console.log(`Webhook: Slot ${bookedStartTime}-${bookedEndTime} removed from teacher ${teacherUser._id}'s availability on ${bookedDateString}.`);
+                    console.warn(`Webhook Warning: Slot ${bookedStartTime}-${bookedEndTime} not found or already booked for teacher ${teacherUser._id}'s availability on ${bookedDateString}.`);
                 }
                 
-                await teacherUser.save(); 
+                await teacherUser.save(); // Save the updated teacher User document
             } else {
-                console.warn(`Webhook Warning: No availability entry found for teacher ${teacherUser._id} on date ${bookedDateString}. Slot not removed.`);
+                console.warn(`Webhook Warning: No availability entry found for teacher ${teacherUser._id} on date ${bookedDateString}. Slot not marked as booked.`);
             }
 
         } catch (availabilityUpdateError) {
