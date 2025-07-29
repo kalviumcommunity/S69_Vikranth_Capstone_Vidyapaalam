@@ -955,7 +955,7 @@ const steps = [
 
 const BookSession = () => {
   const { teacherId } = useParams();
-  const navigate = useNavigate(); // This is used for redirection
+  const navigate = useNavigate();
   const { api, user } = useAuth();
   const { handlePaymentSuccess, error } = useSession();
   const [step, setStep] = useState("date");
@@ -982,13 +982,19 @@ const BookSession = () => {
       }
 
       const parsedAvailability = availabilityStrings.map(itemString => {
-        const [datePart, timeSlotsPart] = itemString.split(' ');
+        // Example itemString: "2025-07-31 09:00-10:00, 10:00-11:00"
         
-        if (!datePart || !timeSlotsPart) {
-          console.warn("Invalid availability string format:", itemString);
-          return null; 
+        // --- FIX FOR MULTIPLE SLOTS PARSING ---
+        // Find the index of the first space to correctly separate date from all slots
+        const firstSpaceIndex = itemString.indexOf(' ');
+        if (firstSpaceIndex === -1) { // Handle case where there's no space (malformed string)
+            console.warn("Invalid availability string format (missing space between date and slots):", itemString);
+            return null;
         }
+        const datePart = itemString.substring(0, firstSpaceIndex);
+        const timeSlotsPart = itemString.substring(firstSpaceIndex + 1); // Get the rest of the string
 
+        // Create Date object in local time to avoid timezone issues
         const [year, month, day] = datePart.split('-').map(Number);
         const dateObj = new Date(year, month - 1, day); 
 
@@ -997,6 +1003,7 @@ const BookSession = () => {
             return null;
         }
 
+        // Now, split timeSlotsPart by ", " to get individual slot strings
         const slots = timeSlotsPart.split(', ').map(slotString => {
           const [startTime, endTime] = slotString.split('-');
           if (!startTime || !endTime) {
@@ -1052,7 +1059,7 @@ const BookSession = () => {
       }
       setStep("payment");
     } else if (step === "payment") {
-      handlePayment(); // Call the async payment handler
+      handlePayment(); 
     }
   };
 
@@ -1063,7 +1070,6 @@ const BookSession = () => {
     }
   };
 
-  // Made handlePayment async to await handlePaymentSuccess
   const handlePayment = async () => {
     if (!teacher || !selectedDate || !selectedSlot) {
       alert("Please complete all details before payment.");
@@ -1082,14 +1088,11 @@ const BookSession = () => {
     };
 
     try {
-      // Assuming handlePaymentSuccess from useSession is an async operation
       await handlePaymentSuccess(teacherData); 
       
-      // If payment is successful and no error is set by useSession, navigate
       navigate("/student/overview"); 
 
     } catch (err) {
-      // The error state from useSession will handle displaying the message
       console.error("Payment process failed:", err);
     }
   };
@@ -1300,7 +1303,7 @@ const BookSession = () => {
               Back
             </button>
             <button
-              onClick={handleNext} // Calls handlePayment (async)
+              onClick={handleNext} 
               className="inline-flex items-center rounded-md text-sm font-medium bg-orange-600 text-white hover:bg-orange-700 h-10 px-4 py-2"
             >
               <CreditCard className="mr-2 h-4 w-4" />
@@ -1314,6 +1317,7 @@ const BookSession = () => {
 };
 
 export default BookSession;
+
 
 
 
