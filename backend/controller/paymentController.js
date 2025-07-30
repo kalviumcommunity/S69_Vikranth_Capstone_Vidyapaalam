@@ -416,7 +416,7 @@
 
 const User = require("../models/User");
 const Session = require("../models/Session");
-const TeacherProfile = require("../models/Teacher");
+const TeacherProfile = require("../models/Teacher"); 
 const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
@@ -430,7 +430,6 @@ exports.createPaymentOrder = async (req, res) => {
     const { amount, currency = "INR", teacherData } = req.body;
     console.log("Received payload for payment order:", { amount, currency, teacherData });
 
-    // Removed 'skill' from validation
     if (!amount || !teacherData || !teacherData.dateTime || !teacherData.startTime || !teacherData.endTime || !teacherData.teacherId || !teacherData.name) {
       return res.status(400).json({ error: "Amount, and complete teacherData (name, dateTime, startTime, endTime, teacherId) are required" });
     }
@@ -543,7 +542,6 @@ exports.handleRazorpayWebhook = async (req, res) => {
         let teacherData;
         try {
           teacherData = JSON.parse(teacherDataString);
-          // Removed 'skill' from validation
           if (!teacherData || !teacherData.teacherId || !teacherData.name || !teacherData.dateTime || !teacherData.startTime || !teacherData.endTime) {
              console.error("Webhook Error: Parsed teacherData is incomplete or missing required fields.", teacherData);
              return res.status(400).json({ status: "failure", error: "Incomplete or malformed teacherData in payment notes" });
@@ -561,7 +559,6 @@ exports.handleRazorpayWebhook = async (req, res) => {
             .join("")
             .toUpperCase()
             .slice(0, 2),
-          // Removed 'skill' from Session creation
           dateTime: new Date(teacherData.dateTime),
           studentId: studentUser._id,
           paymentId: paymentEntity.id,
@@ -573,12 +570,27 @@ exports.handleRazorpayWebhook = async (req, res) => {
         console.log(`Session created: Teacher: ${teacherData.name}, Student: ${studentUser.name}, Time: ${teacherData.startTime}-${teacherData.endTime} on ${teacherData.dateTime}, Session ID: ${newSession._id}`);
 
         try {
-            const teacherIdForAvailability = teacherData.teacherId;
-            let teacherUser = await User.findById(teacherIdForAvailability);
+            const teacherIdFromNotes = teacherData.teacherId;
+            let teacherUser = await User.findById(teacherIdFromNotes); 
 
             if (!teacherUser) {
-                console.error(`Webhook Error: Teacher User not found by ID ${teacherIdForAvailability} for availability update. Session was booked, but availability could not be updated!`);
-                return res.json({ status: "success", message: "Session created, but teacher availability could not be updated (teacher user not found)." });
+                console.warn(`Webhook: Teacher User not found directly with ID ${teacherIdFromNotes}. Attempting to find via TeacherProfile.`);
+                const teacherProfile = await TeacherProfile.findById(teacherIdFromNotes);
+                if (teacherProfile && teacherProfile.userId) {
+                    teacherUser = await User.findById(teacherProfile.userId);
+                    if (teacherUser) {
+                        console.log(`Webhook: Teacher User found indirectly via TeacherProfile (Original ID: ${teacherIdFromNotes}, Actual User ID: ${teacherUser._id}).`);
+                    } else {
+                        console.error(`Webhook Error: Teacher User still not found even after trying TeacherProfile (Profile ID: ${teacherIdFromNotes}, User ID ref: ${teacherProfile.userId}).`);
+                    }
+                } else {
+                    console.error(`Webhook Error: TeacherProfile not found for ID ${teacherIdFromNotes}, or it has no userId reference. Cannot determine true teacher user ID.`);
+                }
+            }
+
+            if (!teacherUser) {
+                console.error(`Webhook Error: Critical - Teacher User not found at all for availability update (ID: ${teacherIdFromNotes}). Session was booked, but availability could not be updated!`);
+                return res.json({ status: "success", message: "Session created, but teacher availability could not be updated." });
             }
 
             if (!teacherUser.availability) {
@@ -615,6 +627,7 @@ exports.handleRazorpayWebhook = async (req, res) => {
 
         } catch (availabilityUpdateError) {
             console.error("Webhook Error: Failed to update teacher availability:", availabilityUpdateError);
+            
         }
 
         res.json({ status: "success" });
