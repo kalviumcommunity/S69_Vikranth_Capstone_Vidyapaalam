@@ -785,32 +785,81 @@ exports.deleteTeacherProfile = async (req, res) => {
 
 
 
+// exports.getTeacherProfileById = async (req, res) => {
+//   try {
+//     const profile = await TeacherProfile.findById(req.params.id).populate('userId', 'name bio availability teachingSkills');
+//     if (!profile) {
+//       return res.status(404).json({ message: 'Teacher not found' });
+//     }
+
+//     const formattedAvailability = profile.userId.availability.map(item => {
+//       const date = item.date.toISOString().split('T')[0];
+//       return `${date} ${item.slots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}`;
+//     });
+
+//     res.json({
+//       _id: profile._id,
+//       name: profile.userId.name || 'Unknown Teacher',
+//       avatarUrl: profile.avatar?.url || '',
+//       teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
+//       rating: profile.rating || 0,
+//       hourlyRate: profile.hourlyRate || 0,
+//       bio: profile.userId.bio || 'No bio available',
+//       availability: formattedAvailability.length ? formattedAvailability : [],
+//       videoUrl: profile.videoUrl?.url || '',
+//       galleryPhotos: profile.galleryPhotos || [],
+//     });
+//   } catch (err) {
+//     res.status(500).json({ error: err.message });
+//   }
+// };
+
+
 exports.getTeacherProfileById = async (req, res) => {
   try {
-    const profile = await TeacherProfile.findById(req.params.id).populate('userId', 'name bio availability teachingSkills');
+    const profile = await TeacherProfile.findById(req.params.id)
+      .populate('userId', 'name bio availability teachingSkills');
+
     if (!profile) {
       return res.status(404).json({ message: 'Teacher not found' });
     }
 
-    const formattedAvailability = profile.userId.availability.map(item => {
-      const date = item.date.toISOString().split('T')[0];
-      return `${date} ${item.slots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}`;
-    });
+    const rawAvailability = Array.isArray(profile.userId?.availability) ? profile.userId.availability : [];
+
+    const formattedAvailability = rawAvailability.map(item => {
+      const dateValue = item?.date instanceof Date ? item.date.toISOString() : item?.date;
+
+      const slots = Array.isArray(item?.slots) ? item.slots.map(slot => ({
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        available: typeof slot.available === 'boolean' ? slot.available : true,
+      })) : [];
+
+      if (!dateValue) {
+        return null;
+      }
+
+      return {
+        date: dateValue,
+        slots: slots,
+      };
+    }).filter(Boolean);
 
     res.json({
       _id: profile._id,
-      name: profile.userId.name || 'Unknown Teacher',
+      name: profile.userId?.name || 'Unknown Teacher',
       avatarUrl: profile.avatar?.url || '',
       teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
       rating: profile.rating || 0,
       hourlyRate: profile.hourlyRate || 0,
-      bio: profile.userId.bio || 'No bio available',
+      bio: profile.userId?.bio || 'No bio available',
       availability: formattedAvailability.length ? formattedAvailability : [],
       videoUrl: profile.videoUrl?.url || '',
       galleryPhotos: profile.galleryPhotos || [],
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Error in getTeacherProfileById:", err.message);
+    res.status(500).json({ error: 'Failed to fetch teacher profile: ' + err.message });
   }
 };
 
