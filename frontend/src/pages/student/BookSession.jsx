@@ -1537,7 +1537,7 @@ const BookSession = () => {
       skill: teacher.teachingSkills?.[0] || "Unknown",
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
-      teacherId: teacherId,
+      teacherId: teacher.actualUserId,
     };
 
     try {
