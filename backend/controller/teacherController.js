@@ -893,7 +893,7 @@ exports.getTeacherProfileWithFormattedAvailability = async (req, res) => {
         const teacherProfile = await TeacherProfile.findById(req.params.id)
             .populate({
                 path: 'userId',
-                select: 'availability'
+                select: '_id availability'
             });
 
         if (!teacherProfile) {
