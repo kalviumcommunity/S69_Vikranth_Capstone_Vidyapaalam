@@ -1534,6 +1534,7 @@ const BookSession = () => {
     const teacherData = {
       name: teacher.name,
       dateTime: selectedDateForBackend,
+      skill : teacher.teachingSkills[0] || "Skill not found" ,
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
       teacherId: teacherId,
