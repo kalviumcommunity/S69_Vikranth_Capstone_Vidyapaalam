@@ -904,17 +904,14 @@ exports.getTeacherProfileWithFormattedAvailability = async (req, res) => {
 
         const formattedAvailability = rawAvailability.map(item => {
             const dateValue = item && item.date instanceof Date ? item.date.toISOString() : item?.date;
-
             const slots = Array.isArray(item?.slots) ? item.slots.map(slot => ({
                 startTime: slot.startTime,
                 endTime: slot.endTime,
                 available: typeof slot.available === 'boolean' ? slot.available : true,
             })) : [];
-
             if (!dateValue) {
                 return null;
             }
-
             return {
                 date: dateValue,
                 slots: slots,
@@ -922,6 +919,11 @@ exports.getTeacherProfileWithFormattedAvailability = async (req, res) => {
         }).filter(Boolean);
 
         const teacherProfileObject = teacherProfile.toObject();
+
+        if (teacherProfile.userId && teacherProfile.userId._id) {
+             teacherProfileObject.actualUserId = teacherProfile.userId._id;
+        }
+
         teacherProfileObject.availability = formattedAvailability;
 
         if (teacherProfileObject.userId && teacherProfileObject.userId.availability) {
@@ -931,10 +933,10 @@ exports.getTeacherProfileWithFormattedAvailability = async (req, res) => {
         res.status(200).json(teacherProfileObject);
 
     } catch (err) {
+        console.error("Error in getTeacherProfileWithFormattedAvailability:", err.message);
         res.status(500).json({ error: 'Failed to fetch teacher profile and availability.' });
     }
 };
-
 
 exports.createBooking = async (req, res) => {
   try {
