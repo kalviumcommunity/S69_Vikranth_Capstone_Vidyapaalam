@@ -421,8 +421,8 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_59BvySck8scTA8",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "KZEGvAwmK7Mpp2xJ0L0xJefc",
+  key_id: "rzp_test_59BvySck8scTA8",
+  key_secret: "KZEGvAwmK7Mpp2xJ0L0xJefc",
 });
 
 exports.createPaymentOrder = async (req, res) => {
@@ -469,7 +469,7 @@ exports.createPaymentOrder = async (req, res) => {
 };
 
 exports.handleRazorpayWebhook = async (req, res) => {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d";
+  const secret = "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d";
 
   console.log("--- RAZORPAY WEBHOOK RECEIVED ---");
   console.log("Headers:", req.headers);
