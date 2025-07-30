@@ -222,8 +222,8 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_59BvySck8scTA8",
-  key_secret: process.env.RAZORPAY_KEY_SECRET || "KZEGvAwmK7Mpp2xJ0L0xJefc",
+  key_id: "rzp_test_59BvySck8scTA8",
+  key_secret:  "KZEGvAwmK7Mpp2xJ0L0xJefc",
 });
 
 exports.createPaymentOrder = async (req, res) => {
@@ -231,7 +231,7 @@ exports.createPaymentOrder = async (req, res) => {
     const { amount, currency = "INR", teacherData } = req.body;
     console.log("Received payload for payment order:", { amount, currency, teacherData });
 
-    if (!amount || !teacherData || !teacherData.dateTime || !teacherData.startTime || !teacherData.endTime || !teacherData.teacherId || !teacherData.name || !teacherData.skill) {
+    if (!amount || !teacherData || !teacherData.dateTime || !teacherData.startTime || !teacherData.endTime || !teacherData.teacherId || !teacherData.name ) {
       return res.status(400).json({ error: "Amount, and complete teacherData (name, skill, dateTime, startTime, endTime, teacherId) are required" });
     }
 
@@ -269,7 +269,7 @@ exports.createPaymentOrder = async (req, res) => {
 };
 
 exports.handleRazorpayWebhook = async (req, res) => {
-  const secret = process.env.RAZORPAY_WEBHOOK_SECRET || "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d";
+  const secret =  "957602e3b363da9db40cced06b8d569e3ec6d18218d07327e9eafe816982cf3d";
 
   console.log("--- RAZORPAY WEBHOOK RECEIVED ---");
   console.log("Headers:", req.headers);
