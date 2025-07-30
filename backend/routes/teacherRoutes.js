@@ -121,7 +121,8 @@ const {
   deleteTeacherProfile,
   getTeacherProfileById,
   getTeacherAvailability, 
-  createBooking 
+  createBooking ,
+  getTeacherProfileWithFormattedAvailability
 } = require('../controller/teacherController');
 const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -136,6 +137,7 @@ router.post('/', protect, authorizeRoles('teacher'), upload, createTeacherProfil
 router.put('/:id', protect, authorizeRoles('teacher', 'admin'), upload, updateTeacherProfile);
 router.delete('/:id', protect, authorizeRoles('teacher', 'admin'), deleteTeacherProfile);
 router.get('/:id/availability', getTeacherAvailability);
+router.get('/teacher-profiles-for-booking/:id', getTeacherProfileWithFormattedAvailability);
 router.post('/:id/bookings', protect, authorizeRoles('student', 'teacher'), createBooking);
 
 module.exports = router;
