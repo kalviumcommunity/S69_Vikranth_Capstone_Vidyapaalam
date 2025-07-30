@@ -316,7 +316,6 @@ export function SessionProvider({ children }) {
 
   const fetchSessions = useCallback(async () => {
     if (!api || !user?.id || !user.paymentAcknowledged) {
-      console.warn("fetchSessions: Missing API, User ID, or Payment Acknowledgment.");
       setError("Payment not acknowledged or authentication required.");
       setLoading(false);
       return;
@@ -326,65 +325,51 @@ export function SessionProvider({ children }) {
     setError(null);
     try {
       const response = await api.get("/api/student/sessions");
-      const data = response.data || [];
+      const data = response.data || {};
 
-      const now = new Date(); // Current date and time
-      console.log(`Current Client Time (now): ${now.toLocaleString()}`);
-      console.log(`Current Client Time (ISO): ${now.toISOString()}`);
+      const now = new Date();
 
+      let allSessions = [];
+
+      if (data.upcoming && Array.isArray(data.upcoming)) {
+        allSessions = allSessions.concat(data.upcoming);
+      }
+      if (data.past && Array.isArray(data.past)) {
+        allSessions = allSessions.concat(data.past);
+      }
+      if (Array.isArray(data)) {
+        allSessions = allSessions.concat(data);
+      }
 
       const upcomingSessions = [];
       const pastSessions = [];
 
-      if (Array.isArray(data)) {
-        data.forEach((session, index) => {
-          console.groupCollapsed(`Processing Session ${index + 1}: ${session._id || 'New Session'}`);
-          console.log("Raw Session Data:", session);
+      allSessions.forEach((session) => {
+        const sessionStartDateTime = new Date(`${session.dateTime}T${session.startTime}:00`);
+        const sessionEndDateTime = new Date(`${session.dateTime}T${session.endTime}:00`);
 
-          // Construct full Date objects for comparison
-          // Assuming session.dateTime is 'YYYY-MM-DD' and session.startTime/endTime are 'HH:MM'
-          const sessionStartDateTime = new Date(`${session.dateTime}T${session.startTime}:00`);
-          const sessionEndDateTime = new Date(`${session.dateTime}T${session.endTime}:00`);
+        if (isNaN(sessionStartDateTime.getTime()) || isNaN(sessionEndDateTime.getTime())) {
+          console.error(`ERROR: Invalid Date constructed for session:`, session);
+          pastSessions.push(session);
+        } else if (sessionEndDateTime > now) {
+          upcomingSessions.push(session);
+        } else {
+          pastSessions.push(session);
+        }
+      });
 
-          console.log(`  Session dateTime: ${session.dateTime}`);
-          console.log(`  Session startTime: ${session.startTime}`);
-          console.log(`  Session endTime: ${session.endTime}`);
-          console.log(`  Constructed Start DateTime: ${sessionStartDateTime.toLocaleString()} (ISO: ${sessionStartDateTime.toISOString()})`);
-          console.log(`  Constructed End DateTime: ${sessionEndDateTime.toLocaleString()} (ISO: ${sessionEndDateTime.toISOString()})`);
+      upcomingSessions.sort((a, b) =>
+          new Date(`${a.dateTime}T${a.startTime}:00`).getTime() -
+          new Date(`${b.dateTime}T${b.startTime}:00`).getTime()
+      );
 
-          if (isNaN(sessionStartDateTime.getTime()) || isNaN(sessionEndDateTime.getTime())) {
-            console.error(`  ERROR: Invalid Date constructed for session ${session._id}. Check dateTime/startTime/endTime formats.`);
-            // You might want to skip this session or put it in an error state
-            pastSessions.push(session); // Or handle invalid sessions as needed
-          } else if (sessionEndDateTime > now) {
-            console.log(`  Comparison: Session End Time (${sessionEndDateTime.toLocaleString()}) > Current Time (${now.toLocaleString()}) -> UPCOMING`);
-            upcomingSessions.push(session);
-          } else {
-            console.log(`  Comparison: Session End Time (${sessionEndDateTime.toLocaleString()}) <= Current Time (${now.toLocaleString()}) -> PAST`);
-            pastSessions.push(session);
-          }
-          console.groupEnd();
-        });
+      pastSessions.sort((a, b) =>
+          new Date(`${b.dateTime}T${b.startTime}:00`).getTime() -
+          new Date(`${a.dateTime}T${a.startTime}:00`).getTime()
+      );
 
-        upcomingSessions.sort((a, b) =>
-            new Date(`${a.dateTime}T${a.startTime}:00`).getTime() -
-            new Date(`${b.dateTime}T${b.startTime}:00`).getTime()
-        );
-
-        pastSessions.sort((a, b) =>
-            new Date(`${b.dateTime}T${b.startTime}:00`).getTime() -
-            new Date(`${a.dateTime}T${a.startTime}:00`).getTime()
-        );
-
-        setUpcoming(upcomingSessions);
-        setPast(pastSessions);
-        console.log("Final Upcoming Sessions Array:", upcomingSessions);
-        console.log("Final Past Sessions Array:", pastSessions);
-      } else {
-        console.warn("API response is not an array. Assuming object with upcoming/past keys.");
-        setUpcoming(data.upcoming || []);
-        setPast(data.past || []);
-      }
+      setUpcoming(upcomingSessions);
+      setPast(pastSessions);
 
     } catch (err) {
       console.error("Error fetching sessions:", err);
