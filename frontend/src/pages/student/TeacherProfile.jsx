@@ -841,7 +841,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useParams, Link } from "react-router-dom";
-import { Star, MessageCircle, Heart, Calendar as CalendarIcon, Clock } from "lucide-react"; // Renamed Calendar to CalendarIcon
+import { Star, MessageCircle, Heart, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   Card,
@@ -865,6 +865,13 @@ const TeacherProfile = () => {
         if (!api) throw new Error("API instance is undefined");
         const response = await api.get(`/api/teacher-profiles/${id}`);
         setTeacher(response.data);
+
+        // --- DEBUGGING LOGS: Check what availability data is coming from the API ---
+        console.log("API Response Data for Teacher Profile:", response.data);
+        console.log("Availability directly on TeacherProfile:", response.data.availability);
+        console.log("Availability via userId (if populated):", response.data.userId?.availability);
+        // --- END DEBUGGING LOGS ---
+
       } catch (error) {
         console.error("Error fetching teacher profile:", {
           message: error.message,
@@ -883,48 +890,61 @@ const TeacherProfile = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const processedAvailability = Array.isArray(teacher?.availability)
+  // Determine rawAvailability: prioritize direct profile.availability, then userId.availability
+  const rawAvailability = Array.isArray(teacher?.availability)
     ? teacher.availability
-        .map((dateItem) => {
-          const dateObj = new Date(dateItem.date);
-
-          if (dateObj < today) {
-            return null;
-          }
-
-          const availableAndSortedSlots = Array.isArray(dateItem.slots)
-            ? dateItem.slots
-                .filter((slot) => slot.available)
-                .sort((a, b) => a.startTime.localeCompare(b.startTime))
-            : [];
-
-          if (availableAndSortedSlots.length === 0) {
-            return null;
-          }
-
-          return {
-            date: dateObj,
-            slots: availableAndSortedSlots,
-          };
-        })
-        .filter(Boolean)
-        .sort((a, b) => a.date.getTime() - b.date.getTime())
+    : Array.isArray(teacher?.userId?.availability)
+    ? teacher.userId.availability
     : [];
+
+  const processedAvailability = rawAvailability
+    .map((dateItem) => {
+      const dateObj = new Date(dateItem.date);
+
+      // Filter out invalid dates or dates in the past
+      if (isNaN(dateObj.getTime()) || dateObj < today) {
+        return null;
+      }
+
+      const availableAndSortedSlots = Array.isArray(dateItem.slots)
+        ? dateItem.slots
+            .filter((slot) => slot.available) // Only show slots marked as available
+            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+        : [];
+
+      // If no available slots for this date, return null so it's filtered out
+      if (availableAndSortedSlots.length === 0) {
+        return null;
+      }
+
+      return {
+        date: dateObj,
+        slots: availableAndSortedSlots,
+      };
+    })
+    .filter(Boolean) // Remove null entries
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  // --- DEBUGGING LOG: See what processedAvailability looks like after filtering ---
+  console.log("Processed Availability for UI:", processedAvailability);
+  // --- END DEBUGGING LOG ---
+
 
   // Function to disable dates on the calendar that are in the past or have no available slots
   const isDateDisabled = useCallback((date) => {
     const compareDate = new Date(date);
     compareDate.setHours(0, 0, 0, 0);
 
-    if (compareDate < today) return true;
+    if (compareDate < today) return true; // Disable past dates
 
     const calendarDateLocalISO = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 
+    // Disable if no availability for this date, or if all slots for this date are unavailable
     return !processedAvailability.some(item => {
       const itemDateObj = item.date instanceof Date ? item.date : new Date(item.date);
       const itemDateLocalISO = `${itemDateObj.getFullYear()}-${(itemDateObj.getMonth() + 1).toString().padStart(2, '0')}-${itemDateObj.getDate().toString().padStart(2, '0')}`;
       
-      return itemDateLocalISO === calendarDateLocalISO && item.slots.some(slot => slot.available);
+      return itemDateLocalISO === calendarDateLocalISO && item.slots.length > 0; // Check if there are any available slots for the date
     });
   }, [processedAvailability, today]);
 
@@ -952,7 +972,7 @@ const TeacherProfile = () => {
       time: `${slot.startTime} - ${slot.endTime}`,
       startTime: slot.startTime,
       endTime: slot.endTime,
-      available: slot.available, // Keep available status, though all shown here are available
+      available: slot.available,
     }));
   }, [selectedDate, processedAvailability]);
 
@@ -993,11 +1013,6 @@ const TeacherProfile = () => {
       </div>
     );
   }
-
-  const monthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
 
   return (
     <motion.div
@@ -1078,21 +1093,23 @@ const TeacherProfile = () => {
           {/* Availability - UPDATED UI */}
           <div className="mt-4 pt-4 border-t border-gray-200">
             <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
+            {/* Using a grid to layout calendar and slots side-by-side on larger screens */}
             <div className="grid gap-8 md:grid-cols-2">
               {/* Calendar Column */}
-              <div>
+              {/* Added w-full to ensure responsiveness */}
+              <div className="w-full">
                 <h4 className="text-lg font-medium text-gray-700 mb-2">Choose a Date</h4>
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={setSelectedDate}
-                  className="rounded-md border shadow-sm"
+                  className="rounded-md border shadow-sm w-full" // Added w-full here too for Calendar component
                   disabled={isDateDisabled}
                 />
               </div>
 
               {/* Time Slots Column */}
-              <div>
+              <div className="w-full">
                 <h4 className="text-lg font-medium text-gray-700 mb-2">
                   Available Time Slots for {selectedDate ? selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'selected date'}
                 </h4>
@@ -1111,7 +1128,7 @@ const TeacherProfile = () => {
                           <Clock className="h-5 w-5 mr-2 text-gray-500" />
                           <span>{slot.time}</span>
                         </div>
-                        {/* On this page, slots are just displayed, not selectable for booking */}
+                        {/* On this page, slots are just displayed for info, not directly selectable for booking */}
                       </div>
                     ))}
                   </div>
