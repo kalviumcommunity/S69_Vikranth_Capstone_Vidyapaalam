@@ -547,7 +547,7 @@
 
 
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useParams, Link } from "react-router-dom";
 import { Star, MessageCircle, Heart, Calendar } from "lucide-react";
@@ -570,8 +570,7 @@ const TeacherProfile = () => {
       setIsLoading(true);
       try {
         if (!api) throw new Error("API instance is undefined");
-        // *** CRITICAL CHANGE: Use the new endpoint for detailed availability ***
-        const response = await api.get(`/api/teacher-profiles/teacher-profiles-for-booking/${id}`);
+        const response = await api.get(`/api/teacher-profiles/${id}`);
         setTeacher(response.data);
       } catch (error) {
         console.error("Error fetching teacher profile:", {
@@ -588,42 +587,37 @@ const TeacherProfile = () => {
     fetchTeacher();
   }, [api, id]);
 
-  // *** UPDATED AVAILABILITY LOGIC ***
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Set to start of today for comparison
+  today.setHours(0, 0, 0, 0);
 
   const processedAvailability = Array.isArray(teacher?.availability)
     ? teacher.availability
         .map((dateItem) => {
           const dateObj = new Date(dateItem.date);
           
-          // Filter out past dates
           if (dateObj < today) {
-            return null; // Exclude this date
+            return null;
           }
 
-          // Filter out booked slots and sort remaining available slots chronologically
           const availableAndSortedSlots = Array.isArray(dateItem.slots)
             ? dateItem.slots
-                .filter((slot) => slot.available) // ONLY include available slots
-                .sort((a, b) => a.startTime.localeCompare(b.startTime)) // Sort slots by time
+                .filter((slot) => slot.available)
+                .sort((a, b) => a.startTime.localeCompare(b.startTime))
             : [];
 
-          // If no available slots for this date after filtering, exclude the date
           if (availableAndSortedSlots.length === 0) {
             return null;
           }
 
           return {
-            date: dateObj, // Keep as Date object for easier sorting
+            date: dateObj,
             slots: availableAndSortedSlots,
           };
         })
-        .filter(Boolean) // Remove any null entries (dates with no available slots or past dates)
-        .sort((a, b) => a.date.getTime() - b.date.getTime()) // Sort dates chronologically
+        .filter(Boolean)
+        .sort((a, b) => a.date.getTime() - b.date.getTime())
     : [];
 
-  // Loading skeleton
   if (isLoading) {
     return (
       <motion.div
@@ -674,7 +668,6 @@ const TeacherProfile = () => {
       transition={{ duration: 0.4 }}
       className="space-y-8 px-4 sm:px-6 lg:px-12 py-6 bg-white max-w-screen-xl mx-auto"
     >
-      {/* Header */}
       <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
         <div className="h-32 w-32 rounded-full overflow-hidden ring-4 ring-orange-300 bg-gray-100 flex items-center justify-center">
           <img
@@ -743,7 +736,6 @@ const TeacherProfile = () => {
             {teacher.bio || "No bio available"}
           </p>
 
-          {/* Availability */}
           <div className="mt-4 pt-4 border-t border-gray-200">
             <h2 className="font-semibold mb-2 text-gray-800">Availability</h2>
             <div className="w-full overflow-x-auto rounded-md border border-gray-200">
@@ -789,7 +781,6 @@ const TeacherProfile = () => {
         </div>
       </div>
 
-      {/* Video Introduction */}
       {teacher.videoUrl && (
         <Card>
           <CardHeader>
@@ -804,7 +795,6 @@ const TeacherProfile = () => {
         </Card>
       )}
 
-      {/* Gallery */}
       {Array.isArray(teacher.galleryPhotos) &&
       teacher.galleryPhotos.length > 0 ? (
         <Card>
@@ -830,7 +820,6 @@ const TeacherProfile = () => {
         </Card>
       )}
 
-      {/* Book Session */}
       <div className="flex justify-center px-4">
         <Link to={`/student/book-session/${teacher._id}`}>
           <button className="bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 w-full sm:w-auto py-3 px-6 rounded-md text-sm font-medium text-center">
