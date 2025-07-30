@@ -1533,7 +1533,7 @@ const BookSession = () => {
 
     const teacherData = {
       name: teacher.name,
-      skill: teacher.teachingSkills?.[0] || "Unknown",
+      skill: teacher.userId?.teachingSkills?.[0] || teacher.teachingSkills?.[0] || "Unknown",
       dateTime: selectedDateForBackend,
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
