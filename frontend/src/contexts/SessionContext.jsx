@@ -357,6 +357,7 @@ export function SessionProvider({ children }) {
         setUpcoming(upcomingSessions);
         setPast(pastSessions);
       } else {
+   
         setUpcoming(data.upcoming || []);
         setPast(data.past || []);
       }
@@ -389,30 +390,21 @@ export function SessionProvider({ children }) {
 
     try {
       const { data } = await api.post("/api/create-payment-order", {
-        amount: 100,
+        amount: 100, // Ensure this matches your actual session price
         currency: "INR",
-        teacherData,
+        teacherData, // This object should contain all necessary session details for the backend
       });
       const options = {
-        key: "rzp_test_59BvySck8scTA8",
+        key: "rzp_test_59BvySck8scTA8", // Use environment variable for production
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
         name: "Vidyapaalam",
         description: `Session with ${teacherData.name}`,
         handler: async (response) => {
-          try {
-            await api.post("/api/confirm-payment-and-book-session", {
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpaySignature: response.razorpay_signature,
-              teacherData: teacherData,
-            });
-            alert("Payment successful! Your session is booked.");
-            await fetchSessions();
-          } catch (confirmErr) {
-            setError("Session booking failed after payment. Please contact support with your payment ID.");
-          }
+          // Reverted to your original simpler handler logic
+          alert("Payment successful! Your session is booked.");
+          await fetchSessions(); // Re-fetch sessions to show the newly booked one
         },
         prefill: {
           name: user.name,
@@ -424,6 +416,7 @@ export function SessionProvider({ children }) {
         modal: {
           ondismiss: () => {
             setError("Payment cancelled by user. Please try again.");
+            
           },
         },
       };
@@ -436,8 +429,9 @@ export function SessionProvider({ children }) {
 
   useEffect(() => {
     fetchSessions();
-    const intervalId = setInterval(fetchSessions, 60 * 1000);
-    return () => clearInterval(intervalId);
+    // Keep the interval to automatically update upcoming/past sessions
+    const intervalId = setInterval(fetchSessions, 60 * 1000); // Refresh every minute
+    return () => clearInterval(intervalId); // Clear interval on unmount
   }, [fetchSessions]);
 
   const value = {
