@@ -316,6 +316,7 @@ export function SessionProvider({ children }) {
 
   const fetchSessions = useCallback(async () => {
     if (!api || !user?.id || !user.paymentAcknowledged) {
+      console.warn("fetchSessions: Missing API, User ID, or Payment Acknowledgment.");
       setError("Payment not acknowledged or authentication required.");
       setLoading(false);
       return;
@@ -327,21 +328,42 @@ export function SessionProvider({ children }) {
       const response = await api.get("/api/student/sessions");
       const data = response.data || [];
 
-      const now = new Date();
+      const now = new Date(); // Current date and time
+      console.log(`Current Client Time (now): ${now.toLocaleString()}`);
+      console.log(`Current Client Time (ISO): ${now.toISOString()}`);
+
 
       const upcomingSessions = [];
       const pastSessions = [];
 
       if (Array.isArray(data)) {
-        data.forEach((session) => {
+        data.forEach((session, index) => {
+          console.groupCollapsed(`Processing Session ${index + 1}: ${session._id || 'New Session'}`);
+          console.log("Raw Session Data:", session);
+
+          // Construct full Date objects for comparison
+          // Assuming session.dateTime is 'YYYY-MM-DD' and session.startTime/endTime are 'HH:MM'
           const sessionStartDateTime = new Date(`${session.dateTime}T${session.startTime}:00`);
           const sessionEndDateTime = new Date(`${session.dateTime}T${session.endTime}:00`);
 
-          if (sessionEndDateTime > now) {
+          console.log(`  Session dateTime: ${session.dateTime}`);
+          console.log(`  Session startTime: ${session.startTime}`);
+          console.log(`  Session endTime: ${session.endTime}`);
+          console.log(`  Constructed Start DateTime: ${sessionStartDateTime.toLocaleString()} (ISO: ${sessionStartDateTime.toISOString()})`);
+          console.log(`  Constructed End DateTime: ${sessionEndDateTime.toLocaleString()} (ISO: ${sessionEndDateTime.toISOString()})`);
+
+          if (isNaN(sessionStartDateTime.getTime()) || isNaN(sessionEndDateTime.getTime())) {
+            console.error(`  ERROR: Invalid Date constructed for session ${session._id}. Check dateTime/startTime/endTime formats.`);
+            // You might want to skip this session or put it in an error state
+            pastSessions.push(session); // Or handle invalid sessions as needed
+          } else if (sessionEndDateTime > now) {
+            console.log(`  Comparison: Session End Time (${sessionEndDateTime.toLocaleString()}) > Current Time (${now.toLocaleString()}) -> UPCOMING`);
             upcomingSessions.push(session);
           } else {
+            console.log(`  Comparison: Session End Time (${sessionEndDateTime.toLocaleString()}) <= Current Time (${now.toLocaleString()}) -> PAST`);
             pastSessions.push(session);
           }
+          console.groupEnd();
         });
 
         upcomingSessions.sort((a, b) =>
@@ -356,13 +378,16 @@ export function SessionProvider({ children }) {
 
         setUpcoming(upcomingSessions);
         setPast(pastSessions);
+        console.log("Final Upcoming Sessions Array:", upcomingSessions);
+        console.log("Final Past Sessions Array:", pastSessions);
       } else {
-   
+        console.warn("API response is not an array. Assuming object with upcoming/past keys.");
         setUpcoming(data.upcoming || []);
         setPast(data.past || []);
       }
 
     } catch (err) {
+      console.error("Error fetching sessions:", err);
       setError(`Failed to load sessions: ${err.message}. Please try again.`);
     } finally {
       setLoading(false);
@@ -390,21 +415,20 @@ export function SessionProvider({ children }) {
 
     try {
       const { data } = await api.post("/api/create-payment-order", {
-        amount: 100, // Ensure this matches your actual session price
+        amount: 100,
         currency: "INR",
-        teacherData, // This object should contain all necessary session details for the backend
+        teacherData,
       });
       const options = {
-        key: "rzp_test_59BvySck8scTA8", // Use environment variable for production
+        key: "rzp_test_59BvySck8scTA8",
         amount: data.amount,
         currency: data.currency,
         order_id: data.orderId,
         name: "Vidyapaalam",
         description: `Session with ${teacherData.name}`,
         handler: async (response) => {
-          // Reverted to your original simpler handler logic
           alert("Payment successful! Your session is booked.");
-          await fetchSessions(); // Re-fetch sessions to show the newly booked one
+          await fetchSessions();
         },
         prefill: {
           name: user.name,
@@ -416,7 +440,6 @@ export function SessionProvider({ children }) {
         modal: {
           ondismiss: () => {
             setError("Payment cancelled by user. Please try again.");
-            
           },
         },
       };
@@ -429,9 +452,8 @@ export function SessionProvider({ children }) {
 
   useEffect(() => {
     fetchSessions();
-    // Keep the interval to automatically update upcoming/past sessions
-    const intervalId = setInterval(fetchSessions, 60 * 1000); // Refresh every minute
-    return () => clearInterval(intervalId); // Clear interval on unmount
+    const intervalId = setInterval(fetchSessions, 60 * 1000);
+    return () => clearInterval(intervalId);
   }, [fetchSessions]);
 
   const value = {
