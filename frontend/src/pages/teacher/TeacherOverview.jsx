@@ -182,10 +182,10 @@
 
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import axios from "axios";
 import { Link } from "react-router-dom";
+import { useSession } from '../context/SessionContext';
+import { useAuth } from '../context/AuthContext';
 
-// Icon components (no changes here)
 const UsersIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -227,86 +227,33 @@ const MessageIcon = ({ className }) => (
 
 const TeacherOverview = () => {
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [upcoming, setUpcoming] = useState([]);
-  const [past, setPast] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null); // New state for error messages
+
+  const {
+    teacherUpcomingSessions: upcoming,
+    teacherPastSessions: past,
+    loadingSessions: loading,
+    sessionError: error,
+    fetchTeacherSessions,
+  } = useSession();
+
+  const { user } = useAuth();
 
   useEffect(() => {
-    const fetchTeacherSessions = async () => {
-      setLoading(true); // Set loading true before fetch
-      setError(null); // Clear previous errors
-      try {
-        // IMPORTANT: Ensure your axios default headers include the auth token.
-        // For example, if you store the token in localStorage and use a global axios config:
-        // const token = localStorage.getItem('token');
-        // if (token) {
-        //   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        // } else {
-        //   // Handle case where no token is found, e.g., redirect to login
-        //   console.warn("No authentication token found. Redirecting or showing login prompt.");
-        //   // Example: history.push('/login');
-        //   setLoading(false);
-        //   setError("You are not authenticated. Please log in.");
-        //   return;
-        // }
-
-        const { data } = await axios.get('/api/teacher/sessions');
-        console.log("API Response Data:", data); // Log the full response data
-
-        if (data && Array.isArray(data.upcomingSessions) && Array.isArray(data.pastSessions)) {
-          setUpcoming(data.upcomingSessions);
-          setPast(data.pastSessions);
-          console.log("Upcoming Sessions State:", data.upcomingSessions);
-          console.log("Past Sessions State:", data.pastSessions);
-        } else {
-          console.warn("API response did not contain expected session arrays:", data);
-          setUpcoming([]);
-          setPast([]);
-        }
-
-      } catch (err) {
-        console.error('Error fetching teacher sessions:', err);
-        // Provide more detailed error message based on common axios error structures
-        if (err.response) {
-          // Server responded with a status other than 2xx
-          console.error("Error response data:", err.response.data);
-          console.error("Error response status:", err.response.status);
-          console.error("Error response headers:", err.response.headers);
-          if (err.response.status === 401 || err.response.status === 403) {
-            setError("Authentication failed. Please log in again.");
-          } else {
-            setError(`Server error: ${err.response.status} - ${err.response.data.message || 'An error occurred'}`);
-          }
-        } else if (err.request) {
-          // Request was made but no response received
-          console.error("Error request:", err.request);
-          setError("Network error: No response from server. Please check your internet connection.");
-        } else {
-          // Something else happened
-          setError("An unexpected error occurred while fetching sessions.");
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTeacherSessions();
-    // Consider if you really need to refetch every 60 seconds.
-    // For development, it's fine, but in production, it might be excessive.
-    const intervalId = setInterval(fetchTeacherSessions, 60 * 1000); // Refetch every minute
-    return () => clearInterval(intervalId); // Cleanup on component unmount
-  }, []);
+    if (user && user.role === 'teacher') {
+        fetchTeacherSessions();
+        const intervalId = setInterval(fetchTeacherSessions, 60 * 1000);
+        return () => clearInterval(intervalId);
+    }
+  }, [fetchTeacherSessions, user]);
 
   const totalCount = upcoming.length + past.length;
   const stats = [
     { title: 'Total Sessions', value: totalCount.toString(), icon: <UsersIcon className="h-5 w-5 text-orange-500" /> },
-    { title: 'Rating', value: '4.8', icon: <StarIcon className="h-5 w-5 text-orange-500" /> }, // Hardcoded, remember to fetch if needed
+    { title: 'Rating', value: '4.8', icon: <StarIcon className="h-5 w-5 text-orange-500" /> },
     { title: 'Upcoming', value: upcoming.length.toString(), icon: <ClockIcon className="h-5 w-5 text-orange-500" /> },
   ];
 
   const renderCard = (session, isPast) => {
-    // Check if studentId and name exist before accessing
     const studentName = session.studentId ? session.studentId.name : 'Unknown Student';
 
     return (
@@ -357,7 +304,7 @@ const TeacherOverview = () => {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <h2 className="text-3xl md:text-4xl font-bold">
-          <span className="bg-orange-500 bg-clip-text text-transparent">Welcome back, Teacher!</span>
+          <span className="bg-orange-500 bg-clip-text text-transparent">Welcome back, {user?.name || 'Teacher'}!</span>
         </h2>
         <p className="mt-2 text-base md:text-lg text-gray-600">Here’s a snapshot of your teaching stats and sessions.</p>
       </motion.div>
@@ -384,7 +331,7 @@ const TeacherOverview = () => {
         <div className="p-4 sm:p-6 bg-gray-50/50">
           {loading ? (
             <p className="text-gray-500 text-center py-10">Loading sessions...</p>
-          ) : error ? ( // Display error if present
+          ) : error ? (
             <div className="text-center py-10 px-4 text-red-600 bg-red-50 border border-red-200 rounded-lg">
               <p className="font-semibold mb-2">Error:</p>
               <p>{error}</p>
