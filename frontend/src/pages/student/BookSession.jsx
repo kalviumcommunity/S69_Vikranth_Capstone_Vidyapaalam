@@ -1439,6 +1439,9 @@ const BookSession = () => {
         if (!api) throw new Error("API instance is undefined");
 
         const response = await api.get(`/api/teacher-profiles/teacher-profiles-for-booking/${teacherId}`);
+
+        console.log("Teacher data received on frontend:", response.data); 
+
         
         setTeacher(response.data); 
 
