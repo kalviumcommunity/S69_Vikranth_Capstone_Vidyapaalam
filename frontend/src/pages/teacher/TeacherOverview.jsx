@@ -276,7 +276,7 @@ const TeacherOverview = () => {
             </div>
             <div className="flex items-center">
               <ClockIcon className="h-4 w-4 mr-2 text-orange-500" />
-              <span className="font-medium">{session.startTime}</span>
+              <span className="font-medium">{session.startTime} - {session.endTime}</span>
             </div>
           </div>
         </div>
