@@ -849,14 +849,14 @@ import {
   CardHeader,
   CardTitle,
 } from "../../components/ui/card";
-import { Calendar } from "@/components/ui/calendar"; // Import Calendar component
+import { Calendar } from "@/components/ui/calendar"; 
 
 const TeacherProfile = () => {
   const { id } = useParams();
   const { api } = useAuth();
   const [teacher, setTeacher] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(null); // State for selected date on the calendar
+  const [selectedDate, setSelectedDate] = useState(null); 
 
   useEffect(() => {
     const fetchTeacher = async () => {
@@ -865,12 +865,6 @@ const TeacherProfile = () => {
         if (!api) throw new Error("API instance is undefined");
         const response = await api.get(`/api/teacher-profiles/${id}`);
         setTeacher(response.data);
-
-        // --- DEBUGGING LOGS: Check what availability data is coming from the API ---
-        console.log("API Response Data for Teacher Profile:", response.data);
-        console.log("Availability directly on TeacherProfile:", response.data.availability);
-        console.log("Availability via userId (if populated):", response.data.userId?.availability);
-        // --- END DEBUGGING LOGS ---
 
       } catch (error) {
         console.error("Error fetching teacher profile:", {
@@ -890,7 +884,6 @@ const TeacherProfile = () => {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Determine rawAvailability: prioritize direct profile.availability, then userId.availability
   const rawAvailability = Array.isArray(teacher?.availability)
     ? teacher.availability
     : Array.isArray(teacher?.userId?.availability)
@@ -901,18 +894,16 @@ const TeacherProfile = () => {
     .map((dateItem) => {
       const dateObj = new Date(dateItem.date);
 
-      // Filter out invalid dates or dates in the past
       if (isNaN(dateObj.getTime()) || dateObj < today) {
         return null;
       }
 
       const availableAndSortedSlots = Array.isArray(dateItem.slots)
         ? dateItem.slots
-            .filter((slot) => slot.available) // Only show slots marked as available
+            .filter((slot) => slot.available) 
             .sort((a, b) => a.startTime.localeCompare(b.startTime))
         : [];
 
-      // If no available slots for this date, return null so it's filtered out
       if (availableAndSortedSlots.length === 0) {
         return null;
       }
@@ -922,33 +913,28 @@ const TeacherProfile = () => {
         slots: availableAndSortedSlots,
       };
     })
-    .filter(Boolean) // Remove null entries
+    .filter(Boolean) 
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // --- DEBUGGING LOG: See what processedAvailability looks like after filtering ---
   console.log("Processed Availability for UI:", processedAvailability);
-  // --- END DEBUGGING LOG ---
 
 
-  // Function to disable dates on the calendar that are in the past or have no available slots
   const isDateDisabled = useCallback((date) => {
     const compareDate = new Date(date);
     compareDate.setHours(0, 0, 0, 0);
 
-    if (compareDate < today) return true; // Disable past dates
+    if (compareDate < today) return true; 
 
     const calendarDateLocalISO = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
 
-    // Disable if no availability for this date, or if all slots for this date are unavailable
     return !processedAvailability.some(item => {
       const itemDateObj = item.date instanceof Date ? item.date : new Date(item.date);
       const itemDateLocalISO = `${itemDateObj.getFullYear()}-${(itemDateObj.getMonth() + 1).toString().padStart(2, '0')}-${itemDateObj.getDate().toString().padStart(2, '0')}`;
       
-      return itemDateLocalISO === calendarDateLocalISO && item.slots.length > 0; // Check if there are any available slots for the date
+      return itemDateLocalISO === calendarDateLocalISO && item.slots.length > 0; 
     });
   }, [processedAvailability, today]);
 
-  // Function to get available slots for the currently selected date
   const getAvailableSlotsForDate = useCallback(() => {
     if (!selectedDate) return [];
 
@@ -1083,7 +1069,7 @@ const TeacherProfile = () => {
           </div>
 
           <div className="text-2xl font-semibold text-orange-600">
-            ${teacher.hourlyRate || 0}/hour
+            ₹{teacher.hourlyRate || 0}/hour
           </div>
 
           <p className="text-gray-700 leading-relaxed mt-2 text-sm">
