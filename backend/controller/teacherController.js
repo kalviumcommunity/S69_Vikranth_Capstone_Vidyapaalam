@@ -575,19 +575,6 @@ exports.createTeacherProfile = async (req, res) => {
   }
 };
 
-// exports.getTeacherProfiles = async (req, res) => {
-//   try {
-//     const profiles = await TeacherProfile.find()
-//       .populate('userId', 'name email');
-
-//     res.status(200).json(profiles);
-//   } catch (error) {
-//     console.error('Error fetching all teacher profiles:', error);
-//     res.status(500).json({ message: 'Server error while fetching teacher profiles', error: error.message });
-//   }
-// };
-
-
 
 exports.getTeacherProfiles = async (req, res) => {
   try {
@@ -850,6 +837,55 @@ exports.getTeacherAvailability = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+exports.getTeacherProfileWithFormattedAvailability = async (req, res) => {
+    try {
+        const teacherProfile = await TeacherProfile.findById(req.params.id)
+            .populate({
+                path: 'userId',
+                select: 'availability'
+            });
+
+        if (!teacherProfile) {
+            return res.status(404).json({ message: 'Teacher not found' });
+        }
+
+        const rawAvailability = teacherProfile.userId?.availability || [];
+
+        const formattedAvailability = rawAvailability.map(item => {
+            const dateValue = item && item.date instanceof Date ? item.date.toISOString() : item?.date;
+
+            const slots = Array.isArray(item?.slots) ? item.slots.map(slot => ({
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+                available: typeof slot.available === 'boolean' ? slot.available : true,
+            })) : [];
+
+            if (!dateValue) {
+                return null;
+            }
+
+            return {
+                date: dateValue,
+                slots: slots,
+            };
+        }).filter(Boolean);
+
+        const teacherProfileObject = teacherProfile.toObject();
+        teacherProfileObject.availability = formattedAvailability;
+
+        if (teacherProfileObject.userId && teacherProfileObject.userId.availability) {
+             delete teacherProfileObject.userId.availability;
+        }
+
+        res.status(200).json(teacherProfileObject);
+
+    } catch (err) {
+        res.status(500).json({ error: 'Failed to fetch teacher profile and availability.' });
+    }
+};
+
 
 exports.createBooking = async (req, res) => {
   try {
