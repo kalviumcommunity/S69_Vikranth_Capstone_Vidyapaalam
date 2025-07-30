@@ -178,11 +178,14 @@
 
 
 
+
+
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { Link } from "react-router-dom";
 
+// Icon components (no changes here)
 const UsersIcon = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -227,73 +230,128 @@ const TeacherOverview = () => {
   const [upcoming, setUpcoming] = useState([]);
   const [past, setPast] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null); // New state for error messages
 
   useEffect(() => {
     const fetchTeacherSessions = async () => {
+      setLoading(true); // Set loading true before fetch
+      setError(null); // Clear previous errors
       try {
+        // IMPORTANT: Ensure your axios default headers include the auth token.
+        // For example, if you store the token in localStorage and use a global axios config:
+        // const token = localStorage.getItem('token');
+        // if (token) {
+        //   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // } else {
+        //   // Handle case where no token is found, e.g., redirect to login
+        //   console.warn("No authentication token found. Redirecting or showing login prompt.");
+        //   // Example: history.push('/login');
+        //   setLoading(false);
+        //   setError("You are not authenticated. Please log in.");
+        //   return;
+        // }
+
         const { data } = await axios.get('/api/teacher/sessions');
-        setUpcoming(data.upcomingSessions || []);
-        setPast(data.pastSessions || []);
+        console.log("API Response Data:", data); // Log the full response data
+
+        if (data && Array.isArray(data.upcomingSessions) && Array.isArray(data.pastSessions)) {
+          setUpcoming(data.upcomingSessions);
+          setPast(data.pastSessions);
+          console.log("Upcoming Sessions State:", data.upcomingSessions);
+          console.log("Past Sessions State:", data.pastSessions);
+        } else {
+          console.warn("API response did not contain expected session arrays:", data);
+          setUpcoming([]);
+          setPast([]);
+        }
+
       } catch (err) {
         console.error('Error fetching teacher sessions:', err);
+        // Provide more detailed error message based on common axios error structures
+        if (err.response) {
+          // Server responded with a status other than 2xx
+          console.error("Error response data:", err.response.data);
+          console.error("Error response status:", err.response.status);
+          console.error("Error response headers:", err.response.headers);
+          if (err.response.status === 401 || err.response.status === 403) {
+            setError("Authentication failed. Please log in again.");
+          } else {
+            setError(`Server error: ${err.response.status} - ${err.response.data.message || 'An error occurred'}`);
+          }
+        } else if (err.request) {
+          // Request was made but no response received
+          console.error("Error request:", err.request);
+          setError("Network error: No response from server. Please check your internet connection.");
+        } else {
+          // Something else happened
+          setError("An unexpected error occurred while fetching sessions.");
+        }
       } finally {
         setLoading(false);
       }
     };
+
     fetchTeacherSessions();
-    const intervalId = setInterval(fetchTeacherSessions, 60 * 1000);
-    return () => clearInterval(intervalId);
+    // Consider if you really need to refetch every 60 seconds.
+    // For development, it's fine, but in production, it might be excessive.
+    const intervalId = setInterval(fetchTeacherSessions, 60 * 1000); // Refetch every minute
+    return () => clearInterval(intervalId); // Cleanup on component unmount
   }, []);
 
   const totalCount = upcoming.length + past.length;
   const stats = [
     { title: 'Total Sessions', value: totalCount.toString(), icon: <UsersIcon className="h-5 w-5 text-orange-500" /> },
-    { title: 'Rating', value: '4.8', icon: <StarIcon className="h-5 w-5 text-orange-500" /> },
+    { title: 'Rating', value: '4.8', icon: <StarIcon className="h-5 w-5 text-orange-500" /> }, // Hardcoded, remember to fetch if needed
     { title: 'Upcoming', value: upcoming.length.toString(), icon: <ClockIcon className="h-5 w-5 text-orange-500" /> },
   ];
 
-  const renderCard = (session, isPast) => (
-    <motion.div
-      key={session._id}
-      className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-    >
-      <div className="p-4 flex flex-col flex-grow gap-4">
-        <div>
-          <h4 className="text-base font-semibold text-gray-800">{session.studentName}</h4>
-          <p className="text-sm text-gray-500">{session.skill} Session</p>
-        </div>
-        <div className="flex flex-col gap-1.5 text-sm text-gray-700">
-          <div className="flex items-center">
-            <CalendarIcon className="h-4 w-4 mr-2 text-orange-500" />
-            <span className="font-medium">{new Date(session.dateTime).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+  const renderCard = (session, isPast) => {
+    // Check if studentId and name exist before accessing
+    const studentName = session.studentId ? session.studentId.name : 'Unknown Student';
+
+    return (
+      <motion.div
+        key={session._id}
+        className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md overflow-hidden flex flex-col h-full"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="p-4 flex flex-col flex-grow gap-4">
+          <div>
+            <h4 className="text-base font-semibold text-gray-800">{studentName}</h4>
+            <p className="text-sm text-gray-500">{session.skill} Session</p>
           </div>
-          <div className="flex items-center">
-            <ClockIcon className="h-4 w-4 mr-2 text-orange-500" />
-            <span className="font-medium">{session.startTime}</span>
+          <div className="flex flex-col gap-1.5 text-sm text-gray-700">
+            <div className="flex items-center">
+              <CalendarIcon className="h-4 w-4 mr-2 text-orange-500" />
+              <span className="font-medium">{new Date(session.dateTime).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+            <div className="flex items-center">
+              <ClockIcon className="h-4 w-4 mr-2 text-orange-500" />
+              <span className="font-medium">{session.startTime}</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="px-4 pb-4 pt-3 flex flex-col gap-2">
-        {isPast ? (
-          <button className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400">
-            <MessageIcon className="h-4 w-4" /> Message
-          </button>
-        ) : (
-          <>
-            <button className="flex w-full justify-center items-center gap-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400">
-              <VideoIcon className="h-4 w-4" /> Start
-            </button>
+        <div className="px-4 pb-4 pt-3 flex flex-col gap-2">
+          {isPast ? (
             <button className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400">
-              <MessageIcon className="h-4 w-4" /> Chat
+              <MessageIcon className="h-4 w-4" /> Message
             </button>
-          </>
-        )}
-      </div>
-    </motion.div>
-  );
+          ) : (
+            <>
+              <button className="flex w-full justify-center items-center gap-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400">
+                <VideoIcon className="h-4 w-4" /> Start
+              </button>
+              <button className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400">
+                <MessageIcon className="h-4 w-4" /> Chat
+              </button>
+            </>
+          )}
+        </div>
+      </motion.div>
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-10">
@@ -326,6 +384,12 @@ const TeacherOverview = () => {
         <div className="p-4 sm:p-6 bg-gray-50/50">
           {loading ? (
             <p className="text-gray-500 text-center py-10">Loading sessions...</p>
+          ) : error ? ( // Display error if present
+            <div className="text-center py-10 px-4 text-red-600 bg-red-50 border border-red-200 rounded-lg">
+              <p className="font-semibold mb-2">Error:</p>
+              <p>{error}</p>
+              <p className="text-sm text-red-500 mt-2">Please check your network connection or try logging in again.</p>
+            </div>
           ) : activeTab === "upcoming" ? (
             upcoming.length === 0 ? (
               <div className="text-center py-10 px-4 space-y-3">
