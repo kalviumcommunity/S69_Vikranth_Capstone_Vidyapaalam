@@ -242,7 +242,7 @@ exports.getTeacherSessions = async (req, res) => {
     const pastSessions = [];
 
     sessions.forEach(session => {
-      const sessionEndDateTime = new Date(`${session.dateTime.split('T')[0]}T${session.endTime}:00`);
+      const sessionEndDateTime = new Date(`${session.dateTime.toISOString().split('T')[0]}T${session.endTime}:00`);
 
       if (isNaN(sessionEndDateTime.getTime())) {
           // Log 5: If there are any date parsing issues
