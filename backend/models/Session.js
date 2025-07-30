@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const sessionSchema = new mongoose.Schema({
   teacherName: { type: String, required: true },
   teacherInitials: { type: String },
-  skill: { type: String, required: true },
+  skill: { type: String },
   dateTime: { type: Date, required: true },
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   teacherId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
