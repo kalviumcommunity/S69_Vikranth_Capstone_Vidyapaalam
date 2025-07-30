@@ -1575,7 +1575,11 @@ const BookSession = () => {
 
     if (!foundAvailability) return [];
 
-    return foundAvailability.slots.map((slot, index) => ({
+      const sortedSlots = [...foundAvailability.slots].sort((a, b) => {
+      return a.startTime.localeCompare(b.startTime);
+    }); 
+
+    return sortedSlots.slots.map((slot, index) => ({
       id: `${selectedDateLocalISO}-${slot.startTime}-${slot.endTime}-${index}`,
       time: `${slot.startTime} - ${slot.endTime}`,
       startTime: slot.startTime,
@@ -1692,13 +1696,22 @@ const BookSession = () => {
             </div>
           </div>
           <CardFooter className="flex justify-end mt-8">
-            <button
+{/*             <button
               onClick={handleNext}
               disabled={!selectedDate || !selectedSlot || isLoading || !selectedSlot?.available}
               className="inline-flex items-center rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 disabled:opacity-50"
             >
               Continue <ArrowRight className="ml-2 h-4 w-4" />
+            </button> */}
+
+            <button
+              onClick={handleNext}
+              disabled={!selectedDate || !selectedSlot || isLoading || !selectedSlot?.available}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 text-white px-4 py-2 text-sm md:text-base md:px-6 md:py-2.5 font-semibold transition-all duration-300 ease-in-out hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300 w-full sm:w-auto"
+            >
+              Continue <ArrowRight className="h-4 w-4" />
             </button>
+
           </CardFooter>
         </div>
 
