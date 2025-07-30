@@ -337,7 +337,7 @@ export function SessionProvider({ children }) {
       if (data.past && Array.isArray(data.past)) {
         allSessions = allSessions.concat(data.past);
       }
-      if (Array.isArray(data)) {
+      if (Array.isArray(data)) { // Fallback if API sometimes sends a flat array directly
         allSessions = allSessions.concat(data);
       }
 
@@ -345,12 +345,16 @@ export function SessionProvider({ children }) {
       const pastSessions = [];
 
       allSessions.forEach((session) => {
-        const sessionStartDateTime = new Date(`${session.dateTime}T${session.startTime}:00`);
-        const sessionEndDateTime = new Date(`${session.dateTime}T${session.endTime}:00`);
+        // Extract only the 'YYYY-MM-DD' part from session.dateTime
+        const datePart = session.dateTime.split('T')[0];
+
+        // Now, construct the full Date objects correctly
+        const sessionStartDateTime = new Date(`${datePart}T${session.startTime}:00`);
+        const sessionEndDateTime = new Date(`${datePart}T${session.endTime}:00`);
 
         if (isNaN(sessionStartDateTime.getTime()) || isNaN(sessionEndDateTime.getTime())) {
-          console.error(`ERROR: Invalid Date constructed for session:`, session);
-          pastSessions.push(session);
+          console.error(`ERROR: Invalid Date constructed for session (check startTime/endTime formats):`, session);
+          pastSessions.push(session); // Treat as past if date parsing fails
         } else if (sessionEndDateTime > now) {
           upcomingSessions.push(session);
         } else {
@@ -359,13 +363,13 @@ export function SessionProvider({ children }) {
       });
 
       upcomingSessions.sort((a, b) =>
-          new Date(`${a.dateTime}T${a.startTime}:00`).getTime() -
-          new Date(`${b.dateTime}T${b.startTime}:00`).getTime()
+          new Date(`${a.dateTime.split('T')[0]}T${a.startTime}:00`).getTime() -
+          new Date(`${b.dateTime.split('T')[0]}T${b.startTime}:00`).getTime()
       );
 
       pastSessions.sort((a, b) =>
-          new Date(`${b.dateTime}T${b.startTime}:00`).getTime() -
-          new Date(`${a.dateTime}T${a.startTime}:00`).getTime()
+          new Date(`${b.dateTime.split('T')[0]}T${b.startTime}:00`).getTime() -
+          new Date(`${a.dateTime.split('T')[0]}T${a.startTime}:00`).getTime()
       );
 
       setUpcoming(upcomingSessions);
