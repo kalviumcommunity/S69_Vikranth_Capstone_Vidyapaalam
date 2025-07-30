@@ -1579,7 +1579,7 @@ const BookSession = () => {
       return a.startTime.localeCompare(b.startTime);
     }); 
 
-    return sortedSlots.slots.map((slot, index) => ({
+    return sortedSlots.map((slot, index) => ({
       id: `${selectedDateLocalISO}-${slot.startTime}-${slot.endTime}-${index}`,
       time: `${slot.startTime} - ${slot.endTime}`,
       startTime: slot.startTime,
