@@ -219,34 +219,54 @@ exports.createSession = async (req, res) => {
 
 exports.getTeacherSessions = async (req, res) => {
   try {
-    const teacherId = req.user.id;
-
-    const sessions = await Session.find({ teacherId: teacherId })
-      .populate('studentId', 'name email')
-      .lean();
+    // Log 1: Confirm the teacher ID
+    const teacherId = req.user.id; // Get teacher ID from authenticated user
+    console.log(`[Backend Log] Fetching sessions for teacher ID: ${teacherId}`);
 
     const now = new Date();
+
+    // Log 2: Before the database query
+    console.log(`[Backend Log] Querying database for sessions with teacherId: ${teacherId}`);
+
+    // Fetch sessions where the current user is the teacher
+    const sessions = await Session.find({ teacherId: teacherId })
+                                  .populate('studentId', 'name email')
+                                  .sort({ dateTime: 1, startTime: 1 });
+
+    // Log 3: After the database query, show how many sessions were found
+    console.log(`[Backend Log] Database query returned ${sessions.length} total sessions for teacher.`);
+    // Log 4: Optionally, to see the raw data returned by the DB query (be cautious with large datasets)
+    // console.log("[Backend Log] Raw sessions from DB:", sessions);
+
     const upcomingSessions = [];
     const pastSessions = [];
 
     sessions.forEach(session => {
-      const sessionEndDateTime = createFullDateTime(session.dateTime instanceof Date ? session.dateTime.toISOString() : session.dateTime, session.endTime);
+      const sessionEndDateTime = new Date(`${session.dateTime.split('T')[0]}T${session.endTime}:00`);
+
       if (isNaN(sessionEndDateTime.getTime())) {
-        console.warn(`Backend: Invalid session end date/time for teacher session ID ${session._id}. Data: ${JSON.stringify(session)}`);
-        pastSessions.push(session);
+          // Log 5: If there are any date parsing issues
+          console.error(`[Backend Log] ERROR: Invalid Date constructed for session ID ${session._id}: dateTime=${session.dateTime}, endTime=${session.endTime}`);
+          pastSessions.push(session);
       } else if (sessionEndDateTime > now) {
-        upcomingSessions.push(session);
+          upcomingSessions.push(session);
       } else {
-        pastSessions.push(session);
+          pastSessions.push(session);
       }
     });
 
-    upcomingSessions.sort((a, b) => createFullDateTime(a.dateTime instanceof Date ? a.dateTime.toISOString() : a.dateTime, a.startTime).getTime() - createFullDateTime(b.dateTime instanceof Date ? b.dateTime.toISOString() : b.dateTime, b.startTime).getTime());
-    pastSessions.sort((a, b) => createFullDateTime(b.dateTime instanceof Date ? b.dateTime.toISOString() : b.dateTime, b.startTime).getTime() - createFullDateTime(a.dateTime instanceof Date ? a.dateTime.toISOString() : a.dateTime, a.startTime).getTime());
+    // Log 6: Final counts before sending the response
+    console.log(`[Backend Log] Processed: Teacher Upcoming Sessions: ${upcomingSessions.length}`);
+    console.log(`[Backend Log] Processed: Teacher Past Sessions: ${pastSessions.length}`);
 
-    res.json({ upcomingSessions, pastSessions });
+    res.status(200).json({
+      upcomingSessions,
+      pastSessions,
+    });
+
   } catch (error) {
-    console.error("Error fetching teacher sessions:", error);
-    res.status(500).json({ error: "Failed to fetch teacher sessions" });
+    // Log 7: Any unexpected errors in the try block
+    console.error("[Backend Log] Error in getTeacherSessions catch block:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
