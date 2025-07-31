@@ -104,8 +104,6 @@
 
 // src/pages/ChatPage.js
 
-// src/pages/ChatPage.js
-
 import React, { useEffect, useState } from 'react';
 import {
   Chat,
@@ -166,25 +164,32 @@ const ChatPage = () => {
   }
 
   return (
-    <div className="w-full h-screen bg-gradient-to-br from-blue-50 via-white to-purple-100 p-2 sm:p-4">
-      <div className="w-full h-full border border-gray-200 bg-white rounded-xl shadow-lg overflow-hidden">
-        <Chat client={chatClient} theme="str-chat__theme-light">
-          <Channel channel={channel}>
-            <Window>
+    <div className="w-screen h-screen bg-white flex flex-col sm:flex-row overflow-hidden">
+      <Chat client={chatClient} theme="str-chat__theme-light">
+        <Channel channel={channel}>
+          <Window>
+            <div className="flex flex-col h-screen sm:h-full w-full">
+              {/* Header */}
               <div className="border-b px-4 py-3 bg-white shadow-sm">
                 <ChannelHeader />
               </div>
-              <div className="flex-1 h-[calc(100vh-160px)] overflow-y-auto">
+
+              {/* Message List */}
+              <div className="flex-1 overflow-y-auto bg-gray-50">
                 <MessageList />
               </div>
+
+              {/* Input */}
               <div className="border-t p-2 bg-white">
                 <MessageInput />
               </div>
-            </Window>
+            </div>
+
+            {/* Thread Panel (optional, collapses on mobile) */}
             <Thread />
-          </Channel>
-        </Chat>
-      </div>
+          </Window>
+        </Channel>
+      </Chat>
     </div>
   );
 };
