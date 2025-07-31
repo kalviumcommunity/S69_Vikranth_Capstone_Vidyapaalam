@@ -1,4 +1,4 @@
-// In src/pages/ChatPage.js
+// src/pages/ChatPage.js
 
 import React, { useEffect, useState } from 'react';
 import {
@@ -20,16 +20,27 @@ import 'stream-chat-react/dist/css/v2/index.css';
 const ChatPage = () => {
   const { chatClient, isClientReady } = useStreamChat();
   const { user } = useAuth();
-  const { recipientId } = useParams(); // <-- Use recipientId
+  const { recipientId } = useParams();
 
   const [channel, setChannel] = useState(null);
 
   useEffect(() => {
     const setupChannel = async () => {
-      if (!isClientReady || !user || !recipientId) {
+      // Add a more robust check for recipientId
+      if (!isClientReady || !user || !recipientId || recipientId === '') {
+        console.log("Aborting channel setup. Missing a dependency:", {
+          isClientReady,
+          user: !!user,
+          recipientId
+        });
         return;
       }
       
+      console.log("Attempting to create channel for users:", {
+        currentUserId: user._id,
+        recipientId: recipientId
+      });
+
       const currentUserId = user._id;
 
       // Create a unique channel ID by sorting the two user IDs
@@ -57,7 +68,7 @@ const ChatPage = () => {
         channel.stopWatching();
       }
     };
-  }, [chatClient, isClientReady, user, recipientId, channel]); // Added 'channel' to dependency array
+  }, [chatClient, isClientReady, user, recipientId]); // Removed 'channel' from dependency array
 
   if (!isClientReady || !channel) {
     return (
