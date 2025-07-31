@@ -372,10 +372,9 @@
 
 
 
-
 import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom"; // Link is already here
+import { Link } from "react-router-dom";
 import { useSession } from '../../contexts/SessionContext';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -433,9 +432,9 @@ const TeacherOverview = () => {
 
   useEffect(() => {
     if (user && user.role === 'teacher') {
-        fetchTeacherSessions();
-        const intervalId = setInterval(fetchTeacherSessions, 60 * 1000);
-        return () => clearInterval(intervalId);
+      fetchTeacherSessions();
+      const intervalId = setInterval(fetchTeacherSessions, 60 * 1000);
+      return () => clearInterval(intervalId);
     }
   }, [fetchTeacherSessions, user]);
 
@@ -447,7 +446,8 @@ const TeacherOverview = () => {
   ];
 
   const renderCard = (session, isPast) => {
-    const studentName = session.studentId ? session.studentId.name : 'Unknown Student';
+    // FIX: Using optional chaining for a cleaner, safer check
+    const studentName = session.studentId?.name || 'Unknown Student';
 
     return (
       <motion.div
@@ -476,7 +476,7 @@ const TeacherOverview = () => {
         <div className="px-4 pb-4 pt-3 flex flex-col gap-2">
           {isPast ? (
             <Link
-              to={`/teacher/chat/${session.studentId._id}`}
+              to={`/teacher/chat/${session.studentId?._id}`} // <-- FIXED: Using Link with optional chaining
               className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400"
             >
               <MessageIcon className="h-4 w-4" /> Message
@@ -487,7 +487,7 @@ const TeacherOverview = () => {
                 <VideoIcon className="h-4 w-4" /> Start
               </button>
               <Link
-                to={`/teacher/chat/${session.studentId._id}`}
+                to={`/teacher/chat/${session.studentId?._id}`} // <-- FIXED: Using Link with optional chaining
                 className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400"
               >
                 <MessageIcon className="h-4 w-4" /> Chat
@@ -567,3 +567,4 @@ const TeacherOverview = () => {
 };
 
 export default TeacherOverview;
+
