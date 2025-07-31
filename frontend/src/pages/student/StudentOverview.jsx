@@ -384,6 +384,60 @@ const item = {
   show: { opacity: 1, scale: 1 },
 };
 
+// const SessionCard = ({ session, isPast }) => (
+//   <motion.div
+//     variants={item}
+//     className="bg-white rounded-2xl shadow-md hover:shadow-xl p-6 flex flex-col justify-between"
+//   >
+//     <div className="flex items-center gap-4">
+//       <div className="h-12 w-12 rounded-full bg-gray-200 flex items-center justify-center text-lg font-semibold">
+//         {session.teacherInitials || session.teacherName?.slice(0, 2).toUpperCase()}
+//       </div>
+//       <div className="space-y-1">
+//         <h3 className="text-lg font-semibold text-gray-800">
+//           {session.teacherName || "Unknown Teacher"}
+//         </h3>
+//         {session.skill && <p className="text-sm text-gray-500">{session.skill} Teacher</p>}
+//       </div>
+//     </div>
+
+//     <div className="mt-4 space-y-2">
+//       <div className="flex items-center text-gray-600">
+//         <Calendar className="w-5 h-5 mr-2 text-gray-500" />
+//         <span>{new Date(session.dateTime).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+//       </div>
+//       <div className="flex items-center text-gray-600">
+//         <Clock className="w-5 h-5 mr-2 text-gray-500" />
+//         <span>{session.timeRange || "N/A"}</span>
+//       </div>
+//     </div>
+
+//     <div className="mt-6 flex flex-col gap-2">
+//       {isPast ? (
+//         <Link 
+//           to={`/student/chat/${session.teacherId._id}`}
+//           className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400"
+//         >
+//           <MessageCircle className="h-4 w-4" /> Message
+//         </Link>
+//       ) : (
+//         <>
+//           <button className="flex w-full justify-center items-center gap-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400">
+//             <Video className="h-4 w-4" /> Join Call
+//           </button>
+//           <Link
+//             to={`/student/chat/${session.teacherId._id}`}
+//             className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400"
+//           >
+//             <MessageCircle className="h-4 w-4" /> Chat
+//           </Link>
+//         </>
+//       )}
+//     </div>
+//   </motion.div>
+// );
+
+
 const SessionCard = ({ session, isPast }) => (
   <motion.div
     variants={item}
@@ -415,7 +469,7 @@ const SessionCard = ({ session, isPast }) => (
     <div className="mt-6 flex flex-col gap-2">
       {isPast ? (
         <Link 
-          to={`/student/chat/${session.teacherId._id}`}
+          to={`/student/chat/${session.teacherId?._id}`} // <-- FIXED: Added optional chaining
           className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400"
         >
           <MessageCircle className="h-4 w-4" /> Message
@@ -426,7 +480,7 @@ const SessionCard = ({ session, isPast }) => (
             <Video className="h-4 w-4" /> Join Call
           </button>
           <Link
-            to={`/student/chat/${session.teacherId._id}`}
+            to={`/student/chat/${session.teacherId?._id}`} // <-- FIXED: Added optional chaining
             className="flex w-full justify-center items-center gap-1.5 text-sm font-medium border border-orange-500 text-orange-600 hover:bg-orange-50 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-orange-400"
           >
             <MessageCircle className="h-4 w-4" /> Chat
@@ -436,6 +490,7 @@ const SessionCard = ({ session, isPast }) => (
     </div>
   </motion.div>
 );
+
 
 const EmptyState = ({ message, linkText, linkTo }) => (
   <motion.div
