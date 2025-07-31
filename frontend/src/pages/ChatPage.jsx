@@ -104,6 +104,8 @@
 
 // src/pages/ChatPage.js
 
+// src/pages/ChatPage.js
+
 import React, { useEffect, useState } from 'react';
 import {
   Chat,
@@ -120,38 +122,29 @@ import { useParams } from 'react-router-dom';
 
 import 'stream-chat-react/dist/css/v2/index.css';
 
-
 const ChatPage = () => {
   const { chatClient, isClientReady } = useStreamChat();
   const { user } = useAuth();
   const { recipientId } = useParams();
-
   const [channel, setChannel] = useState(null);
 
   useEffect(() => {
     const setupChannel = async () => {
-      // Check for all dependencies to be ready, including a valid current user ID
-      if (!isClientReady || !user || !user.id || !recipientId || recipientId === '') {
-        return;
-      }
-      
-      const currentUserId = user.id;
+      if (!isClientReady || !user?.id || !recipientId || recipientId === '') return;
 
-      // Create a unique channel ID by sorting the two user IDs
-      const members = [currentUserId, recipientId];
-      const channelId = members.sort().join('-');
+      const members = [user.id, recipientId].sort();
+      const channelId = members.join('-');
 
       try {
         const newChannel = chatClient.channel('messaging', channelId, {
           name: `Chat with ${user.name}`,
-          members: members,
+          members,
         });
 
         await newChannel.watch();
         setChannel(newChannel);
-        
       } catch (error) {
-        console.error("Failed to set up chat channel:", error);
+        console.error('Failed to set up chat channel:', error);
       }
     };
 
@@ -166,63 +159,32 @@ const ChatPage = () => {
 
   if (!isClientReady || !channel) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 text-gray-500">
+      <div className="flex items-center justify-center h-screen bg-gray-100 text-gray-500 text-lg">
         Connecting to chat...
       </div>
     );
   }
 
-  // Define your custom theme object right here
-  const customTheme = {
-    // Override the general styling of the entire Chat component
-    '--str-chat__primary-color': '#42b0f4',
-    '--str-chat__container-background-color': '#fafafa',
-    '--str-chat__base-font-color': '#333',
-    '--str-chat__message-simple-sent-background-color': '#dcf8c6',
-    '--str-chat__message-simple-received-background-color': '#e5e5ea',
-
-    // You can also target specific components more granularly
-    channelHeader: {
-      container: {
-        background: '#fff',
-        borderBottom: '1px solid #e5e5e5',
-        padding: '10px 15px',
-      },
-      title: {
-        fontSize: '18px',
-        fontWeight: 'bold',
-        color: '#333',
-      },
-    },
-    messageInput: {
-      textarea: {
-        borderColor: '#e5e5e5',
-        boxShadow: 'none',
-        '&:focus': {
-          borderColor: '#42b0f4',
-        },
-      },
-      sendButton: {
-        background: '#42b0f4',
-        color: '#fff',
-        borderRadius: '50%',
-      },
-    },
-  };
-
   return (
-    <div className="chat-container h-screen flex">
-      {/* Pass the custom theme directly to the Chat component */}
-      <Chat client={chatClient} theme={customTheme}>
-        <Channel channel={channel}>
-          <Window>
-            <ChannelHeader />
-            <MessageList />
-            <MessageInput />
-          </Window>
-          <Thread />
-        </Channel>
-      </Chat>
+    <div className="w-full h-screen bg-gradient-to-br from-blue-50 via-white to-purple-100 p-2 sm:p-4">
+      <div className="w-full h-full border border-gray-200 bg-white rounded-xl shadow-lg overflow-hidden">
+        <Chat client={chatClient} theme="str-chat__theme-light">
+          <Channel channel={channel}>
+            <Window>
+              <div className="border-b px-4 py-3 bg-white shadow-sm">
+                <ChannelHeader />
+              </div>
+              <div className="flex-1 h-[calc(100vh-160px)] overflow-y-auto">
+                <MessageList />
+              </div>
+              <div className="border-t p-2 bg-white">
+                <MessageInput />
+              </div>
+            </Window>
+            <Thread />
+          </Channel>
+        </Chat>
+      </div>
     </div>
   );
 };
