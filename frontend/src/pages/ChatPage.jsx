@@ -338,7 +338,7 @@ const ChatPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-100 via-white to-blue-100 p-4 sm:p-6 md:p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[calc(100vh-2rem)] sm:h-[calc(100vh-3rem)]">
+      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[calc(80vh-2rem)] sm:h-[calc(80vh-3rem)]">
         <Chat client={chatClient} theme="str-chat__theme-light">
           <Channel channel={channel}>
             <Window>
