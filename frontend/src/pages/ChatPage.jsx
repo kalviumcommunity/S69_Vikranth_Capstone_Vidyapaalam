@@ -14,7 +14,8 @@ import { useStreamChat } from '../contexts/StreamChatContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useParams } from 'react-router-dom';
 
-import 'stream-chat-react/dist/css/index.css';
+import 'stream-chat-react/dist/css/v2/index.css';
+
 
 const ChatPage = () => {
   const { chatClient, isClientReady } = useStreamChat();
