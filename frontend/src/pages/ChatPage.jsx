@@ -26,22 +26,23 @@ const ChatPage = () => {
 
   useEffect(() => {
     const setupChannel = async () => {
-      // Add a more robust check for recipientId
-      if (!isClientReady || !user || !recipientId || recipientId === '') {
+      // Check for all dependencies to be ready, including a valid current user ID
+      if (!isClientReady || !user || !user.id || !recipientId || recipientId === '') {
         console.log("Aborting channel setup. Missing a dependency:", {
           isClientReady,
           user: !!user,
+          currentUserId: user?.id,
           recipientId
         });
         return;
       }
       
       console.log("Attempting to create channel for users:", {
-        currentUserId: user._id,
+        currentUserId: user.id, // <-- Corrected: user.id instead of user._id
         recipientId: recipientId
       });
 
-      const currentUserId = user._id;
+      const currentUserId = user.id; // <-- Corrected: user.id instead of user._id
 
       // Create a unique channel ID by sorting the two user IDs
       const members = [currentUserId, recipientId];
@@ -68,7 +69,7 @@ const ChatPage = () => {
         channel.stopWatching();
       }
     };
-  }, [chatClient, isClientReady, user, recipientId]); // Removed 'channel' from dependency array
+  }, [chatClient, isClientReady, user, recipientId]);
 
   if (!isClientReady || !channel) {
     return (
