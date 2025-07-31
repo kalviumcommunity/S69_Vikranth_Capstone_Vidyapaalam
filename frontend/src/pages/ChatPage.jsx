@@ -336,36 +336,35 @@ const ChatPage = () => {
     );
   }
 
-  return (
-      <div className="max-w-5xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[calc(80vh-2rem)] sm:h-[calc(80vh-3rem)]">
-        <Chat client={chatClient} theme="str-chat__theme-light">
-          <Channel channel={channel}>
-            <Window>
-              <div className="border-b border-gray-200 bg-orange-50 p-4 sm:p-6">
-                <ChannelHeader />
-              </div>
-              <div className="flex-1 overflow-y-auto bg-white">
-                <MessageList />
-              </div>
-              <div className="border-t border-gray-200 bg-orange-50 p-3 sm:p-4">
-                <MessageInput
-                  additionalTextareaProps={{
-                    className:
-                      'border-orange-300 focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 rounded-lg',
-                  }}
-                />
-              </div>
-            </Window>
-            <Thread
-              additionalMessageInputProps={{
+return (
+  <div className="max-w-7xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col h-[calc(90vh-2rem)] sm:h-[calc(90vh-3rem)]">
+    <Chat client={chatClient} theme="str-chat__theme-light">
+      <Channel channel={channel}>
+        <Window>
+          <div className="border-b border-gray-200 bg-orange-50 p-4 sm:p-6">
+            <ChannelHeader />
+          </div>
+          <div className="flex-1 overflow-y-auto bg-white">
+            <MessageList />
+          </div>
+          <div className="border-t border-gray-200 bg-orange-50 p-3 sm:p-4">
+            <MessageInput
+              additionalTextareaProps={{
                 className:
                   'border-orange-300 focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 rounded-lg',
               }}
             />
-          </Channel>
-        </Chat>
-      </div>
-  );
-};
+          </div>
+        </Window>
+        <Thread
+          additionalMessageInputProps={{
+            className:
+              'border-orange-300 focus:border-orange-500 focus:ring focus:ring-orange-200 focus:ring-opacity-50 rounded-lg',
+          }}
+        />
+      </Channel>
+    </Chat>
+  </div>
+);
 
 export default ChatPage;
