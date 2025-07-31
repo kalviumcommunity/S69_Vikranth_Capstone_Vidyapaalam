@@ -366,5 +366,6 @@ return (
     </Chat>
   </div>
 );
+};
 
 export default ChatPage;
