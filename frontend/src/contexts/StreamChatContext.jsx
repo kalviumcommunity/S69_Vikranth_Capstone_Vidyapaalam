@@ -7,19 +7,15 @@ const StreamChatContext = createContext();
 export const useStreamChat = () => useContext(StreamChatContext);
 
 export const StreamChatProvider = ({ children }) => {
-  const { user, authToken } = useAuth();
+  const { user, loading } = useAuth();
   const [chatClient, setChatClient] = useState(null);
   const [isClientReady, setIsClientReady] = useState(false);
 
   useEffect(() => {
-    // Check if we have the minimum required data to proceed
-    if (!user || !user._id || !authToken) {
-      console.log('Stream Chat Provider: Dependencies not ready. User, User ID, or Auth Token is missing.', {
-        user: !!user,
-        userId: user?._id,
-        authToken: !!authToken,
-      });
-
+    // We must wait for the user to be loaded.
+    // Your backend returns the user id as 'id', so we check for user.id
+    if (loading || !user || !user.id) {
+      console.log('Stream Chat Provider: Dependencies not ready yet.', { loading, user: !!user, userId: user?.id });
       if (chatClient) {
         chatClient.disconnectUser();
         setChatClient(null);
@@ -28,13 +24,24 @@ export const StreamChatProvider = ({ children }) => {
       return;
     }
 
-    // If we've made it this far, dependencies are ready. Let's initialize.
-    console.log('Stream Chat Provider: Dependencies are ready. Initializing chat client...');
-
     const initializeClient = async () => {
       try {
-        const client = StreamChat.getInstance(import.meta.env.VITE_STREAM_API_KEY);
-        await client.connectUser({ id: user._id, name: user.name }, authToken);
+        console.log('Stream Chat Provider: Fetching Stream token from backend using cookie authentication...');
+
+        const backendUrl = import.meta.env.VITE_REACT_APP_BACKEND_URL;
+        // The fetch call will automatically include your `accessToken` cookie
+        const response = await fetch(`${backendUrl}/api/stream/token`, {
+          credentials: 'include', // Important for sending cookies with cross-origin requests
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch Stream Chat token from backend.');
+        }
+
+        const { token, apiKey, userId } = await response.json();
+
+        const client = StreamChat.getInstance(apiKey);
+        await client.connectUser({ id: userId, name: user.name, image: user.picture }, token);
         
         setChatClient(client);
         setIsClientReady(true);
@@ -48,14 +55,13 @@ export const StreamChatProvider = ({ children }) => {
 
     initializeClient();
 
-    // This cleanup function will disconnect the user when the component unmounts
     return () => {
       console.log('Stream Chat Provider: Disconnecting user...');
       if (chatClient) {
         chatClient.disconnectUser();
       }
     };
-  }, [user, user?._id, authToken]); // Ensure all critical dependencies are in the array
+  }, [user, user?.id, loading]);
 
   return (
     <StreamChatContext.Provider value={{ chatClient, isClientReady }}>
