@@ -1,10 +1,12 @@
 const express = require('express');
-const { generateToken } = require('../controller/streamController');
-const { protect } = require('../middleware/authMiddleware'); // Assuming you have an auth middleware
+const { generateToken, generateVideoToken } = require('../controller/streamController');
+const { protect } = require('../middleware/authMiddleware'); 
 
 const router = express.Router();
 
 router.get('/token', protect, generateToken);
+
+router.get('/video-token', protect, generateVideoToken);
 
 module.exports = router;
 
