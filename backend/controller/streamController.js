@@ -41,3 +41,28 @@ exports.generateToken = async (req, res) => {
         res.status(500).json({ error: 'Failed to generate Stream token' });
     }
 };
+
+
+exports.generateVideoToken = async (req, res) => {
+    try {
+        const { id } = req.user;
+
+        if (!id) {
+            return res.status(401).json({ error: 'Unauthorized: User ID not found' });
+        }
+
+        const serverClient = StreamChat.getInstance(STREAM_API_KEY, STREAM_API_SECRET);
+
+        const token = serverClient.createToken(id.toString());
+
+        res.status(200).json({
+            token,
+            apiKey: STREAM_API_KEY,
+            userId: id.toString(),
+        });
+
+    } catch (error) {
+        console.error('Error generating Stream Video token:', error);
+        res.status(500).json({ error: 'Failed to generate Stream Video token' });
+    }
+};
