@@ -93,7 +93,6 @@
 //           <Route path="profile/edit" element={<TeacherProfileEdit />} />
 //           <Route path="settings" element={<TeacherSettings />} />
 //           <Route path="chat/:recipientId" element={<ChatPage />} />
-
 //         </Route>
 //       </Route>
 
@@ -107,15 +106,15 @@
 //   return (
 //     <QueryClientProvider client={queryClient}>
 //       <Toaster />
-//       <BrowserRouter >
+//       <BrowserRouter>
 //         <AuthProvider>
-//           <TeacherProfileProvider>
-//             <SessionProvider>
-//               <StreamChatProvider> 
+//           <SessionProvider>
+//             <StreamChatProvider>
+//               <TeacherProfileProvider>
 //                 <AppContent />
-//               </StreamChatProvider>
-//             </SessionProvider>
-//           </TeacherProfileProvider>
+//               </TeacherProfileProvider>
+//             </StreamChatProvider>
+//           </SessionProvider>
 //         </AuthProvider>
 //       </BrowserRouter>
 //     </QueryClientProvider>
@@ -140,8 +139,9 @@ import PrivateRoute from "./components/ui/PrivateRoute";
 
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TeacherProfileProvider } from "./contexts/TeacherProfileContext";
-import { SessionProvider } from "./contexts/SessionContext"
+import { SessionProvider } from "./contexts/SessionContext";
 import { StreamChatProvider } from "./contexts/StreamChatContext";
+import { StreamVideoProvider } from "./contexts/StreamVideoContext"; // <-- NEW IMPORT
 
 import Index from "./pages/index";
 import SkillsPage from "./pages/SkillsPage";
@@ -164,6 +164,7 @@ import TeacherProfileEdit from "./pages/teacher/TeacherProfileEdit";
 import TeacherSettings from "./pages/teacher/TeacherSettings";
 
 import ChatPage from "./pages/ChatPage";
+import VideoCallPage from "./pages/VideoCallPage"; // <-- NEW IMPORT
 
 import NotAuthorized from "./pages/NotAuthorized";
 import NotFound from "./pages/NotFound";
@@ -208,7 +209,7 @@ const AppContent = () => {
           <Route path="book-session/:teacherId" element={<BookSession />} />
           <Route path="favorites" element={<Favorites />} />
           <Route path="settings" element={<StudentSettings />} />
-          <Route path="chat/:recipientId" element={<ChatPage />} />      
+          <Route path="chat/:recipientId" element={<ChatPage />} />
         </Route>
       </Route>
 
@@ -225,6 +226,11 @@ const AppContent = () => {
         </Route>
       </Route>
 
+      {/* NEW: Video call route */}
+      <Route element={<PrivateRoute roles={["student", "teacher"]} />}>
+        <Route path="/call/:callId" element={<VideoCallPage />} />
+      </Route>
+
       <Route path="/not-authorized" element={<NotAuthorized />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
@@ -239,9 +245,11 @@ const App = () => {
         <AuthProvider>
           <SessionProvider>
             <StreamChatProvider>
-              <TeacherProfileProvider>
-                <AppContent />
-              </TeacherProfileProvider>
+              <StreamVideoProvider> {/* <-- NEW PROVIDER */}
+                <TeacherProfileProvider>
+                  <AppContent />
+                </TeacherProfileProvider>
+              </StreamVideoProvider>
             </StreamChatProvider>
           </SessionProvider>
         </AuthProvider>
@@ -251,5 +259,3 @@ const App = () => {
 };
 
 export default App;
-
-
