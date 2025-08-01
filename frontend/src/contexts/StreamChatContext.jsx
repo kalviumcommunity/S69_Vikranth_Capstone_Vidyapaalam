@@ -12,8 +12,6 @@ export const StreamChatProvider = ({ children }) => {
   const [isClientReady, setIsClientReady] = useState(false);
 
   useEffect(() => {
-    // We must wait for the user to be loaded.
-    // Your backend returns the user id as 'id', so we check for user.id
     if (loading || !user || !user.id) {
       console.log('Stream Chat Provider: Dependencies not ready yet.', { loading, user: !!user, userId: user?.id });
       if (chatClient) {
