@@ -81,6 +81,11 @@
 // };
 
 // export default VideoCallPage;
+
+
+
+
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -103,35 +108,46 @@ const VideoCallPage = () => {
   // Determine the correct redirect path based on user role
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
-  useEffect(() => {
-    let callInstance;
-    const setupCall = async () => {
-      // Guard clause to ensure we have a ready client and user
-      if (!isClientReady || !user?.id || !callId || call) return;
+ // inside VideoCallPage component
 
-      console.log('VideoCallPage: Setting up a new call instance.');
-      
-      try {
-        callInstance = videoClient.getOrCreateCall({ id: callId });
-        setCall(callInstance);
-        await callInstance.join();
-        console.log('VideoCallPage: Successfully joined call.');
-      } catch (error) {
-        console.error('Failed to join video call:', error);
-        navigate(navigatePath); // Use the correct path on error
-      }
-    };
+useEffect(() => {
+    let callInstance;
+    let didCancel = false;
 
-    setupCall();
+    const setupCall = async () => {
+        if (!isClientReady || !user?.id || !callId || call) {
+            console.log('VideoCallPage: Guard clause met, not setting up call.');
+            return;
+        }
 
-    // Cleanup: leave the call when the component unmounts
-    return () => {
-      console.log('VideoCallPage: Component unmounting, leaving call.');
-      if (callInstance) {
-        callInstance.leave();
-      }
-    };
-  }, [isClientReady, user, callId, videoClient, navigate, navigatePath]);
+        console.log('VideoCallPage: Setting up a new call instance.');
+
+        try {
+            callInstance = videoClient.getOrCreateCall({ id: callId });
+            
+            if (didCancel) return; 
+            
+            setCall(callInstance);
+            await callInstance.join();
+            console.log('VideoCallPage: Successfully joined call.');
+        } catch (error) {
+            if (!didCancel) {
+                console.error('Failed to join video call:', error);
+                navigate(navigatePath);
+            }
+        }
+    };
+
+    setupCall();
+
+    return () => {
+        console.log('VideoCallPage: Component unmounting, leaving call.');
+        didCancel = true;
+        if (callInstance) {
+            callInstance.leave();
+        }
+    };
+}, [isClientReady, user, callId, videoClient, navigate, navigatePath, call]);
 
   if (!isClientReady || !call) {
     return (
@@ -143,7 +159,7 @@ const VideoCallPage = () => {
   
   const handleLeaveCall = async () => {
     await call.leave();
-    navigate(navigatePath); // Use the correct path when leaving the call
+    navigate(navigatePath); 
   };
 
   return (
@@ -151,11 +167,9 @@ const VideoCallPage = () => {
       <StreamVideo client={videoClient}>
         <Call call={call}>
           <div className="relative w-full h-full">
-            {/* The main video content area */}
             <div className="absolute inset-0">
               <CallParticipantsList />
             </div>
-            {/* Controls at the bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-4">
               <CallControls onLeave={handleLeaveCall} />
             </div>
