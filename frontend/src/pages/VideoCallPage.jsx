@@ -438,7 +438,7 @@ import {
   CallControls,
   CallParticipantsList,
   StreamTheme,
-  SpeakerLayout,
+  GridLayout, // Replaced SpeakerLayout
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -571,24 +571,18 @@ const VideoCallPage = () => {
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
             <div className="flex h-screen w-screen bg-gray-50 relative">
-              {/* Main Video Area */}
-              <div className="flex-1 relative h-full bg-black md:h-screen">
-                <SpeakerLayout />
+              {/* Main Video Grid */}
+              <div
+                className={`flex-1 transition-all duration-300 ${
+                  sidebarOpen ? "mr-80" : ""
+                } relative h-full bg-black flex`}
+              >
+                <GridLayout />
               </div>
 
-              {/* Desktop Sidebar */}
-              <aside className="hidden md:flex w-80 max-w-full h-full bg-white border-l border-gray-200 shadow-lg flex-col overflow-hidden">
-                <div className="participants-header">
-                  <h3 className="text-lg font-semibold">Participants</h3>
-                </div>
-                <div className="flex-1 overflow-y-auto">
-                  <CallParticipantsList />
-                </div>
-              </aside>
-
-              {/* Mobile Drawer (Only on small screens) */}
+              {/* Participants Drawer */}
               <div
-                className={`fixed inset-0 z-50 md:hidden transition-opacity duration-200 ${
+                className={`fixed inset-0 z-50 transition-opacity duration-200 ${
                   sidebarOpen
                     ? "bg-black bg-opacity-30 pointer-events-auto"
                     : "bg-transparent pointer-events-none"
@@ -596,7 +590,7 @@ const VideoCallPage = () => {
                 onClick={toggleSidebar}
               >
                 <aside
-                  className={`absolute top-0 right-0 h-full w-full bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
+                  className={`absolute top-0 right-0 h-full w-full md:w-80 bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
                     sidebarOpen ? "translate-x-0" : "translate-x-full"
                   }`}
                   onClick={(e) => e.stopPropagation()}
@@ -616,11 +610,11 @@ const VideoCallPage = () => {
               </div>
 
               {/* Controls Bar with Toggle Button */}
-              <div className="controls-bar md:w-[calc(100%-320px)] md:left-0 md:right-auto md:relative md:bg-transparent md:shadow-none">
+              <div className="controls-bar">
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={toggleSidebar}
-                    className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105 md:hidden"
+                    className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
                     aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
                   >
                     <Users size={18} />
