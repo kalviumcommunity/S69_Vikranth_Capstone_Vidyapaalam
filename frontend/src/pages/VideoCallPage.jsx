@@ -109,6 +109,52 @@ const customThemeStyle = `
   --str-video__text-color1: #222;
   --str-video__background-color: #fff;
 }
+.full-call-container {
+  display: flex;
+  flex-direction: column;
+}
+.main-call-area {
+  flex: 1;
+  display: flex;
+}
+.main-speaker-view {
+  flex: 1;
+}
+.participants-list-sidebar {
+  width: 250px;
+  background: #f0f0f0;
+  overflow-y: auto;
+}
+.controls-bar {
+  background: #fff;
+  padding: 1rem;
+}
+@media (max-width: 640px) {
+  .main-call-area {
+    flex-direction: column;
+    height: 100vh;
+  }
+  .main-speaker-view {
+    flex: 1;
+  }
+  .participants-list-sidebar {
+    width: 100%;
+    height: 30vh; /* Give it a fixed height for mobile */
+    position: static;
+    background: #fff;
+    border-top: 1px solid #ccc;
+    z-index: 15;
+    order: 2; /* Position it below the video */
+  }
+  .controls-bar {
+    position: static;
+    width: 100%;
+    order: 3; /* Position it at the bottom */
+  }
+  .str-video__call-participants-list {
+    padding: 0.5rem;
+  }
+}
 `;
 
 const VideoCallPage = () => {
@@ -193,12 +239,16 @@ const VideoCallPage = () => {
       <StreamTheme className="light h-screen w-screen bg-white">
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
-            <div className="relative w-full h-full">
-              <SpeakerLayout />
-              <div className="absolute top-0 right-0 m-4 z-20">
-                <CallParticipantsList />
+            <div className="full-call-container h-full">
+              <div className="main-call-area">
+                <div className="main-speaker-view">
+                  <SpeakerLayout />
+                </div>
+                <div className="participants-list-sidebar">
+                  <CallParticipantsList />
+                </div>
               </div>
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-75 z-10">
+              <div className="controls-bar">
                 <CallControls onLeave={handleLeaveCall} />
               </div>
             </div>
