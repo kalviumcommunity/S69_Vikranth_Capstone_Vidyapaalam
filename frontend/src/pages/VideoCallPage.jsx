@@ -286,12 +286,12 @@ const VideoCallPage = () => {
         .str-video.light {
           --str-video__primary-color: #f97316; /* Orange */
           --str-video__secondary-color: #3b82f6; /* Blue */
-          --str-video__text-color1: #222222; /* DARK for all main UI text */
+          --str-video__text-color1: #02F2FA ; /* DARK for all main UI text */
           --str-video__text-color2: #222222;
           --str-video__text-color3: #222222;
           --str-video__background-color: #f9fafb; /* Light gray */
           --str-video__popover-background: #ffffff;
-          --str-video__popover-text-color: #222222; /* DARK for dropdown/popover */
+          --str-video__popover-text-color: #02F2FA ; /* DARK for dropdown/popover */
           --str-video__tooltip-background: #222222;
           --str-video__tooltip-text-color: #ffffff;
         }
