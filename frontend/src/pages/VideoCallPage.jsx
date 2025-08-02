@@ -87,6 +87,7 @@
 
 
 
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -94,9 +95,10 @@ import {
   StreamCall,
   CallControls,
   CallParticipantsList,
+  CallParticipantsLayout,
 } from '@stream-io/video-react-sdk';
 import { useStreamVideo } from '../contexts/StreamVideoContext';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from './AuthContext';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 
 const VideoCallPage = () => {
@@ -118,13 +120,12 @@ const VideoCallPage = () => {
 
   const call = videoClient.call('default', callId);
 
-  // The `join` method can throw an error if something goes wrong, so we handle it.
   try {
     call.join({ create: true });
   } catch (error) {
     console.error('Failed to create or join video call:', error);
     navigate(navigatePath);
-    return null; // Or show an error message
+    return null; 
   }
 
   const handleLeaveCall = async () => {
@@ -135,20 +136,17 @@ const VideoCallPage = () => {
   };
 
   return (
-    // Full-screen black background container
-    <div className="w-screen h-screen bg-black text-white">
+    <div style={{ width: '100vw', height: '100vh', backgroundColor: 'black', color: 'white', position: 'relative' }}>
       <StreamVideo client={videoClient}>
         <StreamCall call={call}>
-          {/* Relative container for positioning children absolutely */}
-          <div className="relative w-full h-full">
-            {/* The video container, which takes up the full space */}
-            <div className="absolute inset-0">
-              <CallParticipantsList />
-            </div>
-            {/* The controls container, positioned at the bottom of the screen */}
-            <div className="absolute bottom-0 left-0 right-0 p-4">
-              <CallControls onLeave={handleLeaveCall} />
-            </div>
+          {/* Use CallParticipantsLayout to properly display the video feeds */}
+          <div style={{ position: 'absolute', inset: 0 }}>
+            <CallParticipantsLayout />
+          </div>
+          
+          {/* Controls are positioned at the bottom */}
+          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1rem' }}>
+            <CallControls onLeave={handleLeaveCall} />
           </div>
         </StreamCall>
       </StreamVideo>
