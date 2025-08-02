@@ -1,93 +1,3 @@
-// import React, { useEffect, useState } from 'react';
-// import { useParams, useNavigate } from 'react-router-dom';
-// import {
-//   StreamVideo,
-//   Call,
-//   CallControls,
-//   CallParticipantsList,
-// } from '@stream-io/video-react-sdk';
-// import { useStreamVideo } from '../contexts/StreamVideoContext';
-// import { useAuth } from '../contexts/AuthContext';
-// import '@stream-io/video-react-sdk/dist/css/styles.css';
-
-// const VideoCallPage = () => {
-//   const { videoClient, isClientReady } = useStreamVideo();
-//   const { user } = useAuth();
-//   const { callId } = useParams();
-//   const navigate = useNavigate();
-//   const [call, setCall] = useState(null);
-
-//   useEffect(() => {
-//     let callInstance;
-//     const setupCall = async () => {
-//       // Guard clause to ensure we have a ready client and user
-//       if (!isClientReady || !user?.id || !callId || call) return;
-
-//       console.log('VideoCallPage: Setting up a new call instance.');
-      
-//       try {
-//         callInstance = videoClient.getOrCreateCall({ id: callId });
-//         setCall(callInstance);
-//         await callInstance.join();
-//         console.log('VideoCallPage: Successfully joined call.');
-//       } catch (error) {
-//         console.error('Failed to join video call:', error);
-//         navigate('/overview'); // Redirect on error
-//       }
-//     };
-
-//     setupCall();
-
-//     // Cleanup: leave the call when the component unmounts
-//     return () => {
-//       console.log('VideoCallPage: Component unmounting, leaving call.');
-//       if (callInstance) {
-//         callInstance.leave();
-//       }
-//     };
-//   }, [isClientReady, user, callId, videoClient, navigate]); // Removed 'call' from the dependency array
-
-//   if (!isClientReady || !call) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
-//         Connecting to video call...
-//       </div>
-//     );
-//   }
-  
-//   const handleLeaveCall = async () => {
-//     await call.leave();
-//     navigate('/overview'); // Redirect to overview page after leaving the call
-//   };
-
-//   return (
-//     <div className="w-screen h-screen bg-black text-white">
-//       <StreamVideo client={videoClient}>
-//         <Call call={call}>
-//           <div className="relative w-full h-full">
-//             {/* The main video content area */}
-//             <div className="absolute inset-0">
-//               <CallParticipantsList />
-//             </div>
-//             {/* Controls at the bottom */}
-//             <div className="absolute bottom-0 left-0 right-0 p-4">
-//               <CallControls onLeave={handleLeaveCall} />
-//             </div>
-//           </div>
-//         </Call>
-//       </StreamVideo>
-//     </div>
-//   );
-// };
-
-// export default VideoCallPage;
-
-
-
-
-
-
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -100,62 +10,8 @@ import {
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
 import { useAuth } from "../contexts/AuthContext";
+import { Users, X } from "lucide-react"; // Using lucide-react for icons
 import "@stream-io/video-react-sdk/dist/css/styles.css";
-
-const customThemeStyle = `
-.str-video.light {
-  --str-video__primary-color: orange;
-  --str-video__secondary-color: blue;
-  --str-video__text-color1: #fff ;
-  --str-video__background-color: #fff;
-}
-.full-call-container {
-  display: flex;
-  flex-direction: column;
-}
-.main-call-area {
-  flex: 1;
-  display: flex;
-}
-.main-speaker-view {
-  flex: 1;
-}
-.participants-list-sidebar {
-  width: 250px;
-  background: #f0f0f0;
-  overflow-y: auto;
-}
-.controls-bar {
-  background: #fff;
-  padding: 1rem;
-}
-@media (max-width: 640px) {
-  .main-call-area {
-    flex-direction: column;
-    height: 100vh;
-  }
-  .main-speaker-view {
-    flex: 1;
-  }
-  .participants-list-sidebar {
-    width: 100%;
-    height: 30vh; /* Give it a fixed height for mobile */
-    position: static;
-    background: #fff;
-    border-top: 1px solid #ccc;
-    z-index: 15;
-    order: 2; /* Position it below the video */
-  }
-  .controls-bar {
-    position: static;
-    width: 100%;
-    order: 3; /* Position it at the bottom */
-  }
-  .str-video__call-participants-list {
-    padding: 0.5rem;
-  }
-}
-`;
 
 const VideoCallPage = () => {
   const { videoClient, isClientReady } = useStreamVideo();
@@ -164,16 +20,17 @@ const VideoCallPage = () => {
   const navigate = useNavigate();
   const [call, setCall] = useState(null);
   const [error, setError] = useState(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigatePath =
-    user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
+  const navigatePath = user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
 
   useEffect(() => {
-    if (call) return;
-
     if (!isClientReady || !user?.id || !callId || !videoClient) {
+      setError("Missing required data to start the video call.");
       return;
     }
+
+    if (call) return;
 
     const createAndJoinCall = async () => {
       try {
@@ -194,27 +51,27 @@ const VideoCallPage = () => {
         (async () => {
           try {
             await call.leave();
-          } catch (err) {}
+          } catch (err) {
+            console.error("Failed to leave call:", err);
+          }
         })();
       }
     };
-  }, [
-    videoClient,
-    isClientReady,
-    user?.id,
-    callId,
-    navigate,
-    navigatePath,
-    call,
-  ]);
+  }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
 
   const handleLeaveCall = async () => {
     try {
       if (call) {
         await call.leave();
       }
-    } catch (err) {}
+    } catch (err) {
+      console.error("Failed to leave call:", err);
+    }
     navigate(navigatePath);
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen((prev) => !prev);
   };
 
   if (error) {
@@ -235,21 +92,107 @@ const VideoCallPage = () => {
 
   return (
     <>
-      <style>{customThemeStyle}</style>
-      <StreamTheme className="light h-screen w-screen bg-white">
+      <style>{`
+        .str-video.light {
+          --str-video__primary-color: #f97316; /* Orange */
+          --str-video__secondary-color: #3b82f6; /* Blue */
+          --str-video__text-color1: #222222;
+          --str-video__text-color2: #333333;
+          --str-video__text-color3: #555555;
+          --str-video__background-color: #f3f4f6; /* Light gray */
+          --str-video__popover-background: #ffffff;
+          --str-video__popover-text-color: #222222;
+          --str-video__tooltip-background: #222222;
+          --str-video__tooltip-text-color: #ffffff;
+        }
+
+        .str-video__call-participants-list {
+          padding: 1rem;
+        }
+
+        .str-video__participant-details {
+          background: #ffffff;
+          border-radius: 0.5rem;
+          margin-bottom: 0.5rem;
+          padding: 0.5rem;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .str-video__call-controls {
+          display: flex;
+          justify-content: center;
+          gap: 1rem;
+        }
+
+        .str-video__call-controls__button {
+          background: #f97316;
+          color: #ffffff;
+          padding: 0.5rem 1rem;
+          border-radius: 0.375rem;
+          transition: background-color 0.2s;
+        }
+
+        .str-video__call-controls__button:hover {
+          background: #ea580c;
+        }
+
+        @media (max-width: 640px) {
+          .str-video__call-participants-list {
+            max-height: 40vh;
+            overflow-y: auto;
+          }
+        }
+      `}</style>
+      <StreamTheme className="light h-screen w-screen bg-gray-100">
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
-            <div className="full-call-container h-full">
-              <div className="main-call-area">
-                <div className="main-speaker-view">
-                  <SpeakerLayout />
-                </div>
-                <div className="participants-list-sidebar">
-                  <CallParticipantsList />
+            <div className="relative w-full h-full flex flex-col sm:flex-row">
+              {/* Main Speaker View */}
+              <div className="flex-1 bg-black">
+                <SpeakerLayout />
+              </div>
+
+              {/* Sidebar for Desktop, Popup for Mobile */}
+              <div
+                className={`fixed inset-0 z-50 bg-black bg-opacity-50 sm:bg-transparent sm:static sm:w-80 sm:max-w-full sm:shadow-lg sm:rounded-lg sm:bg-white transition-all duration-300 ${
+                  sidebarOpen ? "block" : "hidden sm:w-0 sm:overflow-hidden"
+                }`}
+                onClick={() => setSidebarOpen(false)} // Click outside to close on mobile
+              >
+                <div
+                  className="absolute bottom-0 sm:static w-full sm:w-80 bg-white sm:h-full rounded-t-lg sm:rounded-lg p-4 sm:p-6"
+                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                >
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold text-gray-900 sm:hidden">
+                      Participants
+                    </h3>
+                    <button
+                      onClick={toggleSidebar}
+                      className="text-gray-600 hover:text-gray-900 focus:outline-none"
+                      aria-label="Close participants"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+                  <div className="max-h-[40vh] sm:max-h-[80vh] overflow-y-auto">
+                    <CallParticipantsList />
+                  </div>
                 </div>
               </div>
-              <div className="controls-bar">
-                <CallControls onLeave={handleLeaveCall} />
+
+              {/* Controls Bar with Toggle Button */}
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-800 z-10 flex justify-center items-center">
+                <div className="flex items-center space-x-4">
+                  <button
+                    onClick={toggleSidebar}
+                    className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none"
+                    aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
+                  >
+                    <Users size={24} />
+                  </button>
+                  <CallControls onLeave={handleLeaveCall} />
+                </div>
               </div>
             </div>
           </StreamCall>
