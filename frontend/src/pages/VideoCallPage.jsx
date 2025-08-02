@@ -207,6 +207,228 @@
 
 
 
+// import React, { useEffect, useState } from "react";
+// import { useParams, useNavigate } from "react-router-dom";
+// import {
+//   StreamVideo,
+//   StreamCall,
+//   CallControls,
+//   CallParticipantsList,
+//   StreamTheme,
+//   SpeakerLayout,
+// } from "@stream-io/video-react-sdk";
+// import { useStreamVideo } from "../contexts/StreamVideoContext";
+// import { useAuth } from "../contexts/AuthContext";
+// import { Users, X } from "lucide-react";
+// import "@stream-io/video-react-sdk/dist/css/styles.css";
+
+// const VideoCallPage = () => {
+//   const { videoClient, isClientReady } = useStreamVideo();
+//   const { user } = useAuth();
+//   const { callId } = useParams();
+//   const navigate = useNavigate();
+//   const [call, setCall] = useState(null);
+//   const [error, setError] = useState(null);
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+//   const navigatePath = user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
+
+//   useEffect(() => {
+//     if (!isClientReady || !user?.id || !callId || !videoClient) {
+//       setError("Missing required data to start the video call.");
+//       return;
+//     }
+
+//     if (call) return;
+
+//     const createAndJoinCall = async () => {
+//       try {
+//         const newCall = videoClient.call("default", callId);
+//         await newCall.join({ create: true });
+//         setCall(newCall);
+//         setError(null);
+//       } catch (err) {
+//         console.error("Failed to join video call:", err);
+//         setError("Failed to join the video call. Please try again.");
+//         navigate(navigatePath);
+//       }
+//     };
+
+//     createAndJoinCall();
+
+//     return () => {
+//       if (call) {
+//         (async () => {
+//           try {
+//             await call.leave();
+//           } catch (err) {
+//             console.error("Failed to leave call:", err);
+//           }
+//         })();
+//       }
+//     };
+//   }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
+
+//   const handleLeaveCall = async () => {
+//     try {
+//       if (call) await call.leave();
+//     } catch (err) {
+//       console.error("Failed to leave call:", err);
+//     }
+//     navigate(navigatePath);
+//   };
+
+//   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+//   return (
+//     <>
+//       <style>{`
+//         .str-video.light {
+//           --str-video__primary-color: #f97316;
+//           --str-video__secondary-color: #3b82f6;
+//           --str-video__text-color1: #ffffff;
+//           --str-video__text-color2: #ffffff;
+//           --str-video__text-color3: #ffffff;
+//           --str-video__background-color: #f9fafb;
+//           --str-video__popover-background: #222222;
+//           --str-video__popover-text-color: #ffffff;
+//           --str-video__tooltip-background: #222222;
+//           --str-video__tooltip-text-color: #ffffff;
+//         }
+//         /* Force dropdown (popover) text color to white */
+//         .str-video.light .str-video__popover,
+//         .str-video.light .str-video__popover * {
+//           color: #ffffff !important;
+//         }
+//         .str-video__call-participants-list {
+//           padding: 1rem;
+//         }
+//         .str-video__participant-details {
+//           background: #ffffff;
+//           border-radius: 0.375rem;
+//           margin-bottom: 0.5rem;
+//           padding: 0.75rem;
+//           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+//           transition: background-color 0.2s;
+//         }
+//         .str-video__participant-details:hover {
+//           background: #f9fafb;
+//         }
+//         .str-video__call-controls {
+//           display: flex;
+//           justify-content: center;
+//           gap: 0.75rem;
+//         }
+//         .str-video__call-controls__button {
+//           background: #f97316;
+//           color: #ffffff;
+//           padding: 0.5rem 1rem;
+//           border-radius: 0.375rem;
+//           font-size: 0.875rem;
+//           transition: background-color 0.2s, transform 0.2s;
+//         }
+//         .str-video__call-controls__button:hover {
+//           background: #ea580c;
+//           transform: translateY(-1px);
+//         }
+//         .participants-header {
+//           background: #ffffff;
+//           position: sticky;
+//           top: 0;
+//           z-index: 10;
+//           padding: 0.75rem 1rem;
+//           border-bottom: 1px solid #e5e7eb;
+//           font-weight: 500;
+//         }
+//         .sidebar-container {
+//           animation: slide-in 0.3s ease-out;
+//         }
+//         @keyframes slide-in {
+//           from {
+//             transform: translateX(100%);
+//           }
+//           to {
+//             transform: translateX(0);
+//           }
+//         }
+//         @media (max-width: 640px) {
+//           .str-video__call-participants-list {
+//             max-height: 50vh;
+//             overflow-y: auto;
+//           }
+//         }
+//         @media (min-width: 641px) and (max-width: 1024px) {
+//           .sidebar-container {
+//             width: 18rem;
+//           }
+//         }
+//       `}</style>
+//       <StreamTheme className="light h-screen w-screen bg-gray-50">
+//         <StreamVideo client={videoClient}>
+//           <StreamCall call={call}>
+//             <div className="relative w-full h-full flex flex-col bg-gray-50">
+//               {/* Main Speaker View */}
+//               <div className="flex-1 min-h-0 bg-black">
+//                 <SpeakerLayout />
+//               </div>
+//               {/* Sidebar for Desktop, Drawer for Mobile (only visible when open) */}
+//               <div
+//                 className={`fixed inset-0 z-50 bg-black bg-opacity-30 transition-opacity duration-200 ${
+//                   sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+//                 } ${sidebarOpen ? "" : "sm:hidden"}`}
+//                 onClick={toggleSidebar}
+//               >
+//                 <aside
+//                   className={`fixed top-0 right-0 h-full w-80 max-w-full bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
+//                     sidebarOpen ? "translate-x-0" : "translate-x-full"
+//                   } ${sidebarOpen ? "sm:w-80" : "sm:w-0"} sm:rounded-lg sidebar-container`}
+//                   style={{ maxHeight: "100vh" }}
+//                   onClick={(e) => e.stopPropagation()}
+//                 >
+//                   <div className="flex flex-col h-full">
+//                     <div className="participants-header flex items-center justify-between p-3 border-b border-gray-200">
+//                       <h3 className="text-base font-medium text-gray-900">Participants</h3>
+//                       <button
+//                         onClick={toggleSidebar}
+//                         className="text-gray-500 hover:text-gray-700 focus:outline-none"
+//                         aria-label="Close participants"
+//                       >
+//                         <X size={20} />
+//                       </button>
+//                     </div>
+//                     <div className="flex-1 overflow-y-auto p-3">
+//                       <CallParticipantsList />
+//                     </div>
+//                   </div>
+//                 </aside>
+//               </div>
+//               {/* Controls Bar with Toggle Button */}
+//               <div className="fixed bottom-0 left-0 right-0 p-3 bg-white z-10 flex justify-center items-center shadow-t-sm">
+//                 <div className="flex items-center space-x-3">
+//                   <button
+//                     onClick={toggleSidebar}
+//                     className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
+//                     aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
+//                   >
+//                     <Users size={18} />
+//                   </button>
+//                   <CallControls onLeave={handleLeaveCall} />
+//                 </div>
+//               </div>
+//             </div>
+//           </StreamCall>
+//         </StreamVideo>
+//       </StreamTheme>
+//     </>
+//   );
+// };
+
+// export default VideoCallPage;
+
+
+
+
+
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -286,134 +508,96 @@ const VideoCallPage = () => {
         .str-video.light {
           --str-video__primary-color: #f97316;
           --str-video__secondary-color: #3b82f6;
-          --str-video__text-color1: #ffffff;
-          --str-video__text-color2: #ffffff;
-          --str-video__text-color3: #ffffff;
+          --str-video__text-color1: #111827;
           --str-video__background-color: #f9fafb;
-          --str-video__popover-background: #222222;
-          --str-video__popover-text-color: #ffffff;
-          --str-video__tooltip-background: #222222;
-          --str-video__tooltip-text-color: #ffffff;
+          --str-video__popover-background: #1f2937;
+          --str-video__popover-text-color: #f9fafb;
+          --str-video__tooltip-background: #111827;
+          --str-video__tooltip-text-color: #f9fafb;
         }
-        /* Force dropdown (popover) text color to white */
+
+        /* Dropdowns and popovers */
         .str-video.light .str-video__popover,
         .str-video.light .str-video__popover * {
           color: #ffffff !important;
+          background-color: #1f2937 !important;
         }
-        .str-video__call-participants-list {
-          padding: 1rem;
+
+        .str-video.light .str-video__tooltip,
+        .str-video.light .str-video__tooltip * {
+          color: #ffffff !important;
+          background-color: #111827 !important;
         }
-        .str-video__participant-details {
-          background: #ffffff;
-          border-radius: 0.375rem;
-          margin-bottom: 0.5rem;
-          padding: 0.75rem;
-          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-          transition: background-color 0.2s;
-        }
-        .str-video__participant-details:hover {
-          background: #f9fafb;
-        }
-        .str-video__call-controls {
-          display: flex;
-          justify-content: center;
-          gap: 0.75rem;
-        }
-        .str-video__call-controls__button {
-          background: #f97316;
-          color: #ffffff;
-          padding: 0.5rem 1rem;
-          border-radius: 0.375rem;
-          font-size: 0.875rem;
-          transition: background-color 0.2s, transform 0.2s;
-        }
-        .str-video__call-controls__button:hover {
-          background: #ea580c;
-          transform: translateY(-1px);
-        }
-        .participants-header {
-          background: #ffffff;
-          position: sticky;
-          top: 0;
-          z-index: 10;
-          padding: 0.75rem 1rem;
-          border-bottom: 1px solid #e5e7eb;
+
+        /* Name label on video */
+        .str-video.light .str-video__participant-name,
+        .str-video.light .str-video__participant-name * {
+          color: #ffffff !important;
+          background-color: rgba(0, 0, 0, 0.7) !important;
+          padding: 2px 6px;
+          border-radius: 4px;
           font-weight: 500;
         }
-        .sidebar-container {
-          animation: slide-in 0.3s ease-out;
+
+        .str-video__participant-details {
+          border: 1px solid #e5e7eb;
+          border-radius: 0.5rem;
+          padding: 0.75rem;
+          background-color: #fff;
+          transition: background 0.3s;
         }
-        @keyframes slide-in {
-          from {
-            transform: translateX(100%);
-          }
-          to {
-            transform: translateX(0);
-          }
-        }
-        @media (max-width: 640px) {
-          .str-video__call-participants-list {
-            max-height: 50vh;
-            overflow-y: auto;
-          }
-        }
-        @media (min-width: 641px) and (max-width: 1024px) {
-          .sidebar-container {
-            width: 18rem;
-          }
+        .str-video__participant-details:hover {
+          background-color: #f3f4f6;
         }
       `}</style>
+
       <StreamTheme className="light h-screen w-screen bg-gray-50">
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
-            <div className="relative w-full h-full flex flex-col bg-gray-50">
-              {/* Main Speaker View */}
-              <div className="flex-1 min-h-0 bg-black">
+            <div className="relative flex flex-col h-full w-full bg-gray-100">
+
+              {/* Speaker View */}
+              <div className="flex-1 bg-black">
                 <SpeakerLayout />
               </div>
-              {/* Sidebar for Desktop, Drawer for Mobile (only visible when open) */}
-              <div
-                className={`fixed inset-0 z-50 bg-black bg-opacity-30 transition-opacity duration-200 ${
-                  sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                } ${sidebarOpen ? "" : "sm:hidden"}`}
-                onClick={toggleSidebar}
+
+              {/* Participants Sidebar */}
+              {sidebarOpen && (
+                <div className="fixed inset-0 z-50 bg-black/40 sm:hidden" onClick={toggleSidebar} />
+              )}
+              <aside
+                className={`fixed top-0 right-0 z-50 h-full bg-white w-80 max-w-full transition-transform duration-300 ease-in-out transform ${
+                  sidebarOpen ? "translate-x-0" : "translate-x-full"
+                } shadow-lg border-l border-gray-200`}
+                onClick={(e) => e.stopPropagation()}
               >
-                <aside
-                  className={`fixed top-0 right-0 h-full w-80 max-w-full bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
-                    sidebarOpen ? "translate-x-0" : "translate-x-full"
-                  } ${sidebarOpen ? "sm:w-80" : "sm:w-0"} sm:rounded-lg sidebar-container`}
-                  style={{ maxHeight: "100vh" }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex flex-col h-full">
-                    <div className="participants-header flex items-center justify-between p-3 border-b border-gray-200">
-                      <h3 className="text-base font-medium text-gray-900">Participants</h3>
-                      <button
-                        onClick={toggleSidebar}
-                        className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                        aria-label="Close participants"
-                      >
-                        <X size={20} />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3">
-                      <CallParticipantsList />
-                    </div>
+                <div className="flex flex-col h-full">
+                  <div className="flex items-center justify-between px-4 py-3 border-b bg-white shadow-sm sticky top-0 z-10">
+                    <h2 className="text-lg font-semibold text-gray-800">Participants</h2>
+                    <button
+                      onClick={toggleSidebar}
+                      className="text-gray-500 hover:text-gray-700"
+                      aria-label="Close participants"
+                    >
+                      <X size={20} />
+                    </button>
                   </div>
-                </aside>
-              </div>
-              {/* Controls Bar with Toggle Button */}
-              <div className="fixed bottom-0 left-0 right-0 p-3 bg-white z-10 flex justify-center items-center shadow-t-sm">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={toggleSidebar}
-                    className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
-                    aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
-                  >
-                    <Users size={18} />
-                  </button>
-                  <CallControls onLeave={handleLeaveCall} />
+                  <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
+                    <CallParticipantsList />
+                  </div>
                 </div>
+              </aside>
+
+              {/* Controls Footer */}
+              <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-sm p-4 flex justify-center items-center space-x-4">
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow transition-transform duration-200 transform hover:scale-105"
+                  aria-label="Toggle participants"
+                >
+                  <Users size={18} />
+                </button>
+                <CallControls onLeave={handleLeaveCall} />
               </div>
             </div>
           </StreamCall>
@@ -424,3 +608,4 @@ const VideoCallPage = () => {
 };
 
 export default VideoCallPage;
+
