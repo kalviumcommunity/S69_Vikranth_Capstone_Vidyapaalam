@@ -94,8 +94,7 @@ import {
   StreamVideo,
   StreamCall,
   CallControls,
-  CallParticipantsList,
-  CallParticipantsLayout,
+  CallParticipantsList, // Corrected component name
 } from '@stream-io/video-react-sdk';
 import { useStreamVideo } from '../contexts/StreamVideoContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -109,7 +108,6 @@ const VideoCallPage = () => {
 
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
-  // Display a loading state if the client or user is not ready
   if (!isClientReady || !user?.id || !callId || !videoClient) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
@@ -136,17 +134,17 @@ const VideoCallPage = () => {
   };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', backgroundColor: 'black', color: 'white', position: 'relative' }}>
+    <div className="w-screen h-screen bg-black text-white">
       <StreamVideo client={videoClient}>
         <StreamCall call={call}>
-          {/* Use CallParticipantsLayout to properly display the video feeds */}
-          <div style={{ position: 'absolute', inset: 0 }}>
-            <CallParticipantsLayout />
-          </div>
-          
-          {/* Controls are positioned at the bottom */}
-          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '1rem' }}>
-            <CallControls onLeave={handleLeaveCall} />
+          <div className="relative w-full h-full">
+            <div className="absolute inset-0">
+              {/* The correct component for the participant list */}
+              <CallParticipantsList />
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <CallControls onLeave={handleLeaveCall} />
+            </div>
           </div>
         </StreamCall>
       </StreamVideo>
