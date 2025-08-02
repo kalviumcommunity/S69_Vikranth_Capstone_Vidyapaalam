@@ -109,17 +109,22 @@ const VideoCallPage = () => {
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
   useEffect(() => {
-    let callInstance;
+    console.log('VideoCallPage Effect: Checking dependencies...');
+    console.log({ isClientReady, user: !!user, callId, hasCall: !!call, hasVideoClient: !!videoClient });
 
     // The ultimate defensive check: is videoClient an object with the right method?
     if (!videoClient || typeof videoClient.getOrCreateCall !== 'function' || !user?.id || !callId || call) {
+      console.error('VideoCallPage Effect: Guard clause triggered. Exiting effect.');
       return;
     }
     
+    console.log('VideoCallPage Effect: Setting up a new call instance...');
+
     try {
-      callInstance = videoClient.getOrCreateCall({ id: callId });
+      const callInstance = videoClient.getOrCreateCall({ id: callId });
       setCall(callInstance);
       callInstance.join();
+      console.log('VideoCallPage Effect: Successfully joined call.');
     } catch (error) {
       console.error('Failed to join video call:', error);
       navigate(navigatePath);
@@ -130,7 +135,7 @@ const VideoCallPage = () => {
         callInstance.leave();
       }
     };
-  }, [videoClient, user, callId, call, navigate, navigatePath]);
+  }, [videoClient, user, callId, call, navigate, navigatePath, isClientReady]);
 
   if (!isClientReady || !call) {
     return (
