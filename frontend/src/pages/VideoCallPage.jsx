@@ -280,42 +280,24 @@ const VideoCallPage = () => {
 
   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 text-gray-900 text-lg font-semibold">
-        {error}
-      </div>
-    );
-  }
-
-  if (!isClientReady || !call) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 text-gray-900 text-lg font-semibold">
-        Connecting to video call...
-      </div>
-    );
-  }
-
   return (
     <>
       <style>{`
         .str-video.light {
           --str-video__primary-color: #f97316; /* Orange */
           --str-video__secondary-color: #3b82f6; /* Blue */
-          --str-video__text-color1: #ffffff; /* White */
-          --str-video__text-color2: #ffffff;
-          --str-video__text-color3: #ffffff;
+          --str-video__text-color1: #222222; /* DARK for all main UI text */
+          --str-video__text-color2: #222222;
+          --str-video__text-color3: #222222;
           --str-video__background-color: #f9fafb; /* Light gray */
-          --str-video__popover-background: #1f2937; /* Dark gray for dropdowns */
-          --str-video__popover-text-color: #ffffff; /* White for contrast */
-          --str-video__tooltip-background: #1f2937;
+          --str-video__popover-background: #ffffff;
+          --str-video__popover-text-color: #222222; /* DARK for dropdown/popover */
+          --str-video__tooltip-background: #222222;
           --str-video__tooltip-text-color: #ffffff;
         }
-
         .str-video__call-participants-list {
           padding: 1rem;
         }
-
         .str-video__participant-details {
           background: #ffffff;
           border-radius: 0.375rem;
@@ -324,17 +306,14 @@ const VideoCallPage = () => {
           box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
           transition: background-color 0.2s;
         }
-
         .str-video__participant-details:hover {
           background: #f9fafb;
         }
-
         .str-video__call-controls {
           display: flex;
           justify-content: center;
           gap: 0.75rem;
         }
-
         .str-video__call-controls__button {
           background: #f97316;
           color: #ffffff;
@@ -343,12 +322,10 @@ const VideoCallPage = () => {
           font-size: 0.875rem;
           transition: background-color 0.2s, transform 0.2s;
         }
-
         .str-video__call-controls__button:hover {
           background: #ea580c;
           transform: translateY(-1px);
         }
-
         .participants-header {
           background: #ffffff;
           position: sticky;
@@ -358,11 +335,9 @@ const VideoCallPage = () => {
           border-bottom: 1px solid #e5e7eb;
           font-weight: 500;
         }
-
         .sidebar-container {
           animation: slide-in 0.3s ease-out;
         }
-
         @keyframes slide-in {
           from {
             transform: translateX(100%);
@@ -371,14 +346,12 @@ const VideoCallPage = () => {
             transform: translateX(0);
           }
         }
-
         @media (max-width: 640px) {
           .str-video__call-participants-list {
             max-height: 50vh;
             overflow-y: auto;
           }
         }
-
         @media (min-width: 641px) and (max-width: 1024px) {
           .sidebar-container {
             width: 18rem; /* 288px */
@@ -388,24 +361,24 @@ const VideoCallPage = () => {
       <StreamTheme className="light h-screen w-screen bg-gray-50">
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
-            <div className="relative w-full h-full flex flex-col sm:flex-row bg-gray-50">
+            <div className="relative w-full h-full flex flex-col bg-gray-50">
               {/* Main Speaker View */}
               <div className="flex-1 min-h-0 bg-black">
                 <SpeakerLayout />
               </div>
-              {/* Sidebar for Desktop, Drawer for Mobile */}
+              {/* Sidebar for Desktop, Drawer for Mobile (only visible when open) */}
               <div
                 className={`fixed inset-0 z-50 bg-black bg-opacity-30 transition-opacity duration-200 ${
                   sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                } sm:bg-transparent sm:static sm:hidden sm:w-0 sm:overflow-hidden`}
-                onClick={toggleSidebar} // Click outside to close on mobile
+                } ${sidebarOpen ? "" : "sm:hidden"}`}
+                onClick={toggleSidebar}
               >
                 <aside
                   className={`fixed top-0 right-0 h-full w-80 max-w-full bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
                     sidebarOpen ? "translate-x-0" : "translate-x-full"
-                  } sm:static sm:translate-x-0 sm:shadow-none sm:border-none sm:w-80 sm:bg-white sm:rounded-lg sidebar-container ${sidebarOpen ? "sm:block" : "sm:hidden"}`}
+                  } ${sidebarOpen ? "sm:w-80" : "sm:w-0"} sm:rounded-lg sidebar-container`}
                   style={{ maxHeight: "100vh" }}
-                  onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside
+                  onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex flex-col h-full">
                     <div className="participants-header flex items-center justify-between p-3 border-b border-gray-200">
@@ -446,3 +419,5 @@ const VideoCallPage = () => {
 };
 
 export default VideoCallPage;
+
+
