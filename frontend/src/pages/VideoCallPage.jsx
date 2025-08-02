@@ -86,6 +86,7 @@
 
 
 
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -111,10 +112,10 @@ const VideoCallPage = () => {
     let callInstance;
 
     console.log('VideoCallPage: Effect running. Checking dependencies...');
-    console.log({ isClientReady, user, callId, call, videoClientType: typeof videoClient });
+    console.log({ isClientReady, user, callId, call, videoClient: !!videoClient });
 
-    // THIS IS THE CRITICAL GUARD CLAUSE
-    if (!isClientReady || !user?.id || !callId || call) {
+    // The ultimate defensive check: does videoClient exist and have the method?
+    if (!videoClient || typeof videoClient.getOrCreateCall !== 'function' || !user?.id || !callId || call) {
       console.error('VideoCallPage: Guard clause triggered. Exiting effect.');
       return;
     }
@@ -122,8 +123,6 @@ const VideoCallPage = () => {
     console.log('VideoCallPage: Setting up a new call instance.');
 
     try {
-      // Added a pre-call log to confirm videoClient is a valid object
-      console.log('VideoCallPage: Attempting to call getOrCreateCall...');
       callInstance = videoClient.getOrCreateCall({ id: callId });
       setCall(callInstance);
       callInstance.join();
