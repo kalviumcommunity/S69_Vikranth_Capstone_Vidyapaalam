@@ -87,11 +87,11 @@
 
 
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   StreamVideo,
-  Call,
+  StreamCall,
   CallControls,
   CallParticipantsList,
 } from '@stream-io/video-react-sdk';
@@ -104,56 +104,39 @@ const VideoCallPage = () => {
   const { user } = useAuth();
   const { callId } = useParams();
   const navigate = useNavigate();
-  const [call, setCall] = useState(null);
 
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
-  useEffect(() => {
-    console.log('VideoCallPage Effect: Checking dependencies...');
-    console.log({ isClientReady, user: !!user, callId, hasCall: !!call, hasVideoClient: !!videoClient });
-
-    // The ultimate defensive check: is videoClient an object with the right method?
-    if (!videoClient || typeof videoClient.getOrCreateCall !== 'function' || !user?.id || !callId || call) {
-      console.error('VideoCallPage Effect: Guard clause triggered. Exiting effect.');
-      return;
-    }
-    
-    console.log('VideoCallPage Effect: Setting up a new call instance...');
-
-    try {
-      const callInstance = videoClient.getOrCreateCall({ id: callId });
-      setCall(callInstance);
-      callInstance.join();
-      console.log('VideoCallPage Effect: Successfully joined call.');
-    } catch (error) {
-      console.error('Failed to join video call:', error);
-      navigate(navigatePath);
-    }
-
-    return () => {
-      if (callInstance) {
-        callInstance.leave();
-      }
-    };
-  }, [videoClient, user, callId, call, navigate, navigatePath, isClientReady]);
-
-  if (!isClientReady || !call) {
+  // Display a loading state if the client or user is not ready
+  if (!isClientReady || !user?.id || !callId || !videoClient) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
         Connecting to video call...
       </div>
     );
   }
-  
+
+  let call;
+  try {
+    call = videoClient.call('default', callId);
+    call.join({ create: true });
+  } catch (error) {
+    console.error('Failed to create or join video call:', error);
+    navigate(navigatePath);
+    return null; // Or show an error message
+  }
+
   const handleLeaveCall = async () => {
-    await call.leave();
+    if (call) {
+      await call.leave();
+    }
     navigate(navigatePath);
   };
 
   return (
     <div className="w-screen h-screen bg-black text-white">
       <StreamVideo client={videoClient}>
-        <Call call={call}>
+        <StreamCall call={call}>
           <div className="relative w-full h-full">
             <div className="absolute inset-0">
               <CallParticipantsList />
@@ -162,7 +145,7 @@ const VideoCallPage = () => {
               <CallControls onLeave={handleLeaveCall} />
             </div>
           </div>
-        </Call>
+        </StreamCall>
       </StreamVideo>
     </div>
   );
