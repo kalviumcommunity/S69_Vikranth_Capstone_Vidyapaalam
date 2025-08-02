@@ -447,7 +447,6 @@ const VideoPage = () => {
   const { user } = useAuth();
   const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const joinCall = async () => {
@@ -456,7 +455,6 @@ const VideoPage = () => {
       const newCall = client.call('default', id);
       await newCall.join({ create: true });
       setCall(newCall);
-      setLoading(false);
     };
 
     joinCall();
