@@ -438,7 +438,7 @@ import {
   CallControls,
   CallParticipantsList,
   StreamTheme,
-  StreamVideoParticipant, // Correctly using the SDK's participant component
+  ParticipantView,
   useCallStateHooks,
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
@@ -447,7 +447,6 @@ import { Users, X } from "lucide-react";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 
 const customStyles = `
-  /* General Stream SDK overrides */
   .str-video {
     --str-video__primary-color: #f97316;
     --str-video__secondary-color: #3b82f6;
@@ -458,13 +457,9 @@ const customStyles = `
     --str-video__popover-text-color: #222;
     --str-video__popover-box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
-
-  /* Hover effect for video name tags */
   .str-video__participants-list__item-name:hover {
     background: rgba(255, 255, 255, 0.2);
   }
-
-  /* Custom styling for participant list header */
   .participants-header {
     display: flex;
     align-items: center;
@@ -473,8 +468,6 @@ const customStyles = `
     border-bottom: 1px solid #e5e7eb;
     font-weight: 600;
   }
-
-  /* Controls bar styling */
   .controls-bar {
     position: fixed;
     bottom: 0;
@@ -488,8 +481,6 @@ const customStyles = `
     box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
     z-index: 10;
   }
-
-  /* Custom grid styling for video tiles */
   .video-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -501,16 +492,17 @@ const customStyles = `
   }
 `;
 
-// A custom component that renders all video participants in a grid
 const VideoGridLayout = () => {
-  const { useVideoParticipants } = useCallStateHooks();
-  const videoParticipants = useVideoParticipants();
-
+  const { useParticipants } = useCallStateHooks();
+  const participants = useParticipants();
   return (
     <div className="video-grid">
-      {videoParticipants.map((p) => (
-        <div key={p.userId} className="rounded-lg overflow-hidden flex items-center justify-center bg-gray-900">
-          <StreamVideoParticipant participant={p} />
+      {participants.map((p) => (
+        <div
+          key={p.sessionId}
+          className="rounded-lg overflow-hidden flex items-center justify-center bg-gray-900"
+        >
+          <ParticipantView participant={p} />
         </div>
       ))}
     </div>
