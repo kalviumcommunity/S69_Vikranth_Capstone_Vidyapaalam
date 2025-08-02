@@ -110,14 +110,20 @@ const VideoCallPage = () => {
   useEffect(() => {
     let callInstance;
 
+    console.log('VideoCallPage: Effect running. Checking dependencies...');
+    console.log({ isClientReady, user, callId, call, videoClientType: typeof videoClient });
+
     // THIS IS THE CRITICAL GUARD CLAUSE
     if (!isClientReady || !user?.id || !callId || call) {
+      console.error('VideoCallPage: Guard clause triggered. Exiting effect.');
       return;
     }
-
+    
     console.log('VideoCallPage: Setting up a new call instance.');
 
     try {
+      // Added a pre-call log to confirm videoClient is a valid object
+      console.log('VideoCallPage: Attempting to call getOrCreateCall...');
       callInstance = videoClient.getOrCreateCall({ id: callId });
       setCall(callInstance);
       callInstance.join();
@@ -141,7 +147,7 @@ const VideoCallPage = () => {
       </div>
     );
   }
-  
+  
   const handleLeaveCall = async () => {
     await call.leave();
     navigate(navigatePath);
