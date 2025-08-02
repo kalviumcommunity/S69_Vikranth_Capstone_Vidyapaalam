@@ -284,14 +284,14 @@ const VideoCallPage = () => {
     <>
       <style>{`
         .str-video.light {
-          --str-video__primary-color: #f97316; /* Orange */
-          --str-video__secondary-color: #3b82f6; /* Blue */
-          --str-video__text-color1: #ffffff ; /* DARK for all main UI text */
+          --str-video__primary-color: #f97316;
+          --str-video__secondary-color: #3b82f6;
+          --str-video__text-color1: #ffffff;
           --str-video__text-color2: #ffffff;
           --str-video__text-color3: #ffffff;
-          --str-video__background-color: #f9fafb; /* Light gray */
+          --str-video__background-color: #f9fafb;
           --str-video__popover-background: #ffffff;
-          --str-video__popover-text-color: #fffff ; /* DARK for dropdown/popover */
+          --str-video__popover-text-color: #ffffff;
           --str-video__tooltip-background: #222222;
           --str-video__tooltip-text-color: #ffffff;
         }
@@ -354,7 +354,7 @@ const VideoCallPage = () => {
         }
         @media (min-width: 641px) and (max-width: 1024px) {
           .sidebar-container {
-            width: 18rem; /* 288px */
+            width: 18rem;
           }
         }
       `}</style>
@@ -419,5 +419,3 @@ const VideoCallPage = () => {
 };
 
 export default VideoCallPage;
-
-
