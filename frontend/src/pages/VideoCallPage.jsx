@@ -88,7 +88,7 @@
 
 
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   StreamVideo,
@@ -105,10 +105,36 @@ const VideoCallPage = () => {
   const { user } = useAuth();
   const { callId } = useParams();
   const navigate = useNavigate();
+  const callRef = useRef(null);
 
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
-  if (!isClientReady || !user?.id || !callId || !videoClient) {
+  useEffect(() => {
+    if (callRef.current || !isClientReady || !user?.id || !callId || !videoClient) {
+      return;
+    }
+
+    const createAndJoinCall = async () => {
+      try {
+        const newCall = videoClient.call('default', callId);
+        await newCall.join({ create: true });
+        callRef.current = newCall;
+      } catch (error) {
+        console.error('Failed to create or join video call:', error);
+        navigate(navigatePath);
+      }
+    };
+
+    createAndJoinCall();
+
+    return () => {
+      if (callRef.current) {
+        callRef.current.leave();
+      }
+    };
+  }, [videoClient, isClientReady, user, callId, navigate, navigatePath]);
+
+  if (!isClientReady || !callRef.current) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
         Connecting to video call...
@@ -116,19 +142,9 @@ const VideoCallPage = () => {
     );
   }
 
-  const call = videoClient.call('default', callId);
-
-  try {
-    call.join({ create: true });
-  } catch (error) {
-    console.error('Failed to create or join video call:', error);
-    navigate(navigatePath);
-    return null;
-  }
-
   const handleLeaveCall = async () => {
-    if (call) {
-      await call.leave();
+    if (callRef.current) {
+      await callRef.current.leave();
     }
     navigate(navigatePath);
   };
@@ -136,7 +152,7 @@ const VideoCallPage = () => {
   return (
     <div className="w-screen h-screen bg-black text-white">
       <StreamVideo client={videoClient}>
-        <StreamCall call={call}>
+        <StreamCall call={callRef.current}>
           <div className="relative w-full h-full">
             <div className="absolute inset-0">
               <CallParticipantsList />
