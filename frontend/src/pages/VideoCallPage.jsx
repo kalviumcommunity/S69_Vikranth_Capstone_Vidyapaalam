@@ -676,11 +676,11 @@ const customStyles = `
   .str-video {
     --str-video__primary-color: #f97316;
     --str-video__secondary-color: #3b82f6;
-    --str-video__text-color1: #fff;
+    --str-video__text-color1: #222;
     --str-video__text-color2: #444;
     --str-video__background-color: #f9fafb;
     --str-video__popover-background: #fff;
-    --str-video__popover-text-color: #fff;
+    --str-video__popover-text-color: #222;
     --str-video__popover-box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
   .str-video__participants-list__item-name:hover {
@@ -699,7 +699,7 @@ const customStyles = `
     bottom: 0;
     left: 0;
     right: 0;
-    background: #f97316;
+    background: #1B168E ;
     padding: 1rem;
     display: flex;
     justify-content: center;
@@ -829,7 +829,7 @@ const VideoCallPage = () => {
             <div className="flex h-screen w-screen bg-gray-50 relative">
               {/* Main Video Area */}
               <div
-                className={`flex-1 transition-all duration-300 relative h-full bg-black flex pb-20 ${
+                className={`flex-1 transition-all duration-300 relative h-full bg-black flex pb-24 ${
                   sidebarOpen ? "md:mr-80" : ""
                 }`}
               >
