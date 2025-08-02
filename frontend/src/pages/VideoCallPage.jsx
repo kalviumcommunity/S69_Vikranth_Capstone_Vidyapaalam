@@ -97,25 +97,19 @@ import {
   CallParticipantsList,
   StreamTheme,
   SpeakerLayout,
-  makeTheme,
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
 import { useAuth } from "../contexts/AuthContext";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 
-// Define your custom light theme with an orange primary color
-const lightOrangeTheme = makeTheme({
-  name: 'light-orange',
-  // You can set the base theme to 'light' or 'dark'
-  theme: 'light',
-  colors: {
-    // Customize your primary color here
-    primary: '#FF8C00', // A shade of orange
-    // You can also customize other colors if needed, for example:
-    // secondary: '#FFD700',
-    // text: '#333333',
-  },
-});
+const customThemeStyle = `
+.str-video.light {
+  --str-video__primary-color: orange;
+  --str-video__secondary-color: blue;
+  --str-video__text-color1: #222;
+  --str-video__background-color: #fff;
+}
+`;
 
 const VideoCallPage = () => {
   const { videoClient, isClientReady } = useStreamVideo();
@@ -154,9 +148,7 @@ const VideoCallPage = () => {
         (async () => {
           try {
             await call.leave();
-          } catch (err) {
-            // Optionally handle error
-          }
+          } catch (err) {}
         })();
       }
     };
@@ -175,9 +167,7 @@ const VideoCallPage = () => {
       if (call) {
         await call.leave();
       }
-    } catch (err) {
-      // Optionally handle error
-    }
+    } catch (err) {}
     navigate(navigatePath);
   };
 
@@ -198,21 +188,24 @@ const VideoCallPage = () => {
   }
 
   return (
-    <StreamTheme theme={lightOrangeTheme} className="h-screen w-screen">
-      <StreamVideo client={videoClient}>
-        <StreamCall call={call}>
-          <div className="relative w-full h-full">
-            <SpeakerLayout />
-            <div className="absolute top-0 right-0 m-4 z-20">
-              <CallParticipantsList />
+    <>
+      <style>{customThemeStyle}</style>
+      <StreamTheme className="light h-screen w-screen bg-white">
+        <StreamVideo client={videoClient}>
+          <StreamCall call={call}>
+            <div className="relative w-full h-full">
+              <SpeakerLayout />
+              <div className="absolute top-0 right-0 m-4 z-20">
+                <CallParticipantsList />
+              </div>
+              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-75 z-10">
+                <CallControls onLeave={handleLeaveCall} />
+              </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-75 z-10">
-              <CallControls onLeave={handleLeaveCall} />
-            </div>
-          </div>
-        </StreamCall>
-      </StreamVideo>
-    </StreamTheme>
+          </StreamCall>
+        </StreamVideo>
+      </StreamTheme>
+    </>
   );
 };
 
