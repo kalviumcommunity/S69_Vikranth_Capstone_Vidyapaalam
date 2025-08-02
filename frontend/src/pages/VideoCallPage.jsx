@@ -97,10 +97,25 @@ import {
   CallParticipantsList,
   StreamTheme,
   SpeakerLayout,
+  makeTheme,
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
 import { useAuth } from "../contexts/AuthContext";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
+
+// Define your custom light theme with an orange primary color
+const lightOrangeTheme = makeTheme({
+  name: 'light-orange',
+  // You can set the base theme to 'light' or 'dark'
+  theme: 'light',
+  colors: {
+    // Customize your primary color here
+    primary: '#FF8C00', // A shade of orange
+    // You can also customize other colors if needed, for example:
+    // secondary: '#FFD700',
+    // text: '#333333',
+  },
+});
 
 const VideoCallPage = () => {
   const { videoClient, isClientReady } = useStreamVideo();
@@ -183,7 +198,7 @@ const VideoCallPage = () => {
   }
 
   return (
-    <StreamTheme className="h-screen w-screen bg-black">
+    <StreamTheme theme={lightOrangeTheme} className="h-screen w-screen">
       <StreamVideo client={videoClient}>
         <StreamCall call={call}>
           <div className="relative w-full h-full">
