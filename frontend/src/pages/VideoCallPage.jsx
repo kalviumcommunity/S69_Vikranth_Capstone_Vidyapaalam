@@ -296,62 +296,78 @@ import React, { useEffect, useState } from "react";
        }
 
        return (
-         <StreamTheme className="str-video h-screen w-screen">
-           <StreamVideo client={videoClient}>
-             <StreamCall call={call}>
-               <div className="relative w-full h-full flex flex-col">
-                 {/* Main Speaker View */}
-                 <div className="flex-1 min-h-0 bg-black">
-                   <SpeakerLayout />
-                 </div>
-                 {/* Sidebar for Desktop, Drawer for Mobile (only visible when open) */}
-                 <div
-                   className={`fixed inset-0 z-50 bg-black bg-opacity-30 transition-opacity duration-200 ${
-                     sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-                   } ${sidebarOpen ? "" : "sm:hidden"}`}
-                   onClick={toggleSidebar}
-                 >
-                   <aside
-                     className={`fixed top-0 right-0 h-full w-80 max-w-full bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
-                       sidebarOpen ? "translate-x-0" : "translate-x-full"
-                     } ${sidebarOpen ? "sm:w-80" : "sm:w-0"} sm:rounded-lg`}
-                     style={{ maxHeight: "100vh" }}
-                     onClick={(e) => e.stopPropagation()}
+         <>
+           <style>{`
+             .str-video__call-controls__button {
+               background: var(--str-video__button-primary-base, #19232d);
+               color: var(--str-video__text-color1, #ffffff);
+               padding: 0.5rem 1rem;
+               border-radius: var(--str-video__border-radius-sm, 12px);
+               font-size: var(--str-video__font-size-sm, 0.875rem);
+               transition: background-color 0.2s, transform 0.2s;
+             }
+             .str-video__call-controls__button:hover {
+               background: var(--str-video__button-primary-hover, #4c8fff);
+               transform: translateY(-1px);
+             }
+           `}</style>
+           <StreamTheme className="str-video h-screen w-screen">
+             <StreamVideo client={videoClient}>
+               <StreamCall call={call}>
+                 <div className="relative w-full h-full flex flex-col">
+                   {/* Main Speaker View */}
+                   <div className="flex-1 min-h-0 bg-black">
+                     <SpeakerLayout />
+                   </div>
+                   {/* Sidebar for Desktop, Drawer for Mobile (only visible when open) */}
+                   <div
+                     className={`fixed inset-0 z-50 bg-black bg-opacity-30 transition-opacity duration-200 ${
+                       sidebarOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+                     } ${sidebarOpen ? "" : "sm:hidden"}`}
+                     onClick={toggleSidebar}
                    >
-                     <div className="flex flex-col h-full">
-                       <div className="participants-header flex items-center justify-between p-3 border-b border-gray-200">
-                         <h3 className="text-base font-medium text-gray-900">Participants</h3>
-                         <button
-                           onClick={toggleSidebar}
-                           className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                           aria-label="Close participants"
-                         >
-                           <X size={20} />
-                         </button>
-                       </div>
-                       <div className="flex-1 overflow-y-auto p-3">
-                         <CallParticipantsList />
-                       </div>
-                     </div>
-                   </aside>
-                 </div>
-                 {/* Controls Bar with Toggle Button */}
-                 <div className="fixed bottom-0 left-0 right-0 p-3 bg-white z-10 flex justify-center items-center shadow-t-sm">
-                   <div className="flex items-center space-x-3">
-                     <button
-                       onClick={toggleSidebar}
-                       className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
-                       aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
+                     <aside
+                       className={`fixed top-0 right-0 h-full w-80 max-w-full bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
+                         sidebarOpen ? "translate-x-0" : "translate-x-full"
+                       } ${sidebarOpen ? "sm:w-80" : "sm:w-0"} sm:rounded-lg`}
+                       style={{ maxHeight: "100vh" }}
+                       onClick={(e) => e.stopPropagation()}
                      >
-                       <Users size={18} />
-                     </button>
-                     <CallControls onLeave={handleLeaveCall} />
+                       <div className="flex flex-col h-full">
+                         <div className="participants-header flex items-center justify-between p-3 border-b border-gray-200">
+                           <h3 className="text-base font-medium text-gray-900">Participants</h3>
+                           <button
+                             onClick={toggleSidebar}
+                             className="text-gray-500 hover:text-gray-700 focus:outline-none"
+                             aria-label="Close participants"
+                           >
+                             <X size={20} />
+                           </button>
+                         </div>
+                         <div className="flex-1 overflow-y-auto p-3">
+                           <CallParticipantsList />
+                         </div>
+                       </div>
+                     </aside>
+                   </div>
+                   {/* Controls Bar with Toggle Button */}
+                   <div className="fixed bottom-0 left-0 right-0 p-3 bg-white z-10 flex justify-center items-center shadow-t-sm">
+                     <div className="flex items-center space-x-3">
+                       <button
+                         onClick={toggleSidebar}
+                         className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
+                         aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
+                       >
+                         <Users size={18} />
+                       </button>
+                       <CallControls onLeave={handleLeaveCall} />
+                     </div>
                    </div>
                  </div>
-               </div>
-             </StreamCall>
-           </StreamVideo>
-         </StreamTheme>
+               </StreamCall>
+             </StreamVideo>
+           </StreamTheme>
+         </>
        );
      };
 
