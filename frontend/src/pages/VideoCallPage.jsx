@@ -88,7 +88,7 @@
 
 
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   StreamVideo,
@@ -105,18 +105,39 @@ const VideoCallPage = () => {
   const { user } = useAuth();
   const { callId } = useParams();
   const navigate = useNavigate();
+  const callRef = useRef(null);
 
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
-  // Log key variables to diagnose the issue
-  console.log('VideoCallPage: Rendering...');
-  console.log('isClientReady:', isClientReady);
-  console.log('videoClient:', !!videoClient);
-  console.log('user:', !!user);
-  console.log('callId:', callId);
+  useEffect(() => {
+    // Only proceed if the client is ready, the user is logged in, and a call hasn't been created yet.
+    if (callRef.current || !isClientReady || !user?.id || !callId || !videoClient) {
+      return;
+    }
 
-  // Display a loading state if the client or user is not ready
-  if (!isClientReady || !user?.id || !callId || !videoClient) {
+    const createAndJoinCall = async () => {
+      try {
+        const newCall = videoClient.call('default', callId);
+        await newCall.join({ create: true });
+        callRef.current = newCall;
+        console.log('VideoCallPage: Successfully created and joined the call.');
+      } catch (error) {
+        console.error('Failed to create or join video call:', error);
+        navigate(navigatePath);
+      }
+    };
+
+    createAndJoinCall();
+
+    return () => {
+      if (callRef.current) {
+        callRef.current.leave();
+        console.log('VideoCallPage: Leaving call on unmount.');
+      }
+    };
+  }, [videoClient, isClientReady, user, callId, navigate, navigatePath]);
+
+  if (!isClientReady || !callRef.current) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
         Connecting to video call...
@@ -124,22 +145,9 @@ const VideoCallPage = () => {
     );
   }
 
-  let call;
-  try {
-    // Create the call instance directly. This runs only when all dependencies are ready.
-    call = videoClient.call('default', callId);
-    // The `join` call is asynchronous, so we use a side-effect.
-    call.join({ create: true });
-    console.log('VideoCallPage: Successfully created and joined the call.');
-  } catch (error) {
-    console.error('Failed to create or join video call:', error);
-    navigate(navigatePath);
-    return null;
-  }
-
   const handleLeaveCall = async () => {
-    if (call) {
-      await call.leave();
+    if (callRef.current) {
+      await callRef.current.leave();
     }
     navigate(navigatePath);
   };
@@ -147,7 +155,7 @@ const VideoCallPage = () => {
   return (
     <div className="w-screen h-screen bg-black text-white">
       <StreamVideo client={videoClient}>
-        <StreamCall call={call}>
+        <StreamCall call={callRef.current}>
           <div className="relative w-full h-full">
             <div className="absolute inset-0">
               <CallParticipantsList />
