@@ -106,7 +106,7 @@ const customThemeStyle = `
 .str-video.light {
   --str-video__primary-color: orange;
   --str-video__secondary-color: blue;
-  --str-video__text-color1: #222;
+  --str-video__text-color1: #fff ;
   --str-video__background-color: #fff;
 }
 .full-call-container {
