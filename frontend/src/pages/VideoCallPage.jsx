@@ -88,7 +88,7 @@
 
 
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   StreamVideo,
@@ -105,13 +105,13 @@ const VideoCallPage = () => {
   const { user } = useAuth();
   const { callId } = useParams();
   const navigate = useNavigate();
-  const callRef = useRef(null);
+  const [call, setCall] = useState(null); // Use useState to store the call
 
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
   useEffect(() => {
-    // Only proceed if the client is ready, the user is logged in, and a call hasn't been created yet.
-    if (callRef.current || !isClientReady || !user?.id || !callId || !videoClient) {
+    // Only proceed if the client is ready, a user is logged in, and a call hasn't been set yet.
+    if (call || !isClientReady || !user?.id || !callId || !videoClient) {
       return;
     }
 
@@ -119,8 +119,8 @@ const VideoCallPage = () => {
       try {
         const newCall = videoClient.call('default', callId);
         await newCall.join({ create: true });
-        callRef.current = newCall;
         console.log('VideoCallPage: Successfully created and joined the call.');
+        setCall(newCall); // Update state to trigger a re-render
       } catch (error) {
         console.error('Failed to create or join video call:', error);
         navigate(navigatePath);
@@ -130,14 +130,14 @@ const VideoCallPage = () => {
     createAndJoinCall();
 
     return () => {
-      if (callRef.current) {
-        callRef.current.leave();
+      if (call) {
+        call.leave();
         console.log('VideoCallPage: Leaving call on unmount.');
       }
     };
-  }, [videoClient, isClientReady, user, callId, navigate, navigatePath]);
+  }, [videoClient, isClientReady, user, callId, navigate, navigatePath, call]);
 
-  if (!isClientReady || !callRef.current) {
+  if (!isClientReady || !call) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
         Connecting to video call...
@@ -146,8 +146,8 @@ const VideoCallPage = () => {
   }
 
   const handleLeaveCall = async () => {
-    if (callRef.current) {
-      await callRef.current.leave();
+    if (call) {
+      await call.leave();
     }
     navigate(navigatePath);
   };
@@ -155,7 +155,7 @@ const VideoCallPage = () => {
   return (
     <div className="w-screen h-screen bg-black text-white">
       <StreamVideo client={videoClient}>
-        <StreamCall call={callRef.current}>
+        <StreamCall call={call}>
           <div className="relative w-full h-full">
             <div className="absolute inset-0">
               <CallParticipantsList />
