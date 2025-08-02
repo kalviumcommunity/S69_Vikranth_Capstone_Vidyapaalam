@@ -94,7 +94,7 @@ import {
   StreamVideo,
   StreamCall,
   CallControls,
-  CallParticipantsList, // Corrected component name
+  CallParticipantsList,
 } from '@stream-io/video-react-sdk';
 import { useStreamVideo } from '../contexts/StreamVideoContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -123,7 +123,7 @@ const VideoCallPage = () => {
   } catch (error) {
     console.error('Failed to create or join video call:', error);
     navigate(navigatePath);
-    return null; 
+    return null;
   }
 
   const handleLeaveCall = async () => {
@@ -139,10 +139,9 @@ const VideoCallPage = () => {
         <StreamCall call={call}>
           <div className="relative w-full h-full">
             <div className="absolute inset-0">
-              {/* The correct component for the participant list */}
               <CallParticipantsList />
             </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-75">
               <CallControls onLeave={handleLeaveCall} />
             </div>
           </div>
