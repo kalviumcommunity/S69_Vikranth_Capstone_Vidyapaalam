@@ -429,25 +429,21 @@
 
 
 
-// src/pages/VideoPage.js
+// src/pages/VideoPage.jsx
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 import {
-  Call,
   StreamCall,
-  CallControls,
-  CallingState,
   SpeakerLayout,
-  useCallStateHooks,
+  CallControls,
+  StreamVideoClient,
   useStreamVideoClient,
-  StreamVideo,
 } from '@stream-io/video-react-sdk';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import { useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FiLoader } from 'react-icons/fi';
 
-const VideoCallPage = () => {
+const VideoPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const client = useStreamVideoClient();
@@ -455,35 +451,44 @@ const VideoCallPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const setupCall = async () => {
+    const initCall = async () => {
       if (!client || !user) return;
 
-      const callInstance = client.call('default', id);
-      await callInstance.join({ create: true });
-      setCall(callInstance);
-      setLoading(false);
+      try {
+        const newCall = client.call('default', id);
+        await newCall.join({ create: true });
+        setCall(newCall);
+      } catch (error) {
+        console.error('Failed to join call:', error);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setupCall();
+    initCall();
   }, [client, user, id]);
 
-  if (loading || !call) {
+  if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-900">
-        <FiLoader className="animate-spin text-white text-5xl" />
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
+      </div>
+    );
+  }
+
+  if (!call) {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-500 text-lg">
+        Unable to load the video call.
       </div>
     );
   }
 
   return (
-    <div className="h-screen w-screen bg-gray-900 text-white">
+    <div className="h-screen w-screen">
       <StreamCall call={call}>
-        <div className="h-full w-full relative">
-          <SpeakerLayout />
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-            <CallControls />
-          </div>
-        </div>
+        <SpeakerLayout />
+        <CallControls />
       </StreamCall>
 
       <style>{`
@@ -509,6 +514,6 @@ const VideoCallPage = () => {
   );
 };
 
-export default VideoCallPage;
+export default VideoPage;
 
 
