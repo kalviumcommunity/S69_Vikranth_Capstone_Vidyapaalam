@@ -437,7 +437,6 @@ import {
   StreamCall,
   SpeakerLayout,
   CallControls,
-  StreamVideoClient,
   useStreamVideoClient,
 } from '@stream-io/video-react-sdk';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
@@ -451,41 +450,26 @@ const VideoPage = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const initCall = async () => {
+    const joinCall = async () => {
       if (!client || !user) return;
 
-      try {
-        const newCall = client.call('default', id);
-        await newCall.join({ create: true });
-        setCall(newCall);
-      } catch (error) {
-        console.error('Failed to join call:', error);
-      } finally {
-        setLoading(false);
-      }
+      const newCall = client.call('default', id);
+      await newCall.join({ create: true });
+      setCall(newCall);
+      setLoading(false);
     };
 
-    initCall();
+    joinCall();
   }, [client, user, id]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
-      </div>
-    );
-  }
-
-  if (!call) {
-    return (
-      <div className="flex items-center justify-center h-screen text-red-500 text-lg">
-        Unable to load the video call.
-      </div>
-    );
-  }
-
   return (
-    <div className="h-screen w-screen">
+    <div className="h-screen w-screen relative">
+      {loading && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-500 border-solid"></div>
+        </div>
+      )}
+
       <StreamCall call={call}>
         <SpeakerLayout />
         <CallControls />
@@ -498,16 +482,16 @@ const VideoPage = () => {
 
         .str-video__popover,
         .str-video__popover * {
-          background-color: #ffffff !important;
-          color: #111827 !important;
+          background-color: white !important;
+          color: black !important;
         }
 
         .str-video__tooltip,
         .str-video__tooltip * {
-          background-color: #ffffff !important;
-          color: #111827 !important;
-          border: 1px solid #e5e7eb;
-          border-radius: 0.375rem;
+          background-color: white !important;
+          color: black !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 0.375rem !important;
         }
       `}</style>
     </div>
@@ -515,5 +499,3 @@ const VideoPage = () => {
 };
 
 export default VideoPage;
-
-
