@@ -116,9 +116,10 @@ const VideoCallPage = () => {
     );
   }
 
-  let call;
+  const call = videoClient.call('default', callId);
+
+  // The `join` method can throw an error if something goes wrong, so we handle it.
   try {
-    call = videoClient.call('default', callId);
     call.join({ create: true });
   } catch (error) {
     console.error('Failed to create or join video call:', error);
@@ -134,13 +135,17 @@ const VideoCallPage = () => {
   };
 
   return (
+    // Full-screen black background container
     <div className="w-screen h-screen bg-black text-white">
       <StreamVideo client={videoClient}>
         <StreamCall call={call}>
+          {/* Relative container for positioning children absolutely */}
           <div className="relative w-full h-full">
+            {/* The video container, which takes up the full space */}
             <div className="absolute inset-0">
               <CallParticipantsList />
             </div>
+            {/* The controls container, positioned at the bottom of the screen */}
             <div className="absolute bottom-0 left-0 right-0 p-4">
               <CallControls onLeave={handleLeaveCall} />
             </div>
