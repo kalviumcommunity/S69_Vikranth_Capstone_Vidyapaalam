@@ -105,49 +105,33 @@ const VideoCallPage = () => {
   const navigate = useNavigate();
   const [call, setCall] = useState(null);
 
-  // Determine the correct redirect path based on user role
   const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
- // inside VideoCallPage component
+  useEffect(() => {
+    let callInstance;
 
-useEffect(() => {
-    let callInstance;
-    let didCancel = false;
+    if (!isClientReady || !user?.id || !callId || call) {
+      return;
+    }
 
-    const setupCall = async () => {
-        if (!isClientReady || !user?.id || !callId || call) {
-            console.log('VideoCallPage: Guard clause met, not setting up call.');
-            return;
-        }
+    console.log('VideoCallPage: Setting up a new call instance.');
 
-        console.log('VideoCallPage: Setting up a new call instance.');
+    try {
+      callInstance = videoClient.getOrCreateCall({ id: callId });
+      setCall(callInstance);
+      callInstance.join();
+      console.log('VideoCallPage: Successfully joined call.');
+    } catch (error) {
+      console.error('Failed to join video call:', error);
+      navigate(navigatePath);
+    }
 
-        try {
-            callInstance = videoClient.getOrCreateCall({ id: callId });
-            
-            if (didCancel) return; 
-            
-            setCall(callInstance);
-            await callInstance.join();
-            console.log('VideoCallPage: Successfully joined call.');
-        } catch (error) {
-            if (!didCancel) {
-                console.error('Failed to join video call:', error);
-                navigate(navigatePath);
-            }
-        }
-    };
-
-    setupCall();
-
-    return () => {
-        console.log('VideoCallPage: Component unmounting, leaving call.');
-        didCancel = true;
-        if (callInstance) {
-            callInstance.leave();
-        }
-    };
-}, [isClientReady, user, callId, videoClient, navigate, navigatePath, call]);
+    return () => {
+      if (callInstance) {
+        callInstance.leave();
+      }
+    };
+  }, [isClientReady, user, callId, videoClient, navigate, navigatePath, call]);
 
   if (!isClientReady || !call) {
     return (
@@ -159,7 +143,7 @@ useEffect(() => {
   
   const handleLeaveCall = async () => {
     await call.leave();
-    navigate(navigatePath); 
+    navigate(navigatePath);
   };
 
   return (
