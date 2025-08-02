@@ -91,107 +91,113 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  StreamVideo,
-  StreamCall,
-  CallControls,
-  CallParticipantsList,
+  StreamVideo,
+  StreamCall,
+  CallControls,
+  CallParticipantsList,
 } from '@stream-io/video-react-sdk';
 import { useStreamVideo } from '../contexts/StreamVideoContext';
 import { useAuth } from '../contexts/AuthContext';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 
 const VideoCallPage = () => {
-  const { videoClient, isClientReady } = useStreamVideo();
-  const { user } = useAuth();
-  const { callId } = useParams();
-  const navigate = useNavigate();
-  const [call, setCall] = useState(null);
-  const [error, setError] = useState(null);
+  const { videoClient, isClientReady } = useStreamVideo();
+  const { user } = useAuth();
+  const { callId } = useParams();
+  const navigate = useNavigate();
+  const [call, setCall] = useState(null);
+  const [error, setError] = useState(null);
 
-  const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
+  const navigatePath = user?.role === 'teacher' ? '/teacher/overview' : '/student/overview';
 
-  useEffect(() => {
-    if (!isClientReady || !user?.id || !callId || !videoClient) {
-      setError('Missing required data to start the video call.');
-      return;
-    }
+  useEffect(() => {
+    // Check if the call is already created to prevent re-running
+    if (call) return;
+    
+    // If core dependencies are missing, set an error
+    if (!isClientReady || !user?.id || !callId || !videoClient) {
+      // This error will only show if the dependencies never become ready.
+      // We don't set it in the first render to avoid a flicker.
+      // A simple loading screen is sufficient for initial loading.
+      return;
+    }
 
-    if (call) return; // Prevent re-running if call is already set
+    const createAndJoinCall = async () => {
+      try {
+        const newCall = videoClient.call('default', callId);
+        await newCall.join({ create: true });
+        console.log('VideoCallPage: Successfully created and joined the call.');
+        setCall(newCall);
+        setError(null); // Clear any previous error on success
+      } catch (err) {
+        console.error('Failed to create or join video call:', err);
+        setError('Failed to join the video call. Please try again.');
+        navigate(navigatePath);
+      }
+    };
 
-    const createAndJoinCall = async () => {
-      try {
-        const newCall = videoClient.call('default', callId);
-        await newCall.join({ create: true });
-        console.log('VideoCallPage: Successfully created and joined the call.');
-        setCall(newCall);
-      } catch (error) {
-        console.error('Failed to create or join video call:', error);
-        setError('Failed to join the video call. Please try again.');
-        navigate(navigatePath);
-      }
-    };
+    createAndJoinCall();
 
-    createAndJoinCall();
+    return () => {
+      if (call) {
+        (async () => {
+          try {
+            await call.leave();
+            console.log('VideoCallPage: Successfully left call on unmount.');
+          } catch (err) {
+            console.error('Failed to leave call on unmount:', err);
+          }
+        })();
+      }
+    };
+  }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath, call]);
 
-    return () => {
-      if (call) {
-        // Async cleanup to ensure proper disconnection
-        (async () => {
-          try {
-            await call.leave();
-            console.log('VideoCallPage: Successfully left call on unmount.');
-          } catch (error) {
-            console.error('Failed to leave call on unmount:', error);
-          }
-        })();
-      }
-    };
-  }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
+  const handleLeaveCall = async () => {
+    try {
+      if (call) {
+        await call.leave();
+        console.log('VideoCallPage: Successfully left call.');
+      }
+    } catch (err) {
+      console.error('Failed to leave call:', err);
+    }
+    navigate(navigatePath);
+  };
 
-  const handleLeaveCall = async () => {
-    try {
-      if (call) {
-        await call.leave();
-        console.log('VideoCallPage: Successfully left call.');
-      }
-    } catch (error) {
-      console.error('Failed to leave call:', error);
-    }
-    navigate(navigatePath);
-  };
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
+        {error}
+      </div>
+    );
+  }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
-        {error}
-      </div>
-    );
-  }
+  if (!isClientReady || !call) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
+        Connecting to video call...
+      </div>
+    );
+  }
 
-  if (!isClientReady || !call) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
-        Connecting to video call...
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-screen h-screen bg-black text-white">
-      <StreamVideo client={videoClient}>
-        <StreamCall call={call}>
-          <div className="relative w-full h-full">
-            <div className="absolute inset-0">
-              <CallParticipantsList />
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-75">
-              <CallControls onLeave={handleLeaveCall} />
-            </div>
-          </div>
-        </StreamCall>
-      </StreamVideo>
-    </div>
-  );
+  return (
+    <div className="w-screen h-screen bg-black text-white">
+      <StreamVideo client={videoClient}>
+        <StreamCall call={call}>
+          <div className="relative w-full h-full">
+            <div className="absolute inset-0">
+              <CallParticipantsList />
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gray-900 bg-opacity-75">
+              <CallControls onLeave={handleLeaveCall} />
+            </div>
+          </div>
+        </StreamCall>
+      </StreamVideo>
+    </div>
+  );
 };
 
 export default VideoCallPage;
+
+
