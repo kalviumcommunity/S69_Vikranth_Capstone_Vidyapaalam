@@ -290,10 +290,15 @@ const VideoCallPage = () => {
           --str-video__text-color2: #ffffff;
           --str-video__text-color3: #ffffff;
           --str-video__background-color: #f9fafb;
-          --str-video__popover-background: #ffffff;
+          --str-video__popover-background: #222222;
           --str-video__popover-text-color: #ffffff;
           --str-video__tooltip-background: #222222;
           --str-video__tooltip-text-color: #ffffff;
+        }
+        /* Force dropdown (popover) text color to white */
+        .str-video.light .str-video__popover,
+        .str-video.light .str-video__popover * {
+          color: #ffffff !important;
         }
         .str-video__call-participants-list {
           padding: 1rem;
