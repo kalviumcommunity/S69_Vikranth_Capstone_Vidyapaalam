@@ -429,183 +429,86 @@
 
 
 
-import React, { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+// src/pages/VideoPage.js
+
+import React, { useEffect, useState } from 'react';
 import {
-  StreamVideo,
+  Call,
   StreamCall,
   CallControls,
-  CallParticipantsList,
-  StreamTheme,
+  CallingState,
   SpeakerLayout,
-} from "@stream-io/video-react-sdk";
-import { useStreamVideo } from "../contexts/StreamVideoContext";
-import { useAuth } from "../contexts/AuthContext";
-import { Users, X } from "lucide-react";
-import "@stream-io/video-react-sdk/dist/css/styles.css";
+  useCallStateHooks,
+  useStreamVideoClient,
+  StreamVideo,
+} from '@stream-io/video-react-sdk';
+import '@stream-io/video-react-sdk/dist/css/styles.css';
+import { useParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { FiLoader } from 'react-icons/fi';
 
 const VideoCallPage = () => {
-  const { videoClient, isClientReady } = useStreamVideo();
+  const { id } = useParams();
   const { user } = useAuth();
-  const { callId } = useParams();
-  const navigate = useNavigate();
+  const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
-  const [error, setError] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const navigatePath = user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isClientReady || !user?.id || !callId || !videoClient) {
-      setError("Missing required data to start the video call.");
-      return;
-    }
+    const setupCall = async () => {
+      if (!client || !user) return;
 
-    if (call) return;
-
-    const createAndJoinCall = async () => {
-      try {
-        const newCall = videoClient.call("default", callId);
-        await newCall.join({ create: true });
-        setCall(newCall);
-        setError(null);
-      } catch (err) {
-        console.error("Failed to join video call:", err);
-        setError("Failed to join the video call. Please try again.");
-        navigate(navigatePath);
-      }
+      const callInstance = client.call('default', id);
+      await callInstance.join({ create: true });
+      setCall(callInstance);
+      setLoading(false);
     };
 
-    createAndJoinCall();
+    setupCall();
+  }, [client, user, id]);
 
-    return () => {
-      if (call) {
-        (async () => {
-          try {
-            await call.leave();
-          } catch (err) {
-            console.error("Failed to leave call:", err);
-          }
-        })();
-      }
-    };
-  }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
-
-  const handleLeaveCall = async () => {
-    try {
-      if (call) await call.leave();
-    } catch (err) {
-      console.error("Failed to leave call:", err);
-    }
-    navigate(navigatePath);
-  };
-
-  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+  if (loading || !call) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gray-900">
+        <FiLoader className="animate-spin text-white text-5xl" />
+      </div>
+    );
+  }
 
   return (
-    <>
+    <div className="h-screen w-screen bg-gray-900 text-white">
+      <StreamCall call={call}>
+        <div className="h-full w-full relative">
+          <SpeakerLayout />
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+            <CallControls />
+          </div>
+        </div>
+      </StreamCall>
+
       <style>{`
-        .str-video.light {
-          --str-video__primary-color: #f97316;
-          --str-video__secondary-color: #3b82f6;
-          --str-video__text-color1: #111827;
-          --str-video__background-color: #f9fafb;
-          --str-video__popover-background: #1f2937;
-          --str-video__popover-text-color: #f9fafb;
-          --str-video__tooltip-background: #111827;
-          --str-video__tooltip-text-color: #f9fafb;
+        .str-video__participant-name {
+          color: white !important;
         }
 
-        /* Dropdowns and popovers */
-        .str-video.light .str-video__popover,
-        .str-video.light .str-video__popover * {
-          color: #ffffff !important;
-          background-color: #1f2937 !important;
+        .str-video__popover,
+        .str-video__popover * {
+          background-color: #ffffff !important;
+          color: #111827 !important;
         }
 
-        .str-video.light .str-video__tooltip,
-        .str-video.light .str-video__tooltip * {
-          color: #ffffff !important;
-          background-color: #111827 !important;
-        }
-
-        /* Name label on video */
-        .str-video.light .str-video__participant-name,
-        .str-video.light .str-video__participant-name * {
-          color: #ffffff !important;
-          background-color: rgba(0, 0, 0, 0.7) !important;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-weight: 500;
-        }
-
-        .str-video__participant-details {
+        .str-video__tooltip,
+        .str-video__tooltip * {
+          background-color: #ffffff !important;
+          color: #111827 !important;
           border: 1px solid #e5e7eb;
-          border-radius: 0.5rem;
-          padding: 0.75rem;
-          background-color: #fff;
-          transition: background 0.3s;
-        }
-        .str-video__participant-details:hover {
-          background-color: #f3f4f6;
+          border-radius: 0.375rem;
         }
       `}</style>
-
-      <StreamTheme className="light h-screen w-screen bg-gray-50">
-        <StreamVideo client={videoClient}>
-          <StreamCall call={call}>
-            <div className="relative flex flex-col h-full w-full bg-gray-100">
-
-              {/* Speaker View */}
-              <div className="flex-1 bg-black">
-                <SpeakerLayout />
-              </div>
-
-              {/* Participants Sidebar */}
-              {sidebarOpen && (
-                <div className="fixed inset-0 z-50 bg-black/40 sm:hidden" onClick={toggleSidebar} />
-              )}
-              <aside
-                className={`fixed top-0 right-0 z-50 h-full bg-white w-80 max-w-full transition-transform duration-300 ease-in-out transform ${
-                  sidebarOpen ? "translate-x-0" : "translate-x-full"
-                } shadow-lg border-l border-gray-200`}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex flex-col h-full">
-                  <div className="flex items-center justify-between px-4 py-3 border-b bg-white shadow-sm sticky top-0 z-10">
-                    <h2 className="text-lg font-semibold text-gray-800">Participants</h2>
-                    <button
-                      onClick={toggleSidebar}
-                      className="text-gray-500 hover:text-gray-700"
-                      aria-label="Close participants"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-4 bg-gray-50">
-                    <CallParticipantsList />
-                  </div>
-                </div>
-              </aside>
-
-              {/* Controls Footer */}
-              <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 shadow-sm p-4 flex justify-center items-center space-x-4">
-                <button
-                  onClick={toggleSidebar}
-                  className="p-2 rounded-full bg-orange-500 hover:bg-orange-600 text-white shadow transition-transform duration-200 transform hover:scale-105"
-                  aria-label="Toggle participants"
-                >
-                  <Users size={18} />
-                </button>
-                <CallControls onLeave={handleLeaveCall} />
-              </div>
-            </div>
-          </StreamCall>
-        </StreamVideo>
-      </StreamTheme>
-    </>
+    </div>
   );
 };
 
 export default VideoCallPage;
+
 
