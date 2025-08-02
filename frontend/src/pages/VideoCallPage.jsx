@@ -110,6 +110,7 @@ const VideoCallPage = () => {
   useEffect(() => {
     let callInstance;
 
+    // THIS IS THE CRITICAL GUARD CLAUSE
     if (!isClientReady || !user?.id || !callId || call) {
       return;
     }
