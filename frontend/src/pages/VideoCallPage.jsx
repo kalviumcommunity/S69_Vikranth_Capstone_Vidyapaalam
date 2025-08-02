@@ -533,10 +533,10 @@ const VideoCallPage = () => {
         }
 
         .str-video__popover,
-        .str-video__popover * {
-          background-color: white !important;
-          color: black !important;
-        }
+        // .str-video__popover * {
+        //   background-color: white !important;
+        //   color: black !important;
+        // }
 
         .str-video__tooltip,
         .str-video__tooltip * {
