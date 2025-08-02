@@ -81,12 +81,20 @@ export const StreamVideoProvider = ({ children }) => {
   const [isClientReady, setIsClientReady] = useState(false);
 
   useEffect(() => {
+    let didCancel = false;
+
+    // Handle unauthenticated or loading state
     if (loading || !user || !user.id) {
       if (videoClient) {
         videoClient.disconnectUser();
-        setVideoClient(null);
-        setIsClientReady(false);
       }
+      setVideoClient(null);
+      setIsClientReady(false);
+      return;
+    }
+
+    // Prevent re-initialization if the client already exists
+    if (videoClient) {
       return;
     }
 
@@ -102,17 +110,19 @@ export const StreamVideoProvider = ({ children }) => {
         }
 
         const { token, apiKey, userId } = await response.json();
-        
+        
         const client = new StreamVideoClient({
           apiKey,
           user: { id: userId, name: user.name, image: user.avatar },
           token,
         });
 
+        if (didCancel) return; // Prevent state updates on unmounted component
+
         setVideoClient(client);
         setIsClientReady(true);
-        console.log('Stream Video Provider: Client initialized and connected successfully.');
       } catch (error) {
+        if (didCancel) return;
         console.error("Stream Video Provider: Error connecting user to Stream:", error);
         setVideoClient(null);
         setIsClientReady(false);
@@ -122,6 +132,7 @@ export const StreamVideoProvider = ({ children }) => {
     initializeClient();
 
     return () => {
+      didCancel = true;
       if (videoClient) {
         videoClient.disconnectUser();
       }
