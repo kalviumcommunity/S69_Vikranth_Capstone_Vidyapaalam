@@ -98,7 +98,7 @@ import {
   CallParticipantsLayout,
 } from '@stream-io/video-react-sdk';
 import { useStreamVideo } from '../contexts/StreamVideoContext';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 
 const VideoCallPage = () => {
