@@ -438,7 +438,9 @@ import {
   CallControls,
   CallParticipantsList,
   StreamTheme,
-  GridLayout, // Replaced SpeakerLayout
+  // GridLayout is not a direct export, so we will use a custom component
+  useCallStateHooks,
+  useParticipant,
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -446,7 +448,6 @@ import { Users, X } from "lucide-react";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 
 const customStyles = `
-  /* General Stream SDK overrides */
   .str-video {
     --str-video__primary-color: #f97316;
     --str-video__secondary-color: #3b82f6;
@@ -457,13 +458,9 @@ const customStyles = `
     --str-video__popover-text-color: #222;
     --str-video__popover-box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   }
-
-  /* Hover effect for video name tags */
   .str-video__participants-list__item-name:hover {
     background: rgba(255, 255, 255, 0.2);
   }
-
-  /* Custom styling for participant list header */
   .participants-header {
     display: flex;
     align-items: center;
@@ -472,8 +469,6 @@ const customStyles = `
     border-bottom: 1px solid #e5e7eb;
     font-weight: 600;
   }
-
-  /* Controls bar styling */
   .controls-bar {
     position: fixed;
     bottom: 0;
@@ -488,6 +483,36 @@ const customStyles = `
     z-index: 10;
   }
 `;
+
+const VideoTile = ({ participant }) => {
+  const { video, audio } = useParticipant(participant);
+  return (
+    <div className="relative flex-1 bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center m-2">
+      <video
+        ref={(el) => (el ? (el.srcObject = video.track ? new MediaStream([video.track]) : null) : null)}
+        className="w-full h-full object-cover"
+        autoPlay
+        playsInline
+      />
+      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white px-2 py-1 rounded-md text-sm">
+        {participant.name || participant.userId}
+      </div>
+    </div>
+  );
+};
+
+const VideoGridLayout = () => {
+  const { useVideoParticipants } = useCallStateHooks();
+  const videoParticipants = useVideoParticipants();
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-4 w-full h-full">
+      {videoParticipants.map((p) => (
+        <VideoTile key={p.userId} participant={p} />
+      ))}
+    </div>
+  );
+};
 
 const VideoCallPage = () => {
   const { videoClient, isClientReady } = useStreamVideo();
@@ -574,10 +599,10 @@ const VideoCallPage = () => {
               {/* Main Video Grid */}
               <div
                 className={`flex-1 transition-all duration-300 ${
-                  sidebarOpen ? "mr-80" : ""
+                  sidebarOpen ? "md:mr-80" : ""
                 } relative h-full bg-black flex`}
               >
-                <GridLayout />
+                <VideoGridLayout />
               </div>
 
               {/* Participants Drawer */}
