@@ -139,8 +139,6 @@ import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
-import { ToastContainer } from "react-toastify";
-import 'react-toastify/dist/ReactToastify.css';
 
 import AppLayout from "./components/layout/AppLayout";
 import StudentLayout from "./layouts/StudentLayout";
@@ -151,7 +149,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { TeacherProfileProvider } from "./contexts/TeacherProfileContext";
 import { SessionProvider } from "./contexts/SessionContext";
 import { StreamChatProvider } from "./contexts/StreamChatContext";
-import { StreamVideoProvider } from "./contexts/StreamVideoContext"; // <-- NEW IMPORT
+import { StreamVideoProvider } from "./contexts/StreamVideoContext"; 
 
 import Index from "./pages/index";
 import SkillsPage from "./pages/SkillsPage";
@@ -174,7 +172,7 @@ import TeacherProfileEdit from "./pages/teacher/TeacherProfileEdit";
 import TeacherSettings from "./pages/teacher/TeacherSettings";
 
 import ChatPage from "./pages/ChatPage";
-import VideoCallPage from "./pages/VideoCallPage"; // <-- NEW IMPORT
+import VideoCallPage from "./pages/VideoCallPage"; 
 
 import NotAuthorized from "./pages/NotAuthorized";
 import NotFound from "./pages/NotFound";
@@ -236,7 +234,6 @@ const AppContent = () => {
         </Route>
       </Route>
 
-      {/* NEW: Video call route */}
       <Route element={<PrivateRoute roles={["student", "teacher"]} />}>
         <Route path="/call/:callId" element={<VideoCallPage />} />
       </Route>
@@ -250,14 +247,6 @@ const AppContent = () => {
 const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
-       <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        closeOnClick
-        pauseOnHover
-        draggable
-      />
       <Toaster />
       <BrowserRouter>
         <AuthProvider>
