@@ -785,7 +785,8 @@ import { motion } from "framer-motion";
 import { Upload, Video, X, Loader2 } from "lucide-react";
 import { useTeacherProfile } from "@/hooks/useTeacherProfile";
 import { useAuth } from "@/contexts/AuthContext";
-import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 const TeacherProfileEdit = () => {
   const {
@@ -807,6 +808,9 @@ const TeacherProfileEdit = () => {
   const [currentTab, setCurrentTab] = useState("basic");
   const [newSkill, setNewSkill] = useState("");
   const [newQualification, setNewQualification] = useState("");
+  const [galleryUrls, setGalleryUrls] = useState([]);
+  const [avatarUrl, setAvatarUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
 
   const avatarInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -843,10 +847,12 @@ const TeacherProfileEdit = () => {
         deleteAvatar: false,
         deleteVideo: false
       });
-      // Reset file states when teacherProfile loads
       setAvatarFile(null);
       setVideoFile(null);
       setGalleryFiles([]);
+      setGalleryUrls([]);
+      setAvatarUrl(teacherProfile.avatar?.url || "");
+      setVideoUrl(teacherProfile.videoUrl?.url || "");
     } else if (user && !authLoading && !isLoading) {
       setLocalProfileData(prev => ({
         ...prev,
@@ -858,6 +864,9 @@ const TeacherProfileEdit = () => {
         deleteAvatar: false,
         deleteVideo: false
       }));
+      setAvatarUrl("");
+      setVideoUrl("");
+      setGalleryUrls([]);
     }
   }, [teacherProfile, user, authLoading, isLoading, setAvatarFile, setVideoFile, setGalleryFiles]);
 
@@ -869,25 +878,31 @@ const TeacherProfileEdit = () => {
   const handleAvatarChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("image/")) {
+      const newUrl = URL.createObjectURL(file);
       setAvatarFile(file);
+      setAvatarUrl(newUrl);
       setLocalProfileData(prev => ({
         ...prev,
         deleteAvatar: false
       }));
     } else {
-      toast.error("Please upload a valid image file.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid File',
+        text: 'Please upload a valid image file.',
+        confirmButtonColor: '#f97316', // Orange-500
+        timer: 5000,
+        timerProgressBar: true
       });
     }
   };
 
   const handleRemoveAvatar = () => {
+    if (avatarFile && avatarUrl) {
+      URL.revokeObjectURL(avatarUrl);
+    }
     setAvatarFile(null);
+    setAvatarUrl("");
     setLocalProfileData(prev => ({
       ...prev,
       deleteAvatar: true
@@ -897,25 +912,31 @@ const TeacherProfileEdit = () => {
   const handleVideoUpload = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith("video/")) {
+      const newUrl = URL.createObjectURL(file);
       setVideoFile(file);
+      setVideoUrl(newUrl);
       setLocalProfileData(prev => ({
         ...prev,
         deleteVideo: false
       }));
     } else {
-      toast.error("Please upload a valid video file.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid File',
+        text: 'Please upload a valid video file.',
+        confirmButtonColor: '#f97316',
+        timer: 5000,
+        timerProgressBar: true
       });
     }
   };
 
   const handleRemoveVideo = () => {
+    if (videoFile && videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+    }
     setVideoFile(null);
+    setVideoUrl("");
     setLocalProfileData(prev => ({
       ...prev,
       deleteVideo: true
@@ -925,29 +946,31 @@ const TeacherProfileEdit = () => {
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files).filter(file => file.type.startsWith("image/"));
     if (files.length === 0) {
-      toast.error("Please upload valid image files.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Files',
+        text: 'Please upload valid image files.',
+        confirmButtonColor: '#f97316',
+        timer: 5000,
+        timerProgressBar: true
       });
       return;
     }
     const currentTotalPhotos = (localProfileData.galleryPhotos?.length || 0) + galleryFiles.length;
     const newFilesToAdd = files.slice(0, 10 - currentTotalPhotos);
     if (newFilesToAdd.length < files.length) {
-      toast.warn(`You can only upload up to ${10 - currentTotalPhotos} more photos.`, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
+      Swal.fire({
+        icon: 'warning',
+        title: 'Photo Limit',
+        text: `You can only upload up to ${10 - currentTotalPhotos} more photos.`,
+        confirmButtonColor: '#f97316',
+        timer: 5000,
+        timerProgressBar: true
       });
     }
+    const newUrls = newFilesToAdd.map(file => URL.createObjectURL(file));
     setGalleryFiles((prev) => [...prev, ...newFilesToAdd]);
+    setGalleryUrls((prev) => [...prev, ...newUrls]);
   };
 
   const handleRemoveGalleryPhoto = (indexToRemove) => {
@@ -959,7 +982,13 @@ const TeacherProfileEdit = () => {
       }));
     } else {
       const newFileIndex = indexToRemove - savedPhotosCount;
+      const fileToRemove = galleryFiles[newFileIndex];
+      const urlToRemove = galleryUrls[newFileIndex];
+      if (urlToRemove) {
+        URL.revokeObjectURL(urlToRemove);
+      }
       setGalleryFiles((prev) => prev.filter((_, i) => i !== newFileIndex));
+      setGalleryUrls((prev) => prev.filter((_, i) => i !== newFileIndex));
     }
   };
 
@@ -1017,13 +1046,13 @@ const TeacherProfileEdit = () => {
     };
 
     if (formData.hourlyRate !== undefined && isNaN(formData.hourlyRate)) {
-      toast.error("Hourly Rate must be a valid number.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Input',
+        text: 'Hourly Rate must be a valid number.',
+        confirmButtonColor: '#f97316',
+        timer: 5000,
+        timerProgressBar: true
       });
       return;
     }
@@ -1043,47 +1072,47 @@ const TeacherProfileEdit = () => {
     try {
       if (teacherProfile) {
         await updateTeacherProfile(formData);
-        toast.success("Profile updated successfully!", {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Profile updated successfully!',
+          confirmButtonColor: '#f97316',
+          timer: 3000,
+          timerProgressBar: true
         });
       } else {
         await createTeacherProfile(formData);
-        toast.success("Profile created successfully!", {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success',
+          text: 'Profile created successfully!',
+          confirmButtonColor: '#f97316',
+          timer: 3000,
+          timerProgressBar: true
         });
       }
     } catch (err) {
       console.error("Failed to save profile:", err);
-      toast.error(err.message || "An unexpected error occurred while saving your profile.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.message || 'An unexpected error occurred while saving your profile.',
+        confirmButtonColor: '#f97316',
+        timer: 5000,
+        timerProgressBar: true
       });
     }
   };
 
   const getDisplayAvatarUrl = () => {
-    if (avatarFile) return URL.createObjectURL(avatarFile);
+    if (avatarUrl) return avatarUrl;
     if (localProfileData.deleteAvatar) return "";
     if (teacherProfile?.avatar?.url) return teacherProfile.avatar.url;
     return "";
   };
 
   const getDisplayVideoUrl = () => {
-    if (videoFile) return URL.createObjectURL(videoFile);
+    if (videoUrl) return videoUrl;
     if (localProfileData.deleteVideo) return "";
     if (teacherProfile?.videoUrl?.url) return teacherProfile.videoUrl.url;
     return "";
@@ -1091,18 +1120,20 @@ const TeacherProfileEdit = () => {
 
   const getDisplayGalleryPhotos = () => {
     const savedPhotos = localProfileData.galleryPhotos || [];
-    const newFilesPhotos = galleryFiles.map(file => ({ url: URL.createObjectURL(file), name: file.name }));
+    const newFilesPhotos = galleryFiles.map((file, index) => ({
+      url: galleryUrls[index] || URL.createObjectURL(file),
+      name: file.name
+    }));
     return [...savedPhotos, ...newFilesPhotos];
   };
 
-  // Cleanup object URLs to prevent memory leaks
   useEffect(() => {
     return () => {
-      if (avatarFile) URL.revokeObjectURL(URL.createObjectURL(avatarFile));
-      if (videoFile) URL.revokeObjectURL(URL.createObjectURL(videoFile));
-      galleryFiles.forEach(file => URL.revokeObjectURL(URL.createObjectURL(file)));
+      if (avatarUrl) URL.revokeObjectURL(avatarUrl);
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      galleryUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [avatarFile, videoFile, galleryFiles]);
+  }, [avatarUrl, videoUrl, galleryUrls]);
 
   if (isLoading || authLoading) {
     return (
@@ -1341,7 +1372,6 @@ const TeacherProfileEdit = () => {
                 <form onSubmit={handleSaveAllProfileData} className="space-y-8">
                   <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-3">
-ylogen
                       <label
                         htmlFor="experience"
                         className="block text-base font-medium text-gray-700"
