@@ -481,8 +481,8 @@ const customStyles = `
   .str-video {
     --str-video__primary-color: #1a73e8; /* Google Meet blue */
     --str-video__secondary-color: #34a853; /* Google Meet green */
-    --str-video__text-color1: #ffffff; /* White text for visibility */
-    --str-video__text-color2: #bbbbbb; /* Lighter gray text */
+    --str-video__text-color1: #ffffff; /* White text for all primary text */
+    --str-video__text-color2: #ffffff; /* White text for all secondary text */
     --str-video__background-color: #202124; /* Dark background */
     --str-video__popover-background: #303134; /* Dark popover */
     --str-video__popover-text-color: #ffffff; /* White text in popover */
@@ -515,7 +515,7 @@ const customStyles = `
     border-bottom: 1px solid #444444;
     background: #303134;
     font-weight: 500;
-    color: #ffffff;
+    color: #ffffff; /* White header text */
   }
   .controls-bar {
     position: fixed;
@@ -551,15 +551,17 @@ const customStyles = `
     transition: all 0.2s ease;
     background: #444444;
     border: 1px solid #555555;
+    color: #ffffff; /* White text on toggle button */
   }
   .toggle-button:hover {
     background: #1a73e8 !important; /* Google Meet hover blue */
     transform: scale(1.05);
     border-color: #ffffff;
-    color: #ffffff;
+    color: #ffffff; /* White text on hover */
   }
   .close-button {
     transition: all 0.2s ease;
+    color: #ffffff; /* White text on close button */
   }
   .close-button:hover {
     background: #444444;
@@ -587,6 +589,7 @@ const customStyles = `
     .str-video__participants-list__item-name {
       padding: 0.5rem;
       font-size: 0.875rem;
+      color: #ffffff; /* White text in mobile participants list */
     }
   }
   @media (max-width: 480px) {
@@ -602,6 +605,7 @@ const customStyles = `
     }
     .toggle-button {
       padding: 0.5rem;
+      color: #ffffff; /* White text in mobile toggle button */
     }
   }
 `;
@@ -765,7 +769,7 @@ const VideoCallPage = () => {
                       <h3 className="text-lg font-medium">Participants</h3>
                       <button
                         onClick={toggleSidebar}
-                        className="p-2 text-gray-300 hover:text-white close-button transition-colors"
+                        className="p-2 text-white hover:text-gray-200 close-button transition-colors"
                         aria-label="Close participants"
                       >
                         <X size={20} />
@@ -800,7 +804,3 @@ const VideoCallPage = () => {
 };
 
 export default VideoCallPage;
-// export default VideoCallPage;
-
-
-
