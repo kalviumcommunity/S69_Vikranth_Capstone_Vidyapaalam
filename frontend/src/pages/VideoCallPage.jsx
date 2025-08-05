@@ -455,7 +455,9 @@
 //   );
 // };
 
-// export default VideoCallPage;
+
+
+
 
 
 import React, { useEffect, useState } from "react";
@@ -479,50 +481,54 @@ const customStyles = `
   .str-video {
     --str-video__primary-color: #1a73e8; /* Google Meet blue */
     --str-video__secondary-color: #34a853; /* Google Meet green */
-    --str-video__text-color1: #202124; /* Dark text */
-    --str-video__text-color2: #5f6368; /* Lighter text */
-    --str-video__background-color: #f1f3f4; /* Light background */
-    --str-video__popover-background: #ffffff;
-    --str-video__popover-text-color: #202124;
-    --str-video__popover-box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    --str-video__text-color1: #ffffff; /* White text for visibility */
+    --str-video__text-color2: #bbbbbb; /* Lighter gray text */
+    --str-video__background-color: #202124; /* Dark background */
+    --str-video__popover-background: #303134; /* Dark popover */
+    --str-video__popover-text-color: #ffffff; /* White text in popover */
+    --str-video__popover-box-shadow: 0 4px 16px rgba(0,0,0,0.3);
   }
   .str-video__participant-view {
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    background: #202124; /* Dark background for video area */
+  }
+  .str-video__participant-name {
+    color: #ffffff !important; /* Ensure participant name is white */
   }
   .str-video__participants-list__item-name {
     padding: 0.75rem;
     border-radius: 8px;
     transition: background 0.2s ease;
-    color: #202124;
+    color: #ffffff; /* White text in participants list */
+    background: #303134; /* Dark background for list items */
   }
   .str-video__participants-list__item-name:hover {
-    background: rgba(26, 115, 232, 0.08); /* Subtle hover effect */
+    background: rgba(26, 115, 232, 0.2); /* Subtle hover effect */
   }
   .participants-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #dadce0;
-    background: #ffffff;
+    border-bottom: 1px solid #444444;
+    background: #303134;
     font-weight: 500;
-    color: #202124;
+    color: #ffffff;
   }
   .controls-bar {
     position: fixed;
     bottom: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
-    background: #ffffff;
+    background: #303134;
     padding: 0.75rem 1.5rem;
     border-radius: 40px;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
     z-index: 1000;
     max-width: 90%;
   }
@@ -537,25 +543,26 @@ const customStyles = `
     background: #202124; /* Dark video area */
   }
   .sidebar {
-    background: #ffffff;
-    border-left: 1px solid #dadce0;
-    box-shadow: -2px 0 12px rgba(0,0,0,0.1);
+    background: #303134;
+    border-left: 1px solid #444444;
+    box-shadow: -2px 0 12px rgba(0,0,0,0.5);
   }
   .toggle-button {
     transition: all 0.2s ease;
-    background: #ffffff;
-    border: 1px solid #dadce0;
+    background: #444444;
+    border: 1px solid #555555;
   }
   .toggle-button:hover {
-    background: #e8f0fe !important; /* Google Meet hover blue */
+    background: #1a73e8 !important; /* Google Meet hover blue */
     transform: scale(1.05);
-    border-color: #1a73e8;
+    border-color: #ffffff;
+    color: #ffffff;
   }
   .close-button {
     transition: all 0.2s ease;
   }
   .close-button:hover {
-    background: #f1f3f4;
+    background: #444444;
     border-radius: 50%;
   }
   @media (max-width: 768px) {
@@ -567,7 +574,7 @@ const customStyles = `
     }
     .str-video__participant-view {
       border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
     .controls-bar {
       padding: 0.5rem 1rem;
@@ -632,7 +639,6 @@ const VideoCallPage = () => {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      // Auto-close sidebar on mobile when resizing to small screens
       if (window.innerWidth < 768 && sidebarOpen) {
         setSidebarOpen(false);
       }
@@ -691,8 +697,8 @@ const VideoCallPage = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 text-gray-900 text-lg font-medium">
-        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg font-medium">
+        <div className="bg-gray-800 p-6 rounded-lg shadow-lg text-center">
           <p className="mb-4">{error}</p>
           <button
             onClick={() => navigate(navigatePath)}
@@ -707,8 +713,8 @@ const VideoCallPage = () => {
 
   if (!isClientReady || !call) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 text-gray-900 text-lg font-medium">
-        <div className="flex items-center space-x-3 bg-white p-4 rounded-lg shadow-lg">
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg font-medium">
+        <div className="flex items-center space-x-3 bg-gray-800 p-4 rounded-lg shadow-lg">
           <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path
@@ -726,10 +732,10 @@ const VideoCallPage = () => {
   return (
     <>
       <style>{customStyles}</style>
-      <StreamTheme className="light h-screen w-screen">
+      <StreamTheme className="dark h-screen w-screen">
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
-            <div className="flex h-screen w-screen bg-gray-100 relative overflow-hidden">
+            <div className="flex h-screen w-screen bg-gray-900 relative overflow-hidden">
               {/* Main Video Area */}
               <div
                 className={`flex-1 transition-all duration-300 relative h-full ${
@@ -743,7 +749,7 @@ const VideoCallPage = () => {
               <div
                 className={`fixed inset-0 z-50 transition-opacity duration-300 ${
                   sidebarOpen
-                    ? "bg-black bg-opacity-40 pointer-events-auto"
+                    ? "bg-black bg-opacity-60 pointer-events-auto"
                     : "bg-transparent pointer-events-none"
                 }`}
                 onClick={toggleSidebar}
@@ -759,7 +765,7 @@ const VideoCallPage = () => {
                       <h3 className="text-lg font-medium">Participants</h3>
                       <button
                         onClick={toggleSidebar}
-                        className="p-2 text-gray-600 hover:text-gray-900 close-button transition-colors"
+                        className="p-2 text-gray-300 hover:text-white close-button transition-colors"
                         aria-label="Close participants"
                       >
                         <X size={20} />
@@ -777,7 +783,7 @@ const VideoCallPage = () => {
                 <div className="flex items-center space-x-3">
                   <button
                     onClick={toggleSidebar}
-                    className="toggle-button text-gray-900 p-3 rounded-full hover:bg-blue-50 shadow-sm"
+                    className="toggle-button text-white p-3 rounded-full hover:bg-blue-50 shadow-sm"
                     aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
                   >
                     <Users size={20} />
@@ -794,3 +800,7 @@ const VideoCallPage = () => {
 };
 
 export default VideoCallPage;
+// export default VideoCallPage;
+
+
+
