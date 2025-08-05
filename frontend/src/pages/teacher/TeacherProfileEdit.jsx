@@ -787,7 +787,7 @@ import { useTeacherProfile } from "@/hooks/useTeacherProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
-import { v4 as uuidv4 } from 'uuid'; // Import UUID for stable keys
+import { v4 as uuidv4 } from 'uuid';
 
 const TeacherProfileEdit = () => {
   const {
@@ -812,7 +812,7 @@ const TeacherProfileEdit = () => {
   const [galleryUrls, setGalleryUrls] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [galleryFileIds, setGalleryFileIds] = useState([]); // Store UUIDs for new files
+  const [galleryFileIds, setGalleryFileIds] = useState([]);
 
   const avatarInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -873,6 +873,13 @@ const TeacherProfileEdit = () => {
       setGalleryFileIds([]);
     }
   }, [teacherProfile, user, authLoading, isLoading, setAvatarFile, setVideoFile, setGalleryFiles]);
+
+  // Log state after localProfileData updates
+  useEffect(() => {
+    console.log('Updated localProfileData:', {
+      galleryPhotos: localProfileData.galleryPhotos
+    });
+  }, [localProfileData.galleryPhotos]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -989,9 +996,11 @@ const TeacherProfileEdit = () => {
     });
     const savedPhotosCount = localProfileData.galleryPhotos?.length || 0;
     if (indexToRemove < savedPhotosCount) {
+      const newGalleryPhotos = localProfileData.galleryPhotos.filter((_, i) => i !== indexToRemove);
+      console.log('New galleryPhotos after filter:', newGalleryPhotos);
       setLocalProfileData(prev => ({
         ...prev,
-        galleryPhotos: prev.galleryPhotos.filter((_, i) => i !== indexToRemove)
+        galleryPhotos: newGalleryPhotos
       }));
     } else {
       const newFileIndex = indexToRemove - savedPhotosCount;
@@ -1007,12 +1016,6 @@ const TeacherProfileEdit = () => {
         console.warn(`Invalid newFileIndex: ${newFileIndex}`);
       }
     }
-    console.log('After removal:', {
-      galleryPhotos: localProfileData.galleryPhotos,
-      galleryFiles: galleryFiles,
-      galleryUrls: galleryUrls,
-      galleryFileIds: galleryFileIds
-    });
   };
 
   const handleAddSkill = () => {
@@ -1152,6 +1155,7 @@ const TeacherProfileEdit = () => {
       name: file.name,
       id: galleryFileIds[index]
     }));
+    console.log('Displayed gallery photos:', [...savedPhotos, ...newFilesPhotos]);
     return [...savedPhotos, ...newFilesPhotos];
   };
 
@@ -1164,7 +1168,7 @@ const TeacherProfileEdit = () => {
         if (url) URL.revokeObjectURL(url);
       });
     };
-  }, []); // Empty dependency array to run cleanup only on unmount
+  }, []);
 
   if (isLoading || authLoading) {
     return (
