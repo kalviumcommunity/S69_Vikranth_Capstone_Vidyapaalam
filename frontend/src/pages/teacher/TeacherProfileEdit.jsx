@@ -787,6 +787,7 @@ import { useTeacherProfile } from "@/hooks/useTeacherProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
+import { v4 as uuidv4 } from 'uuid'; // Import UUID for stable keys
 
 const TeacherProfileEdit = () => {
   const {
@@ -811,6 +812,7 @@ const TeacherProfileEdit = () => {
   const [galleryUrls, setGalleryUrls] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
+  const [galleryFileIds, setGalleryFileIds] = useState([]); // Store UUIDs for new files
 
   const avatarInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -851,6 +853,7 @@ const TeacherProfileEdit = () => {
       setVideoFile(null);
       setGalleryFiles([]);
       setGalleryUrls([]);
+      setGalleryFileIds([]);
       setAvatarUrl(teacherProfile.avatar?.url || "");
       setVideoUrl(teacherProfile.videoUrl?.url || "");
     } else if (user && !authLoading && !isLoading) {
@@ -867,6 +870,7 @@ const TeacherProfileEdit = () => {
       setAvatarUrl("");
       setVideoUrl("");
       setGalleryUrls([]);
+      setGalleryFileIds([]);
     }
   }, [teacherProfile, user, authLoading, isLoading, setAvatarFile, setVideoFile, setGalleryFiles]);
 
@@ -890,7 +894,7 @@ const TeacherProfileEdit = () => {
         icon: 'error',
         title: 'Invalid File',
         text: 'Please upload a valid image file.',
-        confirmButtonColor: '#f97316', // Orange-500
+        confirmButtonColor: '#f97316',
         timer: 5000,
         timerProgressBar: true
       });
@@ -969,11 +973,20 @@ const TeacherProfileEdit = () => {
       });
     }
     const newUrls = newFilesToAdd.map(file => URL.createObjectURL(file));
+    const newFileIds = newFilesToAdd.map(() => uuidv4());
     setGalleryFiles((prev) => [...prev, ...newFilesToAdd]);
     setGalleryUrls((prev) => [...prev, ...newUrls]);
+    setGalleryFileIds((prev) => [...prev, ...newFileIds]);
   };
 
   const handleRemoveGalleryPhoto = (indexToRemove) => {
+    console.log('Before removal:', {
+      galleryPhotos: localProfileData.galleryPhotos,
+      galleryFiles: galleryFiles,
+      galleryUrls: galleryUrls,
+      galleryFileIds: galleryFileIds,
+      indexToRemove
+    });
     const savedPhotosCount = localProfileData.galleryPhotos?.length || 0;
     if (indexToRemove < savedPhotosCount) {
       setLocalProfileData(prev => ({
@@ -982,14 +995,24 @@ const TeacherProfileEdit = () => {
       }));
     } else {
       const newFileIndex = indexToRemove - savedPhotosCount;
-      const fileToRemove = galleryFiles[newFileIndex];
-      const urlToRemove = galleryUrls[newFileIndex];
-      if (urlToRemove) {
-        URL.revokeObjectURL(urlToRemove);
+      if (newFileIndex >= 0 && newFileIndex < galleryFiles.length) {
+        setGalleryFiles((prev) => prev.filter((_, i) => i !== newFileIndex));
+        setGalleryUrls((prev) => {
+          const newUrls = prev.filter((_, i) => i !== newFileIndex);
+          URL.revokeObjectURL(prev[newFileIndex]);
+          return newUrls;
+        });
+        setGalleryFileIds((prev) => prev.filter((_, i) => i !== newFileIndex));
+      } else {
+        console.warn(`Invalid newFileIndex: ${newFileIndex}`);
       }
-      setGalleryFiles((prev) => prev.filter((_, i) => i !== newFileIndex));
-      setGalleryUrls((prev) => prev.filter((_, i) => i !== newFileIndex));
     }
+    console.log('After removal:', {
+      galleryPhotos: localProfileData.galleryPhotos,
+      galleryFiles: galleryFiles,
+      galleryUrls: galleryUrls,
+      galleryFileIds: galleryFileIds
+    });
   };
 
   const handleAddSkill = () => {
@@ -1119,21 +1142,29 @@ const TeacherProfileEdit = () => {
   };
 
   const getDisplayGalleryPhotos = () => {
-    const savedPhotos = localProfileData.galleryPhotos || [];
+    const savedPhotos = localProfileData.galleryPhotos?.map((photo, index) => ({
+      url: photo.url,
+      name: `Saved Photo ${index + 1}`,
+      id: photo._id
+    })) || [];
     const newFilesPhotos = galleryFiles.map((file, index) => ({
       url: galleryUrls[index] || URL.createObjectURL(file),
-      name: file.name
+      name: file.name,
+      id: galleryFileIds[index]
     }));
     return [...savedPhotos, ...newFilesPhotos];
   };
 
+  // Cleanup object URLs only on component unmount
   useEffect(() => {
     return () => {
       if (avatarUrl) URL.revokeObjectURL(avatarUrl);
       if (videoUrl) URL.revokeObjectURL(videoUrl);
-      galleryUrls.forEach(url => URL.revokeObjectURL(url));
+      galleryUrls.forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
     };
-  }, [avatarUrl, videoUrl, galleryUrls]);
+  }, []); // Empty dependency array to run cleanup only on unmount
 
   if (isLoading || authLoading) {
     return (
@@ -1579,7 +1610,7 @@ const TeacherProfileEdit = () => {
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {getDisplayGalleryPhotos().map((photo, index) => (
-                            <div key={photo.url || index} className="relative">
+                            <div key={photo.id} className="relative">
                               <img
                                 src={photo.url}
                                 alt={photo.name || `Gallery Photo ${index + 1}`}
