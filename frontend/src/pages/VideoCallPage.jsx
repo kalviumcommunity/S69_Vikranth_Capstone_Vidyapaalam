@@ -479,134 +479,33 @@ import "@stream-io/video-react-sdk/dist/css/styles.css";
 
 const customStyles = `
   .str-video {
-    --str-video__primary-color: #1a73e8; /* Google Meet blue */
-    --str-video__secondary-color: #34a853; /* Google Meet green */
-    --str-video__text-color1: #ffffff; /* White text for all primary text */
-    --str-video__text-color2: #ffffff; /* White text for all secondary text */
-    --str-video__background-color: #202124; /* Dark background */
-    --str-video__popover-background: #303134; /* Dark popover */
-    --str-video__popover-text-color: #ffffff; /* White text in popover */
+    --str-video__primary-color: #1a73e8;
+    --str-video__secondary-color: #34a853;
+    --str-video__text-color1: #ffffff;
+    --str-video__text-color2: #ffffff;
+    --str-video__background-color: #202124;
+    --str-video__popover-background: #303134;
+    --str-video__popover-text-color: #ffffff;
     --str-video__popover-box-shadow: 0 4px 16px rgba(0,0,0,0.3);
   }
   .str-video__participant-view {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    background: #202124; /* Dark background for video area */
+    background: #202124;
   }
   .str-video__participant-name {
-    color: #ffffff !important; /* Ensure participant name is white */
+    color: #ffffff !important;
   }
   .str-video__participants-list__item-name {
+    color: #ffffff !important;
+    background: #303134;
     padding: 0.75rem;
     border-radius: 8px;
     transition: background 0.2s ease;
-    color: #ffffff; /* White text in participants list */
-    background: #303134; /* Dark background for list items */
   }
   .str-video__participants-list__item-name:hover {
-    background: rgba(26, 115, 232, 0.2); /* Subtle hover effect */
-  }
-  .participants-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid #444444;
-    background: #303134;
-    font-weight: 500;
-    color: #ffffff; /* White header text */
-  }
-  .controls-bar {
-    position: fixed;
-    bottom: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #303134;
-    padding: 0.75rem 1.5rem;
-    border-radius: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    z-index: 1000;
-    max-width: 90%;
-  }
-  .video-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 0.75rem;
-    padding: 1rem;
-    width: 100%;
-    height: calc(100% - 80px); /* Adjust for controls bar */
-    overflow-y: auto;
-    background: #202124; /* Dark video area */
-  }
-  .sidebar {
-    background: #303134;
-    border-left: 1px solid #444444;
-    box-shadow: -2px 0 12px rgba(0,0,0,0.5);
-  }
-  .toggle-button {
-    transition: all 0.2s ease;
-    background: #444444;
-    border: 1px solid #555555;
-    color: #ffffff; /* White text on toggle button */
-  }
-  .toggle-button:hover {
-    background: #1a73e8 !important; /* Google Meet hover blue */
-    transform: scale(1.05);
-    border-color: #ffffff;
-    color: #ffffff; /* White text on hover */
-  }
-  .close-button {
-    transition: all 0.2s ease;
-    color: #ffffff; /* White text on close button */
-  }
-  .close-button:hover {
-    background: #444444;
-    border-radius: 50%;
-  }
-  @media (max-width: 768px) {
-    .video-grid {
-      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-      gap: 0.5rem;
-      padding: 0.5rem;
-      height: calc(100% - 70px);
-    }
-    .str-video__participant-view {
-      border-radius: 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
-    }
-    .controls-bar {
-      padding: 0.5rem 1rem;
-      bottom: 1rem;
-      max-width: 95%;
-    }
-    .participants-header {
-      padding: 0.75rem 1rem;
-    }
-    .str-video__participants-list__item-name {
-      padding: 0.5rem;
-      font-size: 0.875rem;
-      color: #ffffff; /* White text in mobile participants list */
-    }
-  }
-  @media (max-width: 480px) {
-    .video-grid {
-      grid-template-columns: 1fr;
-      gap: 0.5rem;
-      padding: 0.5rem;
-    }
-    .controls-bar {
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      padding: 0.5rem;
-    }
-    .toggle-button {
-      padding: 0.5rem;
-      color: #ffffff; /* White text in mobile toggle button */
-    }
+    background: rgba(26, 115, 232, 0.2);
   }
 `;
 
@@ -643,9 +542,7 @@ const VideoCallPage = () => {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768 && sidebarOpen) {
-        setSidebarOpen(false);
-      }
+      if (window.innerWidth < 768 && sidebarOpen) setSidebarOpen(false);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -656,7 +553,6 @@ const VideoCallPage = () => {
       setError("Unable to start the video call. Please check your connection and try again.");
       return;
     }
-
     if (call) return;
 
     const createAndJoinCall = async () => {
@@ -671,7 +567,6 @@ const VideoCallPage = () => {
         navigate(navigatePath);
       }
     };
-
     createAndJoinCall();
 
     return () => {
@@ -685,7 +580,6 @@ const VideoCallPage = () => {
         })();
       }
     };
-    // eslint-disable-next-line
   }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
 
   const handleLeaveCall = async () => {
@@ -751,25 +645,25 @@ const VideoCallPage = () => {
 
               {/* Participants Drawer */}
               <div
-                className={`fixed inset-0 z-50 transition-opacity duration-300 ${
-                  sidebarOpen
-                    ? "bg-black bg-opacity-60 pointer-events-auto"
-                    : "bg-transparent pointer-events-none"
-                }`}
+                className={`fixed inset-0 z-50 ${
+                  sidebarOpen ? "bg-black bg-opacity-60" : "bg-transparent"
+                } ${sidebarOpen ? "block" : "hidden"} md:${sidebarOpen ? "block" : "hidden"}`}
                 onClick={toggleSidebar}
               >
                 <aside
-                  className={`absolute top-0 right-0 h-full w-full md:w-80 sidebar transform transition-transform duration-300 ${
-                    sidebarOpen ? "translate-x-0" : "translate-x-full"
+                  className={`absolute top-0 right-0 h-full w-full md:w-80 bg-gray-800 border-l border-gray-700 shadow-lg transform ${
+                    sidebarOpen
+                      ? "translate-x-0 transition-transform duration-200 ease-in-out"
+                      : "translate-x-full transition-transform duration-200 ease-in-out"
                   }`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex flex-col h-full">
-                    <div className="participants-header">
-                      <h3 className="text-lg font-medium">Participants</h3>
+                    <div className="flex items-center justify-between p-4 border-b border-gray-700 bg-gray-800">
+                      <h3 className="text-lg font-medium text-white">Participants</h3>
                       <button
                         onClick={toggleSidebar}
-                        className="p-2 text-white hover:text-gray-200 close-button transition-colors"
+                        className="p-2 text-white hover:text-gray-300 transition-colors rounded-full"
                         aria-label="Close participants"
                       >
                         <X size={20} />
@@ -782,18 +676,15 @@ const VideoCallPage = () => {
                 </aside>
               </div>
 
-              {/* Controls Bar with Toggle Button */}
-              <div className="controls-bar">
-                <div className="flex items-center space-x-3">
-                  <button
-                    onClick={toggleSidebar}
-                    className="toggle-button text-white p-3 rounded-full hover:bg-blue-50 shadow-sm"
-                    aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
-                  >
-                    <Users size={20} />
-                  </button>
-                  <CallControls onLeave={handleLeaveCall} />
-                </div>
+              <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-800 p-3 rounded-full shadow-lg flex items-center space-x-3 z-50 max-w-[90%] md:max-w-[70%]">
+                <button
+                  onClick={toggleSidebar}
+                  className="p-2 bg-gray-700 text-white rounded-full hover:bg-blue-600 transition-colors"
+                  aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
+                >
+                  <Users size={20} />
+                </button>
+                <CallControls onLeave={handleLeaveCall} />
               </div>
             </div>
           </StreamCall>
