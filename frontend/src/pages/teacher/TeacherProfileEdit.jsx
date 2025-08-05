@@ -780,6 +780,7 @@
 // export default TeacherProfileEdit;
 
 
+
 import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Upload, Video, X, Loader2 } from "lucide-react";
@@ -809,11 +810,9 @@ const TeacherProfileEdit = () => {
   const [currentTab, setCurrentTab] = useState("basic");
   const [newSkill, setNewSkill] = useState("");
   const [newQualification, setNewQualification] = useState("");
-  const [galleryUrls, setGalleryUrls] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
-  const [galleryFileIds, setGalleryFileIds] = useState([]);
-  const [isRemovingPhoto, setIsRemovingPhoto] = useState(false); // Flag to prevent concurrent removals
+  const [galleryPhotos, setGalleryPhotos] = useState([]);
 
   const avatarInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -829,17 +828,12 @@ const TeacherProfileEdit = () => {
     experience: "",
     hourlyRate: "",
     qualifications: [],
-    galleryPhotos: [],
     deleteAvatar: false,
     deleteVideo: false
   });
 
-  // Track whether galleryPhotos has been modified locally
-  const [hasModifiedGallery, setHasModifiedGallery] = useState(false);
-
   useEffect(() => {
-    if (teacherProfile && !hasModifiedGallery) {
-      console.log('Syncing with teacherProfile:', teacherProfile);
+    if (teacherProfile) {
       setLocalProfileData({
         name: teacherProfile.name || "",
         title: teacherProfile.title || "",
@@ -850,22 +844,20 @@ const TeacherProfileEdit = () => {
         experience: teacherProfile.experience || "",
         hourlyRate: teacherProfile.hourlyRate !== undefined && teacherProfile.hourlyRate !== null ? String(teacherProfile.hourlyRate) : "",
         qualifications: teacherProfile.qualifications || [],
-        galleryPhotos: teacherProfile.galleryPhotos?.map(p => ({
-          url: p.url,
-          _id: p._id || uuidv4() // Fallback to UUID if _id is missing
-        })) || [],
         deleteAvatar: false,
         deleteVideo: false
       });
       setAvatarFile(null);
       setVideoFile(null);
       setGalleryFiles([]);
-      setGalleryUrls([]);
-      setGalleryFileIds([]);
       setAvatarUrl(teacherProfile.avatar?.url || "");
       setVideoUrl(teacherProfile.videoUrl?.url || "");
-    } else if (user && !authLoading && !isLoading && !hasModifiedGallery) {
-      console.log('Syncing with user:', user);
+      setGalleryPhotos(teacherProfile.galleryPhotos?.map(p => ({
+        id: p._id,
+        url: p.url,
+        isSaved: true
+      })) || []);
+    } else if (user && !authLoading && !isLoading) {
       setLocalProfileData(prev => ({
         ...prev,
         name: user.name || prev.name,
@@ -878,17 +870,9 @@ const TeacherProfileEdit = () => {
       }));
       setAvatarUrl("");
       setVideoUrl("");
-      setGalleryUrls([]);
-      setGalleryFileIds([]);
+      setGalleryPhotos([]);
     }
-  }, [teacherProfile, user, authLoading, isLoading, setAvatarFile, setVideoFile, setGalleryFiles, hasModifiedGallery]);
-
-  // Log state after localProfileData updates
-  useEffect(() => {
-    console.log('Updated localProfileData:', {
-      galleryPhotos: localProfileData.galleryPhotos
-    });
-  }, [localProfileData.galleryPhotos]);
+  }, [teacherProfile, user, authLoading, isLoading, setAvatarFile, setVideoFile, setGalleryFiles]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -901,10 +885,7 @@ const TeacherProfileEdit = () => {
       const newUrl = URL.createObjectURL(file);
       setAvatarFile(file);
       setAvatarUrl(newUrl);
-      setLocalProfileData(prev => ({
-        ...prev,
-        deleteAvatar: false
-      }));
+      setLocalProfileData(prev => ({ ...prev, deleteAvatar: false }));
     } else {
       Swal.fire({
         icon: 'error',
@@ -918,15 +899,10 @@ const TeacherProfileEdit = () => {
   };
 
   const handleRemoveAvatar = () => {
-    if (avatarFile && avatarUrl) {
-      URL.revokeObjectURL(avatarUrl);
-    }
+    if (avatarFile && avatarUrl) URL.revokeObjectURL(avatarUrl);
     setAvatarFile(null);
     setAvatarUrl("");
-    setLocalProfileData(prev => ({
-      ...prev,
-      deleteAvatar: true
-    }));
+    setLocalProfileData(prev => ({ ...prev, deleteAvatar: true }));
   };
 
   const handleVideoUpload = (e) => {
@@ -935,10 +911,7 @@ const TeacherProfileEdit = () => {
       const newUrl = URL.createObjectURL(file);
       setVideoFile(file);
       setVideoUrl(newUrl);
-      setLocalProfileData(prev => ({
-        ...prev,
-        deleteVideo: false
-      }));
+      setLocalProfileData(prev => ({ ...prev, deleteVideo: false }));
     } else {
       Swal.fire({
         icon: 'error',
@@ -952,15 +925,10 @@ const TeacherProfileEdit = () => {
   };
 
   const handleRemoveVideo = () => {
-    if (videoFile && videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-    }
+    if (videoFile && videoUrl) URL.revokeObjectURL(videoUrl);
     setVideoFile(null);
     setVideoUrl("");
-    setLocalProfileData(prev => ({
-      ...prev,
-      deleteVideo: true
-    }));
+    setLocalProfileData(prev => ({ ...prev, deleteVideo: true }));
   };
 
   const handlePhotoUpload = (e) => {
@@ -976,7 +944,7 @@ const TeacherProfileEdit = () => {
       });
       return;
     }
-    const currentTotalPhotos = (localProfileData.galleryPhotos?.length || 0) + galleryFiles.length;
+    const currentTotalPhotos = galleryPhotos.length;
     const newFilesToAdd = files.slice(0, 10 - currentTotalPhotos);
     if (newFilesToAdd.length < files.length) {
       Swal.fire({
@@ -988,52 +956,31 @@ const TeacherProfileEdit = () => {
         timerProgressBar: true
       });
     }
-    const newUrls = newFilesToAdd.map(file => URL.createObjectURL(file));
-    const newFileIds = newFilesToAdd.map(() => uuidv4());
-    setGalleryFiles((prev) => [...prev, ...newFilesToAdd]);
-    setGalleryUrls((prev) => [...prev, ...newUrls]);
-    setGalleryFileIds((prev) => [...prev, ...newFileIds]);
-    setHasModifiedGallery(true);
+    const newPhotos = newFilesToAdd.map(file => ({
+      id: uuidv4(),
+      url: URL.createObjectURL(file),
+      file,
+      isSaved: false
+    }));
+    setGalleryPhotos(prev => [...prev, ...newPhotos]);
+    setGalleryFiles(prev => [...prev, ...newFilesToAdd]);
   };
 
-  const handleRemoveGalleryPhoto = (indexToRemove) => {
-    if (isRemovingPhoto) {
-      console.warn('Photo removal in progress, skipping:', indexToRemove);
-      return;
-    }
-    setIsRemovingPhoto(true);
-    console.log('Before removal:', {
-      galleryPhotos: localProfileData.galleryPhotos,
-      galleryFiles: galleryFiles,
-      galleryUrls: galleryUrls,
-      galleryFileIds: galleryFileIds,
-      indexToRemove
+  const handleRemoveGalleryPhoto = (id) => {
+    setGalleryPhotos(prev => {
+      const photoToRemove = prev.find(p => p.id === id);
+      if (photoToRemove && !photoToRemove.isSaved) {
+        URL.revokeObjectURL(photoToRemove.url);
+        setGalleryFiles(prevFiles => prevFiles.filter(f => f !== photoToRemove.file));
+      }
+      return prev.filter(p => p.id !== id);
     });
-    const savedPhotosCount = localProfileData.galleryPhotos?.length || 0;
-    if (indexToRemove < savedPhotosCount) {
-      const newGalleryPhotos = localProfileData.galleryPhotos.filter((_, i) => i !== indexToRemove);
-      console.log('New galleryPhotos after filter:', newGalleryPhotos);
+    if (!galleryPhotos.find(p => p.id === id)?.isSaved) {
       setLocalProfileData(prev => ({
         ...prev,
-        galleryPhotos: [...newGalleryPhotos]
+        galleryPhotos: prev.galleryPhotos.filter(p => p._id !== id)
       }));
-      setHasModifiedGallery(true);
-    } else {
-      const newFileIndex = indexToRemove - savedPhotosCount;
-      if (newFileIndex >= 0 && newFileIndex < galleryFiles.length) {
-        setGalleryFiles((prev) => prev.filter((_, i) => i !== newFileIndex));
-        setGalleryUrls((prev) => {
-          const newUrls = prev.filter((_, i) => i !== newFileIndex);
-          URL.revokeObjectURL(prev[newFileIndex]);
-          return newUrls;
-        });
-        setGalleryFileIds((prev) => prev.filter((_, i) => i !== newFileIndex));
-        setHasModifiedGallery(true);
-      } else {
-        console.warn(`Invalid newFileIndex: ${newFileIndex}`);
-      }
     }
-    setTimeout(() => setIsRemovingPhoto(false), 0); // Reset flag after event loop
   };
 
   const handleAddSkill = () => {
@@ -1054,10 +1001,7 @@ const TeacherProfileEdit = () => {
   };
 
   const handleAddQualification = () => {
-    if (
-      newQualification.trim() &&
-      !localProfileData.qualifications.includes(newQualification.trim())
-    ) {
+    if (newQualification.trim() && !localProfileData.qualifications.includes(newQualification.trim())) {
       setLocalProfileData((prev) => ({
         ...prev,
         qualifications: [...prev.qualifications, newQualification.trim()]
@@ -1075,7 +1019,6 @@ const TeacherProfileEdit = () => {
 
   const handleSaveAllProfileData = async (e) => {
     e.preventDefault();
-
     const formData = {
       name: localProfileData.name,
       title: localProfileData.title,
@@ -1086,7 +1029,7 @@ const TeacherProfileEdit = () => {
       experience: localProfileData.experience,
       hourlyRate: localProfileData.hourlyRate === "" ? undefined : Number(localProfileData.hourlyRate),
       qualifications: localProfileData.qualifications,
-      galleryPhotos: localProfileData.galleryPhotos
+      galleryPhotos: galleryPhotos.filter(p => p.isSaved).map(p => ({ _id: p.id, url: p.url }))
     };
 
     if (formData.hourlyRate !== undefined && isNaN(formData.hourlyRate)) {
@@ -1114,7 +1057,6 @@ const TeacherProfileEdit = () => {
     }
 
     try {
-      console.log('Saving formData:', formData);
       if (teacherProfile) {
         await updateTeacherProfile(formData);
         await Swal.fire({
@@ -1125,7 +1067,6 @@ const TeacherProfileEdit = () => {
           timer: 3000,
           timerProgressBar: true
         });
-        setHasModifiedGallery(false); // Allow resync after save
       } else {
         await createTeacherProfile(formData);
         await Swal.fire({
@@ -1136,7 +1077,6 @@ const TeacherProfileEdit = () => {
           timer: 3000,
           timerProgressBar: true
         });
-        setHasModifiedGallery(false); // Allow resync after save
       }
     } catch (err) {
       console.error("Failed to save profile:", err);
@@ -1165,32 +1105,15 @@ const TeacherProfileEdit = () => {
     return "";
   };
 
-  const getDisplayGalleryPhotos = () => {
-    const savedPhotos = localProfileData.galleryPhotos?.map((photo, index) => ({
-      url: photo.url,
-      name: `Saved Photo ${index + 1}`,
-      id: photo._id || uuidv4()
-    })) || [];
-    const newFilesPhotos = galleryFiles.map((file, index) => ({
-      url: galleryUrls[index] || URL.createObjectURL(file),
-      name: file.name,
-      id: galleryFileIds[index]
-    }));
-    const photos = [...savedPhotos, ...newFilesPhotos];
-    console.log('Displayed gallery photos:', photos);
-    return photos;
-  };
-
-  // Cleanup object URLs only on component unmount
   useEffect(() => {
     return () => {
       if (avatarUrl) URL.revokeObjectURL(avatarUrl);
       if (videoUrl) URL.revokeObjectURL(videoUrl);
-      galleryUrls.forEach(url => {
-        if (url) URL.revokeObjectURL(url);
+      galleryPhotos.forEach(photo => {
+        if (!photo.isSaved && photo.url) URL.revokeObjectURL(photo.url);
       });
     };
-  }, []);
+  }, [avatarUrl, videoUrl, galleryPhotos]);
 
   if (isLoading || authLoading) {
     return (
@@ -1632,28 +1555,27 @@ const TeacherProfileEdit = () => {
                     <p className="text-sm text-gray-500">
                       Add photos that showcase your teaching environment or past classes
                     </p>
-                    {getDisplayGalleryPhotos().length > 0 ? (
+                    {galleryPhotos.length > 0 ? (
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                          {getDisplayGalleryPhotos().map((photo, index) => (
+                          {galleryPhotos.map((photo, index) => (
                             <div key={photo.id} className="relative">
                               <img
                                 src={photo.url}
-                                alt={photo.name || `Gallery Photo ${index + 1}`}
+                                alt={`Gallery Photo ${index + 1}`}
                                 className="h-32 w-full object-cover rounded-md"
                               />
                               <button
                                 className="absolute top-2 right-2 text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-md"
-                                onClick={() => handleRemoveGalleryPhoto(index)}
+                                onClick={() => handleRemoveGalleryPhoto(photo.id)}
                                 type="button"
-                                disabled={isRemovingPhoto}
                               >
                                 <X className="h-5 w-5" />
                               </button>
                             </div>
                           ))}
                         </div>
-                        {getDisplayGalleryPhotos().length < 10 && (
+                        {galleryPhotos.length < 10 && (
                           <div className="flex justify-center mt-4">
                             <button
                               type="button"
