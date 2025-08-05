@@ -430,231 +430,6 @@
 
 
 
-// import React, { useEffect, useState } from "react";
-// import { useParams, useNavigate } from "react-router-dom";
-// import {
-//   StreamVideo,
-//   StreamCall,
-//   CallControls,
-//   CallParticipantsList,
-//   StreamTheme,
-//   ParticipantView,
-//   useCallStateHooks,
-// } from "@stream-io/video-react-sdk";
-// import { useStreamVideo } from "../contexts/StreamVideoContext";
-// import { useAuth } from "../contexts/AuthContext";
-// import { Users, X } from "lucide-react";
-// import "@stream-io/video-react-sdk/dist/css/styles.css";
-
-// const customStyles = `
-//   .str-video {
-//     --str-video__primary-color: #f97316;
-//     --str-video__secondary-color: #3b82f6;
-//     --str-video__text-color1: #222;
-//     --str-video__text-color2: #444;
-//     --str-video__background-color: #f9fafb;
-//     --str-video__popover-background: #fff;
-//     --str-video__popover-text-color: #222;
-//     --str-video__popover-box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-//   }
-//   .str-video__participants-list__item-name:hover {
-//     background: rgba(255, 255, 255, 0.2);
-//   }
-//   .participants-header {
-//     display: flex;
-//     align-items: center;
-//     justify-content: space-between;
-//     padding: 1rem;
-//     border-bottom: 1px solid #e5e7eb;
-//     font-weight: 600;
-//   }
-//   .controls-bar {
-//     position: fixed;
-//     bottom: 0;
-//     left: 0;
-//     right: 0;
-//     background: #fff;
-//     padding: 1rem;
-//     display: flex;
-//     justify-content: center;
-//     align-items: center;
-//     box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
-//     z-index: 10;
-//   }
-//   .video-grid {
-//     display: grid;
-//     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-//     gap: 1rem;
-//     padding: 1rem;
-//     width: 100%;
-//     height: 100%;
-//     overflow-y: auto;
-//   }
-// `;
-
-// const VideoGridLayout = () => {
-//   const { useParticipants } = useCallStateHooks();
-//   const participants = useParticipants();
-//   return (
-//     <div className="video-grid">
-//       {participants.map((p) => (
-//         <div
-//           key={p.sessionId}
-//           className="rounded-lg overflow-hidden flex items-center justify-center bg-gray-900"
-//         >
-//           <ParticipantView participant={p} />
-//         </div>
-//       ))}
-//     </div>
-//   );
-// };
-
-// const VideoCallPage = () => {
-//   const { videoClient, isClientReady } = useStreamVideo();
-//   const { user } = useAuth();
-//   const { callId } = useParams();
-//   const navigate = useNavigate();
-//   const [call, setCall] = useState(null);
-//   const [sidebarOpen, setSidebarOpen] = useState(false);
-//   const [error, setError] = useState(null);
-
-//   const navigatePath = user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
-
-//   useEffect(() => {
-//     if (!isClientReady || !user?.id || !callId || !videoClient) {
-//       setError("Missing required data to start the video call.");
-//       return;
-//     }
-
-//     if (call) return;
-
-//     const createAndJoinCall = async () => {
-//       try {
-//         const newCall = videoClient.call("default", callId);
-//         await newCall.join({ create: true });
-//         setCall(newCall);
-//         setError(null);
-//       } catch (err) {
-//         console.error("Failed to join video call:", err);
-//         setError("Failed to join the video call. Please try again.");
-//         navigate(navigatePath);
-//       }
-//     };
-
-//     createAndJoinCall();
-
-//     return () => {
-//       if (call) {
-//         (async () => {
-//           try {
-//             await call.leave();
-//           } catch (err) {
-//             console.error("Failed to leave call:", err);
-//           }
-//         })();
-//       }
-//     };
-//     // eslint-disable-next-line
-//   }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
-
-//   const handleLeaveCall = async () => {
-//     try {
-//       if (call) await call.leave();
-//     } catch (err) {
-//       console.error("Failed to leave call:", err);
-//     }
-//     navigate(navigatePath);
-//   };
-
-//   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
-
-//   if (error) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
-//         {error}
-//       </div>
-//     );
-//   }
-
-//   if (!isClientReady || !call) {
-//     return (
-//       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
-//         Connecting to video call...
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <>
-//       <style>{customStyles}</style>
-//       <StreamTheme className="light h-screen w-screen">
-//         <StreamVideo client={videoClient}>
-//           <StreamCall call={call}>
-//             <div className="flex h-screen w-screen bg-gray-50 relative">
-//               {/* Main Video Grid */}
-//               <div
-//                 className={`flex-1 transition-all duration-300 ${
-//                   sidebarOpen ? "md:mr-80" : ""
-//                 } relative h-full bg-black flex`}
-//               >
-//                 <VideoGridLayout />
-//               </div>
-
-//               {/* Participants Drawer */}
-//               <div
-//                 className={`fixed inset-0 z-50 transition-opacity duration-200 ${
-//                   sidebarOpen
-//                     ? "bg-black bg-opacity-30 pointer-events-auto"
-//                     : "bg-transparent pointer-events-none"
-//                 }`}
-//                 onClick={toggleSidebar}
-//               >
-//                 <aside
-//                   className={`absolute top-0 right-0 h-full w-full md:w-80 bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
-//                     sidebarOpen ? "translate-x-0" : "translate-x-full"
-//                   }`}
-//                   onClick={(e) => e.stopPropagation()}
-//                 >
-//                   <div className="flex flex-col h-full">
-//                     <div className="participants-header">
-//                       <h3 className="text-lg font-semibold">Participants</h3>
-//                       <button onClick={toggleSidebar} className="text-gray-500 hover:text-gray-700">
-//                         <X size={20} />
-//                       </button>
-//                     </div>
-//                     <div className="flex-1 overflow-y-auto">
-//                       <CallParticipantsList />
-//                     </div>
-//                   </div>
-//                 </aside>
-//               </div>
-
-//               {/* Controls Bar with Toggle Button */}
-//               <div className="controls-bar">
-//                 <div className="flex items-center space-x-3">
-//                   <button
-//                     onClick={toggleSidebar}
-//                     className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
-//                     aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
-//                   >
-//                     <Users size={18} />
-//                   </button>
-//                   <CallControls onLeave={handleLeaveCall} />
-//                 </div>
-//               </div>
-//             </div>
-//           </StreamCall>
-//         </StreamVideo>
-//       </StreamTheme>
-//     </>
-//   );
-// };
-
-// export default VideoCallPage;
-
-
-
-
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -665,7 +440,6 @@ import {
   StreamTheme,
   ParticipantView,
   useCallStateHooks,
-  SpeakerLayout,
 } from "@stream-io/video-react-sdk";
 import { useStreamVideo } from "../contexts/StreamVideoContext";
 import { useAuth } from "../contexts/AuthContext";
@@ -699,7 +473,7 @@ const customStyles = `
     bottom: 0;
     left: 0;
     right: 0;
-    background: #1B168E ;
+    background: #fff;
     padding: 1rem;
     display: flex;
     justify-content: center;
@@ -721,7 +495,6 @@ const customStyles = `
 const VideoGridLayout = () => {
   const { useParticipants } = useCallStateHooks();
   const participants = useParticipants();
-
   return (
     <div className="video-grid">
       {participants.map((p) => (
@@ -744,17 +517,8 @@ const VideoCallPage = () => {
   const [call, setCall] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [error, setError] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   const navigatePath = user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   useEffect(() => {
     if (!isClientReady || !user?.id || !callId || !videoClient) {
@@ -827,13 +591,13 @@ const VideoCallPage = () => {
         <StreamVideo client={videoClient}>
           <StreamCall call={call}>
             <div className="flex h-screen w-screen bg-gray-50 relative">
-              {/* Main Video Area */}
+              {/* Main Video Grid */}
               <div
-                className={`flex-1 transition-all duration-300 relative h-full bg-black flex pb-24 ${
+                className={`flex-1 transition-all duration-300 ${
                   sidebarOpen ? "md:mr-80" : ""
-                }`}
+                } relative h-full bg-black flex`}
               >
-                {isMobile ? <VideoGridLayout /> : <SpeakerLayout />}
+                <VideoGridLayout />
               </div>
 
               {/* Participants Drawer */}
@@ -887,3 +651,239 @@ const VideoCallPage = () => {
 };
 
 export default VideoCallPage;
+
+
+
+
+// import React, { useEffect, useState } from "react";
+// import { useParams, useNavigate } from "react-router-dom";
+// import {
+//   StreamVideo,
+//   StreamCall,
+//   CallControls,
+//   CallParticipantsList,
+//   StreamTheme,
+//   ParticipantView,
+//   useCallStateHooks,
+//   SpeakerLayout,
+// } from "@stream-io/video-react-sdk";
+// import { useStreamVideo } from "../contexts/StreamVideoContext";
+// import { useAuth } from "../contexts/AuthContext";
+// import { Users, X } from "lucide-react";
+// import "@stream-io/video-react-sdk/dist/css/styles.css";
+
+// const customStyles = `
+//   .str-video {
+//     --str-video__primary-color: #f97316;
+//     --str-video__secondary-color: #3b82f6;
+//     --str-video__text-color1: #222;
+//     --str-video__text-color2: #444;
+//     --str-video__background-color: #f9fafb;
+//     --str-video__popover-background: #fff;
+//     --str-video__popover-text-color: #222;
+//     --str-video__popover-box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+//   }
+//   .str-video__participants-list__item-name:hover {
+//     background: rgba(255, 255, 255, 0.2);
+//   }
+//   .participants-header {
+//     display: flex;
+//     align-items: center;
+//     justify-content: space-between;
+//     padding: 1rem;
+//     border-bottom: 1px solid #e5e7eb;
+//     font-weight: 600;
+//   }
+//   .controls-bar {
+//     position: fixed;
+//     bottom: 0;
+//     left: 0;
+//     right: 0;
+//     background: #1B168E ;
+//     padding: 1rem;
+//     display: flex;
+//     justify-content: center;
+//     align-items: center;
+//     box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+//     z-index: 10;
+//   }
+//   .video-grid {
+//     display: grid;
+//     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+//     gap: 1rem;
+//     padding: 1rem;
+//     width: 100%;
+//     height: 100%;
+//     overflow-y: auto;
+//   }
+// `;
+
+// const VideoGridLayout = () => {
+//   const { useParticipants } = useCallStateHooks();
+//   const participants = useParticipants();
+
+//   return (
+//     <div className="video-grid">
+//       {participants.map((p) => (
+//         <div
+//           key={p.sessionId}
+//           className="rounded-lg overflow-hidden flex items-center justify-center bg-gray-900"
+//         >
+//           <ParticipantView participant={p} />
+//         </div>
+//       ))}
+//     </div>
+//   );
+// };
+
+// const VideoCallPage = () => {
+//   const { videoClient, isClientReady } = useStreamVideo();
+//   const { user } = useAuth();
+//   const { callId } = useParams();
+//   const navigate = useNavigate();
+//   const [call, setCall] = useState(null);
+//   const [sidebarOpen, setSidebarOpen] = useState(false);
+//   const [error, setError] = useState(null);
+//   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+//   const navigatePath = user?.role === "teacher" ? "/teacher/overview" : "/student/overview";
+
+//   useEffect(() => {
+//     const handleResize = () => {
+//       setIsMobile(window.innerWidth < 768);
+//     };
+//     window.addEventListener("resize", handleResize);
+//     return () => window.removeEventListener("resize", handleResize);
+//   }, []);
+
+//   useEffect(() => {
+//     if (!isClientReady || !user?.id || !callId || !videoClient) {
+//       setError("Missing required data to start the video call.");
+//       return;
+//     }
+
+//     if (call) return;
+
+//     const createAndJoinCall = async () => {
+//       try {
+//         const newCall = videoClient.call("default", callId);
+//         await newCall.join({ create: true });
+//         setCall(newCall);
+//         setError(null);
+//       } catch (err) {
+//         console.error("Failed to join video call:", err);
+//         setError("Failed to join the video call. Please try again.");
+//         navigate(navigatePath);
+//       }
+//     };
+
+//     createAndJoinCall();
+
+//     return () => {
+//       if (call) {
+//         (async () => {
+//           try {
+//             await call.leave();
+//           } catch (err) {
+//             console.error("Failed to leave call:", err);
+//           }
+//         })();
+//       }
+//     };
+//     // eslint-disable-next-line
+//   }, [videoClient, isClientReady, user?.id, callId, navigate, navigatePath]);
+
+//   const handleLeaveCall = async () => {
+//     try {
+//       if (call) await call.leave();
+//     } catch (err) {
+//       console.error("Failed to leave call:", err);
+//     }
+//     navigate(navigatePath);
+//   };
+
+//   const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
+//   if (error) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
+//         {error}
+//       </div>
+//     );
+//   }
+
+//   if (!isClientReady || !call) {
+//     return (
+//       <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white text-lg">
+//         Connecting to video call...
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <>
+//       <style>{customStyles}</style>
+//       <StreamTheme className="light h-screen w-screen">
+//         <StreamVideo client={videoClient}>
+//           <StreamCall call={call}>
+//             <div className="flex h-screen w-screen bg-gray-50 relative">
+//               {/* Main Video Area */}
+//               <div
+//                 className={`flex-1 transition-all duration-300 relative h-full bg-black flex pb-24 ${
+//                   sidebarOpen ? "md:mr-80" : ""
+//                 }`}
+//               >
+//                 {isMobile ? <VideoGridLayout /> : <SpeakerLayout />}
+//               </div>
+
+//               {/* Participants Drawer */}
+//               <div
+//                 className={`fixed inset-0 z-50 transition-opacity duration-200 ${
+//                   sidebarOpen
+//                     ? "bg-black bg-opacity-30 pointer-events-auto"
+//                     : "bg-transparent pointer-events-none"
+//                 }`}
+//                 onClick={toggleSidebar}
+//               >
+//                 <aside
+//                   className={`absolute top-0 right-0 h-full w-full md:w-80 bg-white border-l border-gray-200 shadow-md transform transition-transform duration-300 ${
+//                     sidebarOpen ? "translate-x-0" : "translate-x-full"
+//                   }`}
+//                   onClick={(e) => e.stopPropagation()}
+//                 >
+//                   <div className="flex flex-col h-full">
+//                     <div className="participants-header">
+//                       <h3 className="text-lg font-semibold">Participants</h3>
+//                       <button onClick={toggleSidebar} className="text-gray-500 hover:text-gray-700">
+//                         <X size={20} />
+//                       </button>
+//                     </div>
+//                     <div className="flex-1 overflow-y-auto">
+//                       <CallParticipantsList />
+//                     </div>
+//                   </div>
+//                 </aside>
+//               </div>
+
+//               {/* Controls Bar with Toggle Button */}
+//               <div className="controls-bar">
+//                 <div className="flex items-center space-x-3">
+//                   <button
+//                     onClick={toggleSidebar}
+//                     className="bg-orange-500 text-white p-2 rounded-full hover:bg-orange-600 focus:outline-none shadow-sm transition-transform hover:scale-105"
+//                     aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
+//                   >
+//                     <Users size={18} />
+//                   </button>
+//                   <CallControls onLeave={handleLeaveCall} />
+//                 </div>
+//               </div>
+//             </div>
+//           </StreamCall>
+//         </StreamVideo>
+//       </StreamTheme>
+//     </>
+//   );
+// };
+
+// export default VideoCallPage;
