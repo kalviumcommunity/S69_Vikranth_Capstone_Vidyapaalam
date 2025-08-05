@@ -426,7 +426,7 @@ export default function StudentLayout() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-1 custom-scrollbar">
+          <nav className="flex-1 overflow-y-auto px-4 py-4 space-y-2 flex flex-col custom-scrollbar">
             {navItems.map(({ name, to, icon: Icon }) => {
               const active = location.pathname === to;
               return (
