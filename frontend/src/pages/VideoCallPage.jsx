@@ -484,20 +484,22 @@ const customStyles = `
     --str-video__background-color: #f1f3f4; /* Light background */
     --str-video__popover-background: #ffffff;
     --str-video__popover-text-color: #202124;
-    --str-video__popover-box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    --str-video__popover-box-shadow: 0 4px 16px rgba(0,0,0,0.15);
   }
   .str-video__participant-view {
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
   }
   .str-video__participants-list__item-name {
-    padding: 0.5rem;
-    border-radius: 6px;
+    padding: 0.75rem;
+    border-radius: 8px;
     transition: background 0.2s ease;
+    color: #202124;
   }
   .str-video__participants-list__item-name:hover {
-    background: rgba(26, 115, 232, 0.1); /* Subtle hover effect */
+    background: rgba(26, 115, 232, 0.08); /* Subtle hover effect */
   }
   .participants-header {
     display: flex;
@@ -511,43 +513,89 @@ const customStyles = `
   }
   .controls-bar {
     position: fixed;
-    bottom: 1rem;
+    bottom: 1.5rem;
     left: 50%;
     transform: translateX(-50%);
     background: #ffffff;
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1.5rem;
     border-radius: 40px;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     z-index: 1000;
+    max-width: 90%;
   }
   .video-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 0.75rem;
     padding: 1rem;
     width: 100%;
     height: calc(100% - 80px); /* Adjust for controls bar */
     overflow-y: auto;
-    background: #202124; /* Dark background for video area */
+    background: #202124; /* Dark video area */
   }
   .sidebar {
     background: #ffffff;
     border-left: 1px solid #dadce0;
-    box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+    box-shadow: -2px 0 12px rgba(0,0,0,0.1);
   }
   .toggle-button {
     transition: all 0.2s ease;
+    background: #ffffff;
+    border: 1px solid #dadce0;
   }
   .toggle-button:hover {
     background: #e8f0fe !important; /* Google Meet hover blue */
     transform: scale(1.05);
+    border-color: #1a73e8;
+  }
+  .close-button {
+    transition: all 0.2s ease;
   }
   .close-button:hover {
     background: #f1f3f4;
     border-radius: 50%;
+  }
+  @media (max-width: 768px) {
+    .video-grid {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.5rem;
+      padding: 0.5rem;
+      height: calc(100% - 70px);
+    }
+    .str-video__participant-view {
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .controls-bar {
+      padding: 0.5rem 1rem;
+      bottom: 1rem;
+      max-width: 95%;
+    }
+    .participants-header {
+      padding: 0.75rem 1rem;
+    }
+    .str-video__participants-list__item-name {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+    }
+  }
+  @media (max-width: 480px) {
+    .video-grid {
+      grid-template-columns: 1fr;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+    .controls-bar {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      padding: 0.5rem;
+    }
+    .toggle-button {
+      padding: 0.5rem;
+    }
   }
 `;
 
@@ -584,10 +632,14 @@ const VideoCallPage = () => {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
+      // Auto-close sidebar on mobile when resizing to small screens
+      if (window.innerWidth < 768 && sidebarOpen) {
+        setSidebarOpen(false);
+      }
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [sidebarOpen]);
 
   useEffect(() => {
     if (!isClientReady || !user?.id || !callId || !videoClient) {
@@ -640,7 +692,15 @@ const VideoCallPage = () => {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 text-gray-900 text-lg font-medium">
-        {error}
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <p className="mb-4">{error}</p>
+          <button
+            onClick={() => navigate(navigatePath)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Return to Dashboard
+          </button>
+        </div>
       </div>
     );
   }
@@ -648,8 +708,8 @@ const VideoCallPage = () => {
   if (!isClientReady || !call) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100 text-gray-900 text-lg font-medium">
-        <div className="flex items-center space-x-2">
-          <svg className="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24">
+        <div className="flex items-center space-x-3 bg-white p-4 rounded-lg shadow-lg">
+          <svg className="animate-spin h-6 w-6 text-blue-600" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path
               className="opacity-75"
@@ -673,7 +733,7 @@ const VideoCallPage = () => {
               {/* Main Video Area */}
               <div
                 className={`flex-1 transition-all duration-300 relative h-full ${
-                  sidebarOpen ? "md:mr-80" : ""
+                  sidebarOpen && !isMobile ? "md:mr-80" : ""
                 }`}
               >
                 {isMobile ? <VideoGridLayout /> : <SpeakerLayout />}
@@ -681,9 +741,9 @@ const VideoCallPage = () => {
 
               {/* Participants Drawer */}
               <div
-                className={`fixed inset-0 z-50 transition-opacity duration-200 ${
+                className={`fixed inset-0 z-50 transition-opacity duration-300 ${
                   sidebarOpen
-                    ? "bg-black bg-opacity-30 pointer-events-auto"
+                    ? "bg-black bg-opacity-40 pointer-events-auto"
                     : "bg-transparent pointer-events-none"
                 }`}
                 onClick={toggleSidebar}
@@ -705,7 +765,7 @@ const VideoCallPage = () => {
                         <X size={20} />
                       </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p rilass-4">
+                    <div className="flex-1 overflow-y-auto p-4">
                       <CallParticipantsList />
                     </div>
                   </div>
@@ -714,10 +774,10 @@ const VideoCallPage = () => {
 
               {/* Controls Bar with Toggle Button */}
               <div className="controls-bar">
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
                   <button
                     onClick={toggleSidebar}
-                    className="bg-white text-gray-900 p-3 rounded-full hover:bg-blue-50 toggle-button shadow-sm"
+                    className="toggle-button text-gray-900 p-3 rounded-full hover:bg-blue-50 shadow-sm"
                     aria-label={sidebarOpen ? "Hide participants" : "Show participants"}
                   >
                     <Users size={20} />
