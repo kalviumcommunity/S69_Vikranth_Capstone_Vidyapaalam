@@ -31,7 +31,6 @@ app.use(cookieParser());
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
 const teacherProfileRoutes = require('./routes/teacherRoutes');
-const googleCalendarAuthRoutes = require('./routes/googleCalendarAuthRoutes'); 
 const sessionRoutes = require("./routes/sessionRoutes");
 const streamRoutes = require('./routes/streamRoutes');
 
@@ -39,7 +38,6 @@ const streamRoutes = require('./routes/streamRoutes');
 // Mount Routes
 app.use('/auth', authRoutes); 
 app.use('/api/teacher-profiles', teacherProfileRoutes);
-app.use('/auth/calendar', googleCalendarAuthRoutes); 
 app.use("/api", sessionRoutes);
 app.use("/api", paymentRoutes);
 app.use('/api/stream', streamRoutes);
