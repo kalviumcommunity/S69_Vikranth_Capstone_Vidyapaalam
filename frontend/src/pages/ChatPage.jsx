@@ -109,7 +109,6 @@ import React, { useEffect, useState } from 'react';
 import {
   Chat,
   Channel,
-  ChannelHeader,
   MessageList,
   MessageInput,
   Window,
@@ -146,7 +145,6 @@ const ChatPage = () => {
           (member) => member.user_id !== user.id
         );
         setOtherUser(otherMember?.user || null);
-        
       } catch (error) {
         console.error('Failed to set up chat channel:', error);
       }
@@ -164,10 +162,10 @@ const ChatPage = () => {
   if (!isClientReady || !channel) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 p-4">
-        <div className="text-center p-4 sm:p-8 bg-white rounded-xl shadow-lg border border-slate-200 max-w-sm w-full">
-          <div className="animate-spin rounded-full h-8 sm:h-12 w-8 sm:w-12 border-t-3 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-sm sm:text-lg font-medium text-slate-700">Connecting to chat...</p>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Please wait a moment</p>
+        <div className="text-center p-6 bg-white rounded-xl shadow-lg border border-slate-200 max-w-sm w-full">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-3 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-base font-medium text-slate-700">Connecting to chat...</p>
+          <p className="text-sm text-slate-500 mt-1">Please wait a moment</p>
         </div>
       </div>
     );
@@ -176,80 +174,162 @@ const ChatPage = () => {
   const channelTitle = otherUser ? otherUser.name : 'Loading...';
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      <div className="h-full p-0 sm:p-2 md:p-4 lg:p-6">
-        <div className="h-full max-w-none lg:max-w-6xl xl:max-w-7xl mx-auto">
-          <Chat client={chatClient} theme="str-chat__theme-light">
-            <Channel channel={channel}>
-              <div className="h-full bg-white rounded-none sm:rounded-xl shadow-none sm:shadow-xl border-0 sm:border border-slate-200 overflow-hidden flex flex-col">
-                <Window>
-                  {/* Header */}
-                  <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-3 sm:p-4 md:p-5 shadow-lg">
-                    <div className="flex items-center space-x-2 sm:space-x-3">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-sm sm:text-lg md:text-xl font-semibold">
-                          {otherUser?.name ? otherUser.name.charAt(0).toUpperCase() : '?'}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm sm:text-base md:text-lg font-semibold truncate">
-                          {channelTitle}
-                        </div>
-                        <div className="text-xs sm:text-sm text-blue-100 mt-0.5">
-                          {otherUser ? 'Active now' : 'Connecting...'}
-                        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 flex flex-col">
+      <div className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+        <Chat client={chatClient} theme="str-chat__theme-light">
+          <Channel channel={channel}>
+            <div className="h-full bg-white rounded-lg shadow-lg border border-slate-200 flex flex-col">
+              <Window>
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg font-semibold">
+                        {otherUser?.name ? otherUser.name.charAt(0).toUpperCase() : '?'}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-base font-semibold truncate">{channelTitle}</div>
+                      <div className="text-sm text-blue-100 mt-0.5">
+                        {otherUser ? 'Active now' : 'Connecting...'}
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Messages */}
-                  <div className="flex-1 overflow-hidden bg-slate-50/30">
-                    <div className="h-full overflow-y-auto px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4">
-                      <MessageList />
-                    </div>
+                {/* Messages */}
+                <div className="flex-1 overflow-hidden bg-slate-50/50">
+                  <div className="h-full overflow-y-auto px-4 py-3">
+                    <MessageList />
                   </div>
+                </div>
 
-                  {/* Input */}
-                  <div className="bg-white border-t border-slate-200 p-2 sm:p-3 md:p-4 lg:p-5">
-                    <div className="bg-slate-50 rounded-lg sm:rounded-xl p-2 sm:p-3 border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-                      <MessageInput
-                        additionalTextareaProps={{
-                          className: 'bg-transparent border-0 focus:ring-0 resize-none placeholder-slate-500 text-sm sm:text-base',
-                          placeholder: `Message ${otherUser?.name || 'user'}...`,
-                          rows: 1,
-                        }}
-                      />
-                    </div>
+                {/* Input */}
+                <div className="bg-white border-t border-slate-200 p-3">
+                  <div className="bg-slate-50 rounded-lg p-2 border border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                    <MessageInput
+                      additionalTextareaProps={{
+                        className:
+                          'bg-transparent border-0 focus:ring-0 resize-none placeholder-slate-500 text-base',
+                        placeholder: `Message ${otherUser?.name || 'user'}...`,
+                        rows: 1,
+                      }}
+                    />
                   </div>
-                </Window>
-
-                <Thread />
-              </div>
-            </Channel>
-          </Chat>
-        </div>
+                </div>
+              </Window>
+              <Thread />
+            </div>
+          </Channel>
+        </Chat>
       </div>
 
       <style jsx global>{`
-        .str-chat__channel-header { display: none !important; }
-        .str-chat__message-list { background: transparent !important; }
-        .str-chat__message-input { background: transparent !important; border: none !important; padding: 0 !important; }
-        .str-chat__message-input-inner { background: transparent !important; border: none !important; }
-        .str-chat__message-simple__content { border-radius: 1rem !important; box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important; }
-        .str-chat__message-simple__content.str-chat__message-simple__content--me { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; color: white !important; }
-        .str-chat__message-simple__content:not(.str-chat__message-simple__content--me) { background: white !important; border: 1px solid #e2e8f0 !important; }
-        .str-chat__send-button { background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important; border-radius: 0.5rem !important; }
-        .str-chat__textarea__textarea { min-height: 36px !important; }
-        
-        @media (max-width: 640px) {
-          .str-chat__message-simple__content { max-width: 85% !important; }
-          .str-chat__textarea__textarea { font-size: 16px !important; }
-          .str-chat__thread { position: fixed !important; inset: 0 !important; z-index: 1000 !important; }
+        .str-chat__channel-header {
+          display: none !important;
         }
-        @media (min-width: 1025px) {
-          .str-chat__message-simple__content { max-width: 65% !important; }
-          .str-chat__main-panel--thread-open { max-width: 60% !important; }
-          .str-chat__thread { max-width: 40% !important; }
+        .str-chat__message-list {
+          background: transparent !important;
+        }
+        .str-chat__message-input {
+          background: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+        }
+        .str-chat__message-input-inner {
+          background: transparent !important;
+          border: none !important;
+        }
+        .str-chat__message-simple__content {
+          border-radius: 1rem !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+        }
+        .str-chat__message-simple__content.str-chat__message-simple__content--me {
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+          color: white !important;
+        }
+        .str-chat__message-simple__content:not(.str-chat__message-simple__content--me) {
+          background: white !important;
+          border: 1px solid #e2e8f0 !important;
+        }
+        .str-chat__send-button {
+          background: linear-gradient(135deg, #3b82f6, #1d4ed8) !important;
+          border-radius: 0.5rem !important;
+        }
+        .str-chat__textarea__textarea {
+          min-height: 36px !important;
+          max-height: 100px !important;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+        .str-chat__textarea__textarea::-webkit-scrollbar {
+          display: none;
+        }
+
+        /* Extra small screens (below 640px) */
+        @media (max-width: 639px) {
+          .str-chat__message-simple__content {
+            max-width: 80% !important;
+          }
+          .str-chat__textarea__textarea {
+            font-size: 14px !important;
+          }
+          .str-chat__thread {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 1000 !important;
+            background: white !important;
+          }
+          .str-chat__main-panel {
+            height: 100% !important;
+          }
+        }
+
+        /* Small screens (640px and up) */
+        @media (min-width: 640px) {
+          .str-chat__message-simple__content {
+            max-width: 75% !important;
+          }
+          .str-chat__textarea__textarea {
+            font-size: 15px !important;
+          }
+        }
+
+        /* Medium screens (768px and up) */
+        @media (min-width: 768px) {
+          .str-chat__message-simple__content {
+            max-width: 70% !important;
+          }
+          .str-chat__textarea__textarea {
+            font-size: 16px !important;
+          }
+        }
+
+        /* Large screens (1024px and up) */
+        @media (min-width: 1024px) {
+          .str-chat__message-simple__content {
+            max-width: 65% !important;
+          }
+          .str-chat__main-panel--thread-open {
+            max-width: 60% !important;
+          }
+          .str-chat__thread {
+            max-width: 40% !important;
+            border-left: 1px solid #e2e8f0 !important;
+          }
+        }
+
+        /* Extra large screens (1280px and up) */
+        @media (min-width: 1280px) {
+          .str-chat__message-simple__content {
+            max-width: 60% !important;
+          }
+          .str-chat__main-panel--thread-open {
+            max-width: 65% !important;
+          }
+          .str-chat__thread {
+            max-width: 35% !important;
+          }
         }
       `}</style>
     </div>
