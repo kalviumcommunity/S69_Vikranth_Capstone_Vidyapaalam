@@ -549,6 +549,7 @@ export default function StudentLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const { user, logout: authLogout } = useAuth();
   const [displayedUserName, setDisplayedUserName] = useState("Guest");
   const [avatarInitials, setAvatarInitials] = useState("?");
@@ -571,6 +572,9 @@ export default function StudentLayout() {
 
   useEffect(() => {
     const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+      // On desktop, always keep sidebar open unless explicitly closed.
+      // On mobile, start with it closed.
       setSidebarOpen(window.innerWidth >= 768);
     };
 
@@ -615,7 +619,7 @@ export default function StudentLayout() {
       <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
         {/* Overlay for mobile */}
         <AnimatePresence>
-          {sidebarOpen && window.innerWidth < 768 && (
+          {sidebarOpen && isMobile && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.6 }}
@@ -632,18 +636,20 @@ export default function StudentLayout() {
         <motion.aside
           initial={false}
           animate={{
-            x: sidebarOpen ? 0 : -288,
+            x: isMobile && !sidebarOpen ? -288 : 0,
+            width: sidebarOpen ? 288 : 64,
           }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="fixed top-0 left-0 h-screen w-72 bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col overflow-hidden
-                     md:static md:translate-x-0"
+          className="fixed top-0 left-0 h-screen bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col overflow-hidden"
         >
           {/* Header (Logo) */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 h-16 flex-shrink-0">
             <Link to="/" className="flex items-center gap-2" aria-label="VidyaPaalam Home">
-              <span className="text-2xl font-extrabold text-orange-600">VidyaPaalam</span>
+              <span className="text-2xl font-extrabold text-orange-600">
+                {sidebarOpen ? "VidyaPaalam" : "VP"}
+              </span>
             </Link>
-            {window.innerWidth < 768 && (
+            {isMobile && sidebarOpen && (
               <button
                 onClick={() => setSidebarOpen(false)}
                 className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -656,19 +662,22 @@ export default function StudentLayout() {
 
           {/* User Info */}
           <div className="flex flex-col items-center px-4 py-6 border-b border-gray-100 flex-shrink-0">
-            <div className="relative flex items-center justify-center h-16 w-16 text-2xl bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md transition-all duration-200">
+            <div className={`relative flex items-center justify-center bg-orange-100 text-orange-600 rounded-full font-bold border-2 border-orange-300 shadow-md transition-all duration-200
+              ${sidebarOpen ? "h-16 w-16 text-2xl" : "h-10 w-10 text-lg"}`}>
               {avatarInitials}
               <span className="absolute bottom-0 right-0 h-3 w-3 bg-green-500 rounded-full border-2 border-white"></span>
             </div>
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.2 }}
-              className="mt-3 text-center"
-            >
-              <div className="text-lg font-semibold text-gray-900 truncate max-w-[200px]">{displayedUserName}</div>
-              <div className="text-sm text-gray-500">Student</div>
-            </motion.div>
+            {sidebarOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.2 }}
+                className="mt-3 text-center"
+              >
+                <div className="text-lg font-semibold text-gray-900 truncate max-w-[200px]">{displayedUserName}</div>
+                <div className="text-sm text-gray-500">Student</div>
+              </motion.div>
+            )}
           </div>
 
           {/* Navigation */}
@@ -680,14 +689,25 @@ export default function StudentLayout() {
                   key={name}
                   to={to}
                   className={`
-                    flex items-center p-3 rounded-lg transition-all duration-200 gap-3
+                    flex items-center p-3 rounded-lg transition-all duration-200
                     ${active ? "bg-orange-100 text-orange-700 font-semibold" : "text-gray-700 hover:bg-orange-50"}
+                    ${sidebarOpen ? "gap-3" : "justify-center"}
                   `}
                   aria-current={active ? "page" : undefined}
-                  onClick={() => window.innerWidth < 768 && setSidebarOpen(false)}
+                  onClick={() => isMobile && setSidebarOpen(false)}
                 >
                   <Icon className={`h-5 w-5 ${active ? "text-orange-600" : "text-gray-500"}`} />
-                  <span className="text-base">{name}</span>
+                  {sidebarOpen && (
+                    <motion.span
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.2 }}
+                      className="text-base"
+                    >
+                      {name}
+                    </motion.span>
+                  )}
+                  {!sidebarOpen && <span className="sr-only">{name}</span>}
                 </Link>
               );
             })}
@@ -697,27 +717,45 @@ export default function StudentLayout() {
           <div className="px-4 py-4 border-t border-gray-100 flex-shrink-0">
             <button
               onClick={handleLogout}
-              className="flex items-center w-full p-3 rounded-lg text-gray-700 gap-3
-                       hover:bg-orange-50 hover:text-orange-600 transition-all duration-200"
+              className={`
+                flex items-center w-full p-3 rounded-lg text-gray-700
+                hover:bg-orange-50 hover:text-orange-600 transition-all duration-200
+                ${sidebarOpen ? "gap-3" : "justify-center"}
+              `}
             >
               <LogOut className="h-5 w-5 text-gray-500" />
-              <span className="text-base">Logout</span>
+              {sidebarOpen && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                  className="text-base"
+                >
+                  Logout
+                </motion.span>
+              )}
+              {!sidebarOpen && <span className="sr-only">Logout</span>}
             </button>
           </div>
         </motion.aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col ml-0 md:ml-72">
+        <div className={`flex-1 flex flex-col ml-0 ${sidebarOpen ? "md:ml-72" : "md:ml-16"}`}>
           {/* Header */}
           <header className="flex items-center gap-4 p-4 bg-white border-b border-gray-200 shadow-sm sticky top-0 z-30 h-16">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="text-gray-600 p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 md:hidden"
+              className="text-gray-600 p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
               aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
             >
               {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             <h1 className="text-xl font-bold text-gray-900 flex-grow truncate">{getPageTitle()}</h1>
+            {!sidebarOpen && (
+              <div className="h-10 w-10 flex items-center justify-center bg-orange-100 text-orange-600 rounded-full text-lg font-bold">
+                {avatarInitials}
+              </div>
+            )}
           </header>
 
           <main className="flex-1 p-4 md:p-6 overflow-y-auto bg-gray-50">
