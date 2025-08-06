@@ -138,7 +138,8 @@
 import React, { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "react-hot-toast";
+
 
 import AppLayout from "./components/layout/AppLayout";
 import StudentLayout from "./layouts/StudentLayout";
