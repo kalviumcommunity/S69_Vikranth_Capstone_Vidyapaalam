@@ -198,7 +198,6 @@ exports.refreshToken = async (req, res) => {
         const newAccessToken = generateAccessToken(user);
         const newRefreshToken = generateRefreshToken(user);
 
-        // Store the new refresh token as the active one
         user.activeToken = newRefreshToken;
         await user.save();
 
@@ -268,7 +267,7 @@ exports.saveRole = async (req, res) => {
         res.status(200).json({ message: 'Role updated successfully', user: { 
             id: user._id, 
             role: user.role,
-            paymentAcknowledged: user.paymentAcknowledged // ADDED THIS LINE
+            paymentAcknowledged: user.paymentAcknowledged
         }});
 
     } catch (error) {
@@ -354,7 +353,7 @@ exports.updateInterestedSkills = async (req, res) => {
                 role: user.role,
                 interestedSkills: user.interestedSkills,
                 isVerified: user.isVerified,
-                paymentAcknowledged: user.paymentAcknowledged // ADDED THIS LINE
+                paymentAcknowledged: user.paymentAcknowledged 
             }
         });
 
@@ -394,7 +393,7 @@ exports.updateTeachingSkills = async (req, res) => {
                 role: user.role,
                 teachingSkills: user.teachingSkills,
                 isVerified: user.isVerified,
-                paymentAcknowledged: user.paymentAcknowledged // ADDED THIS LINE
+                paymentAcknowledged: user.paymentAcknowledged 
             }
         });
 
@@ -410,9 +409,8 @@ exports.updateAvailability = async (req, res) => {
         return res.status(401).json({ message: 'Authentication required.' });
     }
 
-    const availabilityData = req.body; // Expecting an array of availability objects
+    const availabilityData = req.body; 
 
-    // Validate that the entire body is an array
     if (!Array.isArray(availabilityData)) {
         return res.status(400).json({ message: 'Request body must be an array of availability objects.' });
     }
@@ -478,6 +476,7 @@ exports.updateAvailability = async (req, res) => {
 };
 
 
+
 exports.firebaseAuth = async (req, res) => {
     const { idToken } = req.body;
 
@@ -497,12 +496,14 @@ exports.firebaseAuth = async (req, res) => {
         if (!user) {
             user = await User.findOne({ email });
             if (user) {
+                
                 user.firebaseUid = firebaseUid;
                 user.name = name;
                 user.picture = picture;
                 await user.save();
                 console.log(`Existing user (${user.email}) successfully linked with Firebase UID.`);
             } else {
+                
                 user = new User({
                     firebaseUid,
                     email,
@@ -510,8 +511,7 @@ exports.firebaseAuth = async (req, res) => {
                     picture,
                     isVerified: true,
                     role: null,
-                    password: '',
-                    paymentAcknowledged: false, // Ensure this is set for new users created via Firebase too
+                    paymentAcknowledged: false, 
                 });
                 await user.save();
                 console.log(`New user created in MongoDB via Firebase: ${user.email}`);
@@ -546,7 +546,7 @@ exports.firebaseAuth = async (req, res) => {
                 picture: user.picture,
                 role: user.role,
                 isVerified: user.isVerified,
-                paymentAcknowledged: user.paymentAcknowledged // ADDED THIS LINE
+                paymentAcknowledged: user.paymentAcknowledged
             }
         });
 
