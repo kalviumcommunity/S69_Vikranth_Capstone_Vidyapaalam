@@ -1,6 +1,5 @@
 const { check, validationResult } = require('express-validator');
 
-// Signup validation rules
 const signupValidationRules = [
     check('name')
         .trim()
@@ -22,7 +21,6 @@ const signupValidationRules = [
         .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
 ];
 
-// Login validation rules
 const loginValidationRules = [
     check('email')
         .trim()
@@ -33,7 +31,6 @@ const loginValidationRules = [
         .withMessage('Password is required'),
 ];
 
-// Common validator middleware
 const validate = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
