@@ -5,7 +5,7 @@ const {
     createSession,
     getTeacherSessions
 } = require("../controller/sessionController");
-const {protect} = require("../middleware/authMiddleware"); // Ensure this exists
+const {protect} = require("../middleware/authMiddleware"); 
 
 router.get("/student/sessions", protect, getSessions);
 router.post("/student/sessions", protect, createSession);
