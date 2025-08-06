@@ -813,8 +813,6 @@ export default function StudentLayout() {
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
-      // On desktop, always keep sidebar open unless explicitly closed.
-      // On mobile, start with it closed.
       setSidebarOpen(window.innerWidth >= 768);
     };
 
@@ -936,7 +934,7 @@ export default function StudentLayout() {
                   aria-current={active ? "page" : undefined}
                   onClick={() => isMobile && setSidebarOpen(false)}
                 >
-                  <Icon className={`h-5 w-5 ${active ? "text-orange-600" : "text-gray-500"}`} />
+                  <Icon className={`${sidebarOpen ? "h-5 w-5" : "h-6 w-6"} ${active ? "text-orange-600" : "text-gray-500"}`} />
                   {sidebarOpen && (
                     <motion.span
                       initial={{ opacity: 0 }}
@@ -963,7 +961,7 @@ export default function StudentLayout() {
                 ${sidebarOpen ? "gap-3" : "justify-center"}
               `}
             >
-              <LogOut className="h-5 w-5 text-gray-500" />
+              <LogOut className={`${sidebarOpen ? "h-5 w-5" : "h-6 w-6"} text-gray-500`} />
               {sidebarOpen && (
                 <motion.span
                   initial={{ opacity: 0 }}
