@@ -49,7 +49,7 @@ exports.registerUser = async (req, res) => {
     const user = await User.create({
         name,
         email,
-        password: password,
+        password,
         role: null,
         isVerified: false,
         paymentAcknowledged: false, 
