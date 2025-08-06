@@ -738,7 +738,7 @@ import { useAuth } from "../contexts/AuthContext";
 const StudentLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
   const { user, logout: authLogout } = useAuth();
   const [displayedUserName, setDisplayedUserName] = useState("Guest");
   const [avatarInitials, setAvatarInitials] = useState("?");
@@ -758,6 +758,16 @@ const StudentLayout = () => {
       setAvatarInitials("S");
     }
   }, [user]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setSidebarOpen(window.innerWidth >= 768);
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize();
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -802,14 +812,14 @@ const StudentLayout = () => {
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 font-sans antialiased">
       <AnimatePresence>
-        {sidebarOpen && (
+        {sidebarOpen && window.innerWidth < 768 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.6 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 bg-black z-40 md:hidden"
+            className="fixed inset-0 bg-black z-40"
             aria-hidden="true"
           />
         )}
@@ -822,19 +832,21 @@ const StudentLayout = () => {
         }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className="fixed top-0 left-0 h-screen w-72 bg-white border-r border-gray-200 shadow-lg z-50 flex flex-col overflow-hidden
-                   md:static md:translate-x-0 md:flex md:flex-col md:h-screen md:w-72"
+                   md:static md:translate-x-0 md:flex"
       >
         <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 h-16 flex-shrink-0">
           <Link to="/" className="flex items-center gap-2" aria-label="VidyaPaalam Home">
             <span className="text-2xl font-extrabold text-orange-600">VidyaPaalam</span>
           </Link>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 md:hidden"
-            aria-label="Close sidebar"
-          >
-            <X className="h-5 w-5 text-gray-600" />
-          </button>
+          {window.innerWidth < 768 && (
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="p-2 rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              aria-label="Close sidebar"
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+          )}
         </div>
 
         <div className="flex flex-col items-center px-4 py-6 border-b border-gray-100 flex-shrink-0">
@@ -865,7 +877,7 @@ const StudentLayout = () => {
                   ${active ? "bg-orange-100 text-orange-700 font-semibold" : "text-gray-700 hover:bg-orange-50"}
                 `}
                 aria-current={active ? "page" : undefined}
-                onClick={() => setSidebarOpen(false)}
+                onClick={() => window.innerWidth < 768 && setSidebarOpen(false)}
               >
                 <Icon className={`h-5 w-5 ${active ? "text-orange-600" : "text-gray-500"}`} />
                 <span className="text-base">{name}</span>
