@@ -1,5 +1,3 @@
-
-
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { MenuIcon, X } from "lucide-react";

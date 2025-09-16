@@ -10,7 +10,6 @@ export const Toaster = ({ className, ...props }) => {
   );
 };
 
-// Simple toast function that uses our custom toast system
 export const toast = (message, options) => {
   const { showToast } = require('@/lib/utils');
   showToast(message, options?.type || 'info');

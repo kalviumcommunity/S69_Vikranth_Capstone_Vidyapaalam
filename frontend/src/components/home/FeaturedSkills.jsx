@@ -60,10 +60,9 @@ const FeaturedSkills = () => {
         </motion.p>
       </div>
 
-      {/* Wrap SkillGrid with motion.div and add the layout prop */}
-      {/* This will automatically animate the container's size change */}
+
       <motion.div
-        layout // Enable automatic layout animation
+        layout 
         transition={{ duration: 0.5, type: "spring", stiffness: 70, damping: 15 }} // Customize animation
       >
         <SkillGrid skills={visibleSkills} />
@@ -75,8 +74,7 @@ const FeaturedSkills = () => {
           onClick={handleShowMore}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          // Use AnimatePresence and key to animate button text change smoothly
-          // Note: requires overflow hidden on parent if text size changes drastically
+          
         >
           <AnimatePresence mode="wait">
             <motion.span

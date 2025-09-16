@@ -1,4 +1,3 @@
-// src/hooks/useTeacherProfile.js
 
 import { useContext } from 'react';
 import { TeacherProfileContext } from '../contexts/TeacherProfileContext';
