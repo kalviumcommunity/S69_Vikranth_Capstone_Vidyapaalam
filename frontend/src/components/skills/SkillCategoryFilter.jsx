@@ -1,4 +1,3 @@
-
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 const SkillCategoryFilter = ({ categories, selectedCategory, onSelectCategory }) => {

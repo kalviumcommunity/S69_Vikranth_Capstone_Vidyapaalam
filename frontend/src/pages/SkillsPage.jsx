@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 
-// --- Mock Data ---
 const mockSkills = [
   {
     id: "react",

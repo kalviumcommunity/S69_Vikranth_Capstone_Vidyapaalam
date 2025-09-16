@@ -172,9 +172,8 @@ const HowItWorks = () => {
         </div>
       </motion.div>
 
-      {/* Main Carousel */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 relative z-10">
-        {/* Large Card Carousel */}
+
         <div className="relative min-h-[400px] sm:min-h-[450px] md:min-h-[500px] lg:min-h-[550px]" style={{ perspective: '1000px' }}>
           <AnimatePresence initial={false} custom={direction} mode="wait">
             <motion.div
@@ -201,7 +200,7 @@ const HowItWorks = () => {
                       </span>
                     </div>
 
-                    {/* Icon */}
+                    
                     <motion.div
                       className={`w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 sm:mb-8 p-4 sm:p-5 bg-gradient-to-br ${currentSteps[currentStep].color} rounded-xl shadow-md`}
                       whileHover={{ scale: 1.1, rotate: 5 }}
@@ -210,7 +209,7 @@ const HowItWorks = () => {
                       {currentSteps[currentStep].icon}
                     </motion.div>
 
-                    {/* Content */}
+                    
                     <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-4 sm:mb-6 tracking-tight">
                       {currentSteps[currentStep].title}
                     </h3>
@@ -223,7 +222,7 @@ const HowItWorks = () => {
             </motion.div>
           </AnimatePresence>
 
-          {/* Navigation Arrows */}
+         
           <button
             onClick={prevStep}
             className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 z-10 bg-white/90 backdrop-blur-lg hover:bg-white border border-gray-200 rounded-full p-2 sm:p-3 transition-all duration-300 hover:scale-105 shadow-md hover:shadow-lg"
@@ -240,7 +239,7 @@ const HowItWorks = () => {
           </button>
         </div>
 
-        {/* Step Indicators */}
+        
         <div className="flex justify-center gap-2 sm:gap-3 mt-8 sm:mt-10">
           {currentSteps.map((_, index) => (
             <button
@@ -256,7 +255,7 @@ const HowItWorks = () => {
           ))}
         </div>
 
-        {/* Auto-play Controls */}
+        
         <motion.div 
           className="text-center mt-8 sm:mt-10"
           initial={{ opacity: 0 }}

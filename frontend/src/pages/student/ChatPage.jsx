@@ -11,7 +11,6 @@ const ChatPage = () => {
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Mock teacher data (replace with API call)
   const mockTeachers = {
     "1": { name: "Maria Johnson", avatar: "/placeholder.svg" },
     "2": { name: "David Lee", avatar: "/placeholder.svg" },
