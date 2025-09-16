@@ -105,39 +105,14 @@ async function handleSingleMediaUploadAndReplace(profile, mediaField, newFile, r
   console.log(`--- DEBUG: End handleSingleMediaUploadAndReplace for ${mediaField} ---\n`);
 }
 
-// const parseIncomingGalleryPhotos = (body) => {
-//   const galleryPhotos = [];
-//   const indices = new Set();
-
-//   for (const key in body) {
-//     const match = key.match(/galleryPhotos\[(\d+)\]\[(\w+)\]/);
-//     if (match) {
-//       const index = match[1];
-//       indices.add(index);
-//     }
-//   }
-
-//   for (const index of indices) {
-//     const url = body[`galleryPhotos[${index}][url]`];
-//     const publicId = body[`galleryPhotos[${index}][publicId]`];
-//     const name = body[`galleryPhotos[${index}][name]`] || '';
-//     if (url && publicId) {
-//       galleryPhotos[index] = { url, publicId, name };
-//     }
-//   }
-
-//   return galleryPhotos.filter(photo => photo && photo.url && publicId);
-// };
 
 const parseIncomingGalleryPhotos = (body) => {
   console.log('DEBUG: parseIncomingGalleryPhotos received body:', JSON.stringify(body, null, 2));
   let galleryPhotos = [];
 
-  // Handle JSON array in req.body.galleryPhotos
   if (body.galleryPhotos) {
     try {
       let parsedPhotos = body.galleryPhotos;
-      // If galleryPhotos is a string (e.g., JSON.stringify in body), parse it
       if (typeof parsedPhotos === 'string') {
         parsedPhotos = JSON.parse(parsedPhotos);
       }
@@ -286,100 +261,6 @@ exports.getAuthenticatedTeacherProfile = async (req, res) => {
   }
 };
 
-// exports.updateTeacherProfile = async (req, res) => {
-//   const {
-//     name, title, email, phone, aboutMe,
-//     skills, experience, hourlyRate, qualifications
-//   } = req.body;
-//   const authenticatedUserId = req.user.id;
-//   const authenticatedUserRole = req.user.role;
-
-//   try {
-//     let teacherProfile = await TeacherProfile.findById(req.params.id);
-
-//     if (!teacherProfile) {
-//       return res.status(404).json({ message: 'Teacher profile not found.' });
-//     }
-
-//     if (teacherProfile.userId.toString() !== authenticatedUserId.toString() && authenticatedUserRole !== 'admin') {
-//       return res.status(403).json({ message: 'Not authorized to update this profile.' });
-//     }
-
-//     await handleSingleMediaUploadAndReplace(
-//       teacherProfile,
-//       'avatar',
-//       req.files && req.files.avatar ? req.files.avatar[0] : undefined,
-//       'image',
-//       req.body.avatar === ''
-//     );
-
-//     await handleSingleMediaUploadAndReplace(
-//       teacherProfile,
-//       'videoUrl',
-//       req.files && req.files.video ? req.files.video[0] : undefined,
-//       'video',
-//       req.body.videoUrl === ''
-//     );
-
-//     const uploadedMedia = await processFileUploads(req.files);
-//     const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
-
-//     let finalGalleryPhotos = [
-//       ...incomingGalleryPhotos,
-//       ...(uploadedMedia.galleryPhotos || [])
-//     ];
-
-//     const finalPublicIds = new Set(
-//       finalGalleryPhotos
-//         .filter(p => p && p.publicId)
-//         .map(p => p.publicId)
-//     );
-
-//     const photosToDeletePromises = [];
-//     for (const existingPhoto of teacherProfile.galleryPhotos || []) {
-//       if (existingPhoto.publicId && !finalPublicIds.has(existingPhoto.publicId)) {
-//         photosToDeletePromises.push(
-//           deleteFromCloudinary(existingPhoto.publicId, 'image')
-//             .then(deleted => {
-//               if (deleted) {
-//                 console.log(`DEBUG: Gallery photo ${existingPhoto.publicId} deleted successfully.`);
-//               } else {
-//                 console.log(`DEBUG: Failed to delete gallery photo ${existingPhoto.publicId}, proceeding with update.`);
-//               }
-//             })
-//         );
-//       }
-//     }
-//     await Promise.all(photosToDeletePromises);
-
-//     teacherProfile.galleryPhotos = finalGalleryPhotos;
-
-//     teacherProfile.name = name !== undefined ? name : teacherProfile.name;
-//     teacherProfile.title = title !== undefined ? title : teacherProfile.title;
-//     teacherProfile.email = email !== undefined ? email : teacherProfile.email;
-//     teacherProfile.phone = phone !== undefined ? phone : teacherProfile.phone;
-//     teacherProfile.aboutMe = aboutMe !== undefined ? aboutMe : teacherProfile.aboutMe;
-//     teacherProfile.skills = Array.isArray(skills) ? skills : teacherProfile.skills;
-//     teacherProfile.experience = experience !== undefined ? experience : teacherProfile.experience;
-//     teacherProfile.hourlyRate = hourlyRate !== undefined ? Number(hourlyRate) : teacherProfile.hourlyRate;
-//     teacherProfile.qualifications = Array.isArray(qualifications) ? qualifications : teacherProfile.qualifications;
-
-//     const updatedProfile = await teacherProfile.save();
-
-//     const populatedProfile = await TeacherProfile.findById(updatedProfile._id)
-//       .populate('userId', 'name email role');
-
-//     res.status(200).json(populatedProfile);
-//   } catch (error) {
-//     console.error('Error updating teacher profile:', error);
-//     if (error.code === 11000) {
-//       return res.status(400).json({ message: 'The email address provided is already in use by another profile.' });
-//     }
-//     res.status(500).json({ message: 'Server error while updating teacher profile', error: error.message });
-//   }
-// };
-
-
 exports.updateTeacherProfile = async (req, res) => {
   const {
     name, title, email, phone, aboutMe,
@@ -418,17 +299,14 @@ exports.updateTeacherProfile = async (req, res) => {
     const uploadedMedia = await processFileUploads(req.files);
     const incomingGalleryPhotos = parseIncomingGalleryPhotos(req.body);
 
-    // Preserve existing gallery photos if no new uploads or incoming photos
     let finalGalleryPhotos = incomingGalleryPhotos.length > 0
       ? incomingGalleryPhotos
       : (teacherProfile.galleryPhotos || []);
 
-    // Append new uploads
     if (uploadedMedia.galleryPhotos && uploadedMedia.galleryPhotos.length > 0) {
       finalGalleryPhotos = [...finalGalleryPhotos, ...uploadedMedia.galleryPhotos];
     }
 
-    // Remove duplicates based on publicId
     const seenPublicIds = new Set();
     finalGalleryPhotos = finalGalleryPhotos.filter(photo => {
       if (!photo || !photo.publicId) return false;
@@ -437,7 +315,6 @@ exports.updateTeacherProfile = async (req, res) => {
       return true;
     });
 
-    // Delete photos that are no longer in finalGalleryPhotos
     const finalPublicIds = new Set(finalGalleryPhotos.map(p => p.publicId));
     const photosToDeletePromises = [];
     for (const existingPhoto of teacherProfile.galleryPhotos || []) {
@@ -554,38 +431,6 @@ exports.deleteTeacherProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error while deleting teacher profile', error: error.message });
   }
 };
-
-
-
-// exports.getTeacherProfileById = async (req, res) => {
-//   try {
-//     const profile = await TeacherProfile.findById(req.params.id).populate('userId', 'name bio availability teachingSkills');
-//     if (!profile) {
-//       return res.status(404).json({ message: 'Teacher not found' });
-//     }
-
-//     const formattedAvailability = profile.userId.availability.map(item => {
-//       const date = item.date.toISOString().split('T')[0];
-//       return `${date} ${item.slots.map(slot => `${slot.startTime}-${slot.endTime}`).join(', ')}`;
-//     });
-
-//     res.json({
-//       _id: profile._id,
-//       name: profile.userId.name || 'Unknown Teacher',
-//       avatarUrl: profile.avatar?.url || '',
-//       teachingSkills: profile.userId?.teachingSkills || profile.skills || [],
-//       rating: profile.rating || 0,
-//       hourlyRate: profile.hourlyRate || 0,
-//       bio: profile.userId.bio || 'No bio available',
-//       availability: formattedAvailability.length ? formattedAvailability : [],
-//       videoUrl: profile.videoUrl?.url || '',
-//       galleryPhotos: profile.galleryPhotos || [],
-//     });
-//   } catch (err) {
-//     res.status(500).json({ error: err.message });
-//   }
-// };
-
 
 exports.getTeacherProfileById = async (req, res) => {
   try {
@@ -741,8 +586,4 @@ exports.createBooking = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
-
-
-
 
