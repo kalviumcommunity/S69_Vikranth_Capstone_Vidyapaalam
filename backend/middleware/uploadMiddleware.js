@@ -1,10 +1,8 @@
-    // middleware/uploadMiddleware.js
+  const multer = require('multer');
 
-    const multer = require('multer');
+  const storage = multer.memoryStorage(); 
 
-    const storage = multer.memoryStorage(); 
-
-    const fileFilter = (req, file, cb) => {
+  const fileFilter = (req, file, cb) => {
       if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
         cb(null, true);
       } else {
@@ -12,8 +10,7 @@
       }
     };
 
-
-    const upload = multer({
+  const upload = multer({
       storage: storage,
       fileFilter: fileFilter,
       limits: {
